@@ -1,0 +1,4 @@
+transformers>=4.35.0
+torch>=2.0.0
+accelerate>=0.25.0
+tokenizers>=0.15.0
