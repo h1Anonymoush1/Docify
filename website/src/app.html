@@ -15,6 +15,7 @@
       window.addEventListener('unhandledrejection', function(event) {
         // Log the error for debugging (don't prevent default browser behavior)
         console.error('🚨 Unhandled promise rejection:', event.reason);
+        console.error('🚨 Error stack:', event.reason?.stack);
 
         // Check for specific error types and handle them
         if (event.reason && event.reason.message) {
@@ -22,6 +23,14 @@
           if (event.reason.message.includes('\ufffd')) {
             console.error('🚨 Encoding error detected - this usually indicates missing environment variables or API configuration issues');
             console.error('Please check: PUBLIC_APPWRITE_ENDPOINT and PUBLIC_APPWRITE_PROJECT_ID');
+          }
+
+          // Handle JavaScript syntax errors
+          if (event.reason.message.includes('Unexpected token') ||
+              event.reason.message.includes('SyntaxError')) {
+            console.error('🚨 JavaScript syntax error detected - this may indicate a build or caching issue');
+            console.error('🚨 Current URL:', window.location.href);
+            console.error('🚨 User agent:', navigator.userAgent);
           }
 
           // Handle authentication errors
@@ -36,6 +45,15 @@
 
         // For other errors, let the browser handle them normally
         // This ensures errors are still visible in browser console
+      });
+
+      // Also catch JavaScript syntax errors
+      window.addEventListener('error', function(event) {
+        console.error('🚨 JavaScript error:', event.error);
+        console.error('🚨 Error message:', event.message);
+        console.error('🚨 Error filename:', event.filename);
+        console.error('🚨 Error line:', event.lineno);
+        console.error('🚨 Error column:', event.colno);
       });
     </script>
     %sveltekit.head%
