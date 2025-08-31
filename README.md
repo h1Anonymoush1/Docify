@@ -15,7 +15,7 @@ A modern documentation platform built for the [Appwrite Sites Hackathon 2025](ht
 ### Frontend
 - **Framework**: SvelteKit 2.16.0 with Svelte 5.0
 - **Language**: JavaScript/TypeScript
-- **Styling**: TailwindCSS 4.1.3
+- **Styling**: Custom CSS with CSS Variables
 - **Build Tool**: Vite 6.0
 - **Package Manager**: npm
 
@@ -36,7 +36,7 @@ A modern documentation platform built for the [Appwrite Sites Hackathon 2025](ht
 Docify/
 ├── website/              # SvelteKit Frontend Application
 │   ├── src/
-│   │   ├── app.css      # Global styles with TailwindCSS
+│   │   ├── app.css      # Global styles with custom CSS variables
 │   │   ├── app.html     # HTML template
 │   │   ├── lib/
 │   │   │   └── appwrite.js  # Appwrite client configuration
@@ -139,7 +139,7 @@ This project meets all Appwrite Sites Hackathon requirements:
 The project will be evaluated on:
 
 1. **Impact of Idea**: Creating a comprehensive documentation platform
-2. **Creativity in Design**: Modern UI/UX with SvelteKit and TailwindCSS
+2. **Creativity in Design**: Modern UI/UX with SvelteKit and custom CSS theming
 3. **Technical Execution**: Clean code, proper architecture, and Appwrite integration
 
 ## 📦 Key Dependencies
@@ -147,7 +147,6 @@ The project will be evaluated on:
 ### Production Dependencies
 - `appwrite: ^16.1.0` - Appwrite Web SDK
 - `@appwrite.io/pink-icons: ^0.25.0` - Appwrite icon library
-- `tailwindcss: ^4.1.3` - Utility-first CSS framework
 - `@sveltejs/adapter-node: ^5.2.12` - Node.js adapter for deployment
 
 ### Development Dependencies

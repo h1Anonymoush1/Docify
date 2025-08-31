@@ -58,7 +58,7 @@ URL Input → Scraper Function → Validation Function → LLM Analysis Function
 
 ### Frontend
 - **Framework**: SvelteKit with TypeScript
-- **Styling**: TailwindCSS
+- **Styling**: Custom CSS with CSS Variables
 - **Components**: Custom UI components
 - **State Management**: Svelte stores
 - **Visualization**: Mermaid.js for diagrams

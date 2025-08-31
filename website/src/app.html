@@ -10,10 +10,28 @@
       href="https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:opsz,wght@14..32,100..900&family=Poppins:wght@300;400&display=swap"
       rel="stylesheet"
     />
+    <script>
+      // Global error handler for unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(event) {
+        // Prevent the default browser behavior (logging to console)
+        event.preventDefault();
+
+        // Log the error for debugging
+        console.warn('🚨 Caught unhandled promise rejection:', event.reason);
+
+        // You can add additional error handling logic here
+        if (event.reason && event.reason.message) {
+          if (event.reason.message.includes('missing scopes') ||
+              event.reason.message.includes('401') ||
+              event.reason.message.includes('Unauthorized')) {
+            console.log('🔒 Authentication-related error handled globally');
+          }
+        }
+      });
+    </script>
     %sveltekit.head%
   </head>
   <body
-    class="bg-[#FAFAFB] font-[Inter] text-sm text-[#56565C]"
     data-sveltekit-preload-data="hover"
   >
     <div style="display: contents">%sveltekit.body%</div>

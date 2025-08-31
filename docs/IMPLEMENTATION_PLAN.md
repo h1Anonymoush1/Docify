@@ -15,7 +15,7 @@
 #### 1.2 Frontend Foundation
 - [ ] Create SvelteKit routing structure
 - [ ] Implement authentication pages (login/signup)
-- [ ] Set up TailwindCSS styling system
+- [ ] Set up custom CSS styling system with CSS variables
 - [ ] Create base components (Header, Footer, Layout)
 - [ ] Implement protected route middleware
 
