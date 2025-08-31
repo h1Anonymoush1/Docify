@@ -13,20 +13,29 @@
     <script>
       // Global error handler for unhandled promise rejections
       window.addEventListener('unhandledrejection', function(event) {
-        // Prevent the default browser behavior (logging to console)
-        event.preventDefault();
+        // Log the error for debugging (don't prevent default browser behavior)
+        console.error('🚨 Unhandled promise rejection:', event.reason);
 
-        // Log the error for debugging
-        console.warn('🚨 Caught unhandled promise rejection:', event.reason);
-
-        // You can add additional error handling logic here
+        // Check for specific error types and handle them
         if (event.reason && event.reason.message) {
+          // Handle encoding/character errors
+          if (event.reason.message.includes('\ufffd')) {
+            console.error('🚨 Encoding error detected - this usually indicates missing environment variables or API configuration issues');
+            console.error('Please check: PUBLIC_APPWRITE_ENDPOINT and PUBLIC_APPWRITE_PROJECT_ID');
+          }
+
+          // Handle authentication errors
           if (event.reason.message.includes('missing scopes') ||
               event.reason.message.includes('401') ||
               event.reason.message.includes('Unauthorized')) {
-            console.log('🔒 Authentication-related error handled globally');
+            console.warn('🔒 Authentication-related error handled globally');
+            // Don't prevent default behavior for auth errors - let browser show them
+            return;
           }
         }
+
+        // For other errors, let the browser handle them normally
+        // This ensures errors are still visible in browser console
       });
     </script>
     %sveltekit.head%
