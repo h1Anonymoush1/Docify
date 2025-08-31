@@ -4,13 +4,9 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [sveltekit()],
   build: {
-    // Ensure consistent encoding
-    rollupOptions: {
-      output: {
-        // Ensure proper character encoding in output files
-        charset: 'utf8'
-      }
-    }
+    // Additional build options for Safari compatibility
+    minify: 'esbuild',
+    sourcemap: false
   },
   // Ensure environment variables are properly loaded
   define: {
