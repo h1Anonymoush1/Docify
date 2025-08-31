@@ -8,16 +8,16 @@
   import { browser } from '$app/environment';
   import '../app.css';
   
-         // Protected routes that require authentication
-       const protectedRoutes = ['/dashboard', '/settings'];
-  
+  // Protected routes that require authentication
+  const protectedRoutes = ['/dashboard', '/settings'];
+
   // Check if current route is protected
   $: isProtectedRoute = protectedRoutes.some(route => $page.url.pathname.startsWith(route));
-  
-        // Redirect to auth if accessing protected route without authentication
-      $: if (browser && !$isLoading && isProtectedRoute && !$isAuthenticated) {
-        goto('/auth');
-      }
+
+  // Redirect to auth if accessing protected route without authentication
+  $: if (browser && !$isLoading && isProtectedRoute && !$isAuthenticated) {
+    goto('/auth');
+  }
 </script>
 
 <svelte:head>

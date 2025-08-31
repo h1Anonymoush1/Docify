@@ -20,7 +20,17 @@ async function initializeAuth() {
     const currentUser = await account.get();
     user.set(currentUser);
   } catch (err) {
-    // User is not authenticated
+    // Handle different types of authentication errors
+    if (err.message && err.message.includes('\ufffd')) {
+      console.warn('Authentication error: Invalid character encoding detected. This may be due to missing environment variables.');
+      error.set('Authentication service is not properly configured. Please check your environment settings.');
+    } else if (err.code === 401 || err.message?.includes('401')) {
+      // User is not authenticated - this is expected
+      user.set(null);
+    } else {
+      console.error('Authentication initialization error:', err);
+      error.set('Failed to initialize authentication. Please try refreshing the page.');
+    }
     user.set(null);
   } finally {
     isLoading.set(false);
