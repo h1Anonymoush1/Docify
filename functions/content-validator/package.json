@@ -1,0 +1,13 @@
+{
+  "name": "content-validator",
+  "version": "1.0.0",
+  "description": "Content validation function for Docify",
+  "main": "src/main.js",
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "^13.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

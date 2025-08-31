@@ -1,344 +1,222 @@
 <script lang="ts">
   import "../app.css";
-  import { client } from "$lib/appwrite";
+  import { goto } from "$app/navigation";
+  import { client, account, databases } from "$lib/appwrite";
   import { AppwriteException } from "appwrite";
-  import {
-    PUBLIC_APPWRITE_ENDPOINT,
-    PUBLIC_APPWRITE_PROJECT_ID,
-    PUBLIC_APPWRITE_PROJECT_NAME,
-  } from "$env/static/public";
-  import { writable } from "svelte/store";
   import { onMount } from "svelte";
-  import appwriteSvg from "../../static/appwrite-icon.svg";
-  import svelteSvg from "../../static/svelte.svg";
 
-  let detailHeight = writable(0);
+  let url = $state("");
+  let isSubmitting = $state(false);
+  let error = $state("");
+  let user = $state(null);
 
-  let detailsRef: HTMLElement | null = null;
-
-  function handleDetailHeight() {
-    detailHeight.set(detailsRef ? detailsRef.clientHeight : 0);
-  }
-
-  onMount(() => {
-    handleDetailHeight();
+  // Check if user is logged in
+  onMount(async () => {
+    try {
+      user = await account.get();
+    } catch (err) {
+      // User not logged in, that's fine
+      user = null;
+    }
   });
 
-  type LogEntry = {
-    date: Date;
-    method: string;
-    path: string;
-    response: string;
-    status: number;
-  };
+  async function handleSubmit() {
+    if (!url.trim()) {
+      error = "Please enter a URL";
+      return;
+    }
 
-  let logs = $state<Array<LogEntry>>([]);
-  let status = $state<"idle" | "loading" | "success" | "error">("idle");
-  let showLogs = $state(false);
+    if (!user) {
+      error = "Please sign in to submit URLs";
+      goto("/auth");
+      return;
+    }
 
-  async function sendPing() {
-    if (status === "loading") return;
-    status = "loading";
+    isSubmitting = true;
+    error = "";
+
     try {
-      /* @ts-ignore */
-      const result = await client.ping();
-      const log = {
-        date: new Date(),
-        method: "GET",
-        path: "/v1/ping",
-        status: 200,
-        response: JSON.stringify(result),
-      };
-      logs = [log, ...logs];
-      status = "success";
+      // Create a new summary document
+      const summaryId = `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const summary = await databases.createDocument(
+        "docify-db", // databaseId
+        "summaries", // collectionId
+        summaryId, // documentId
+        {
+          userId: user.$id,
+          title: "Processing...", // Will be updated by scraper
+          originalUrl: url.trim(),
+          urlHash: generateUrlHash(url.trim()),
+          status: "pending",
+          isPublic: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      );
+
+      // Navigate to dashboard to see processing
+      goto("/dashboard");
+
     } catch (err) {
-      const log = {
-        date: new Date(),
-        method: "GET",
-        path: "/v1/ping",
-        status: err instanceof AppwriteException ? err.code : 500,
-        response:
-          err instanceof AppwriteException
-            ? err.message
-            : "Something went wrong",
-      };
-      logs = [log, ...logs];
-      status = "error";
+      console.error("Failed to create summary:", err);
+      if (err instanceof AppwriteException) {
+        error = err.message;
+      } else {
+        error = "Failed to submit URL. Please try again.";
+      }
     } finally {
-      showLogs = true;
-      requestAnimationFrame(() => {
-        handleDetailHeight();
-      });
+      isSubmitting = false;
+    }
+  }
+
+  function generateUrlHash(url: string): string {
+    const crypto = require('crypto');
+    return crypto.createHash('sha256').update(url).digest('hex');
+  }
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !isSubmitting) {
+      handleSubmit();
     }
   }
 </script>
 
-<svelte:window on:resize={handleDetailHeight} />
 <svelte:head>
-  <title>Appwrite + Svelte</title>
+  <title>Docify - Transform Documentation into Interactive Summaries</title>
+  <meta name="description" content="Transform any online documentation into structured summaries with AI-generated diagrams, code examples, and interactive previews." />
 </svelte:head>
 
-<main
-  class="checker-background flex flex-col items-center p-5"
-  style={`margin-bottom: ${$detailHeight}px`}
->
-  <div
-    class="mt-25 flex w-full max-w-[40em] items-center justify-center lg:mt-34"
-  >
-    <div
-      class="rounded-[25%] border border-[#19191C0A] bg-[#F9F9FA] p-3 shadow-[0px_9.36px_9.36px_0px_hsla(0,0%,0%,0.04)]"
-    >
-      <div
-        class="rounded-[25%] border border-[#FAFAFB] bg-white p-5 shadow-[0px_2px_12px_0px_hsla(0,0%,0%,0.03)] lg:p-9"
-      >
-        <img
-          alt={"Svelte logo"}
-          src={svelteSvg}
-          class="h-14 w-14"
-          width={56}
-          height={56}
-        />
+<main class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+  <!-- Navigation -->
+  <nav class="px-6 py-4 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <span class="text-white font-bold text-sm">D</span>
+        </div>
+        <h1 class="text-xl font-bold text-gray-900">Docify</h1>
       </div>
-    </div>
-    <div
-      class={`flex w-38 items-center transition-opacity duration-2500`}
-      class:opacity-0={status !== "success"}
-      class:opacity-100={status === "success"}
-    >
-      <div
-        class="to-[rgba(253, 54, 110, 0.15)] h-[1px] flex-1 bg-gradient-to-l from-[#f02e65]"
-      ></div>
-      <div
-        class="icon-check flex h-5 w-5 items-center justify-center rounded-full border border-[#FD366E52] bg-[#FD366E14] text-[#FD366E]"
-      ></div>
-      <div
-        class="to-[rgba(253, 54, 110, 0.15)] h-[1px] flex-1 bg-gradient-to-r from-[#f02e65]"
-      ></div>
-    </div>
-    <div
-      class="rounded-[25%] border border-[#19191C0A] bg-[#F9F9FA] p-3 shadow-[0px_9.36px_9.36px_0px_hsla(0,0%,0%,0.04)]"
-    >
-      <div
-        class="rounded-[25%] border border-[#FAFAFB] bg-white p-5 shadow-[0px_2px_12px_0px_hsla(0,0%,0%,0.03)] lg:p-9"
-      >
-        <img
-          alt={"Appwrite logo"}
-          src={appwriteSvg}
-          class="h-14 w-14"
-          width={56}
-          height={56}
-        />
-      </div>
-    </div>
-  </div>
 
-  <section class="mt-12 flex h-52 flex-col items-center">
-    {#if status === "loading"}
-      <div class="flex flex-row gap-4">
-        <div role="status">
-          <svg
-            aria-hidden="true"
-            class="h-5 w-5 animate-spin fill-[#FD366E] text-gray-200 dark:text-gray-600"
-            viewBox="0 0 100 101"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+      <div class="flex items-center space-x-4">
+        {#if user}
+          <span class="text-sm text-gray-600">Welcome, {user.name || user.email}!</span>
+          <button
+            onclick={() => goto('/dashboard')}
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <path
-              d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-              fill="currentColor"
-            />
-            <path
-              d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-              fill="currentFill"
-            />
-          </svg>
-          <span class="sr-only">Loading...</span>
-        </div>
-        <span>Waiting for connection...</span>
+            Dashboard
+          </button>
+        {:else}
+          <button
+            onclick={() => goto('/auth')}
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sign In
+          </button>
+        {/if}
       </div>
-    {:else if status === "success"}
-      <h1 class="font-[Poppins] text-2xl font-light text-[#2D2D31]">
-        Congratulations!
-      </h1>
-    {:else}
-      <h1 class="font-[Poppins] text-2xl font-light text-[#2D2D31]">
-        Check connection
-      </h1>
-    {/if}
-
-    <p class="mt-2 mb-8">
-      {#if status === "success"}
-        <span>You connected your app successfully.</span>
-      {:else if status === "error" || status === "idle"}
-        <span>Send a ping to verify the connection</span>
-      {/if}
-    </p>
-
-    <button
-      onclick={sendPing}
-      class={`cursor-pointer rounded-md bg-[#FD366E] px-2.5 py-1.5`}
-      class:hidden={status === "loading"}
-      class:visible={status !== "loading"}
-    >
-      <span class="text-white">Send a ping</span>
-    </button>
-  </section>
-
-  <div class="grid grid-rows-3 gap-7 lg:grid-cols-3 lg:grid-rows-none">
-    <div
-      class="flex h-full w-72 flex-col gap-2 rounded-md border border-[#EDEDF0] bg-white p-4"
-    >
-      <h2 class="text-xl font-light text-[#2D2D31]">Edit your app</h2>
-      <p>
-        Edit{" "}
-        <code class="rounded-sm bg-[#EDEDF0] p-1">app/page.js</code> to get started
-        with building your app.
-      </p>
     </div>
-    <a
-      href="https://cloud.appwrite.io"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div
-        class="flex h-full w-72 flex-col gap-2 rounded-md border border-[#EDEDF0] bg-white p-4"
-      >
-        <div class="flex flex-row items-center justify-between">
-          <h2 class="text-xl font-light text-[#2D2D31]">Go to console</h2>
-          <span class="icon-arrow-right text-[#D8D8DB]"></span>
-        </div>
-        <p>
-          Navigate to the console to control and oversee the Appwrite services.
-        </p>
-      </div>
-    </a>
+  </nav>
 
-    <a
-      href="https://appwrite.io/docs"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      <div
-        class="flex h-full w-72 flex-col gap-2 rounded-md border border-[#EDEDF0] bg-white p-4"
-      >
-        <div class="flex flex-row items-center justify-between">
-          <h2 class="text-xl font-light text-[#2D2D31]">Explore docs</h2>
-          <span class="icon-arrow-right text-[#D8D8DB]"></span>
-        </div>
-        <p>
-          Discover the full power of Appwrite by diving into our documentation.
-        </p>
-      </div>
-    </a>
-  </div>
+  <!-- Hero Section -->
+  <section class="px-6 py-20">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-5xl font-bold text-gray-900 mb-6">
+        Transform Documentation into
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+          Interactive Summaries
+        </span>
+      </h1>
 
-  <aside
-    class="fixed bottom-0 flex w-full cursor-pointer border-t border-[#EDEDF0] bg-white"
-  >
-    <details open={showLogs} bind:this={detailsRef} class={"w-full"}>
-      <summary
-        class="flex w-full flex-row justify-between p-4 marker:content-none"
-      >
-        <div class="flex gap-2">
-          <span class="font-semibold">Logs</span>
-          {#if logs.length > 0}
-            <div class="flex items-center rounded-md bg-[#E6E6E6] px-2">
-              <span class="font-semibold">{logs.length}</span>
+      <p class="text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
+        Paste any documentation URL and get AI-powered analysis with diagrams, code examples,
+        and structured insights in minutes.
+      </p>
+
+      <!-- URL Input Form -->
+      <div class="max-w-2xl mx-auto mb-8">
+        <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
+          <div class="mb-4">
+            <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
+              Documentation URL
+            </label>
+            <input
+              id="url"
+              type="url"
+              bind:value={url}
+              onkeydown={handleKeydown}
+              placeholder="https://example.com/docs/getting-started"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {#if error}
+            <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p class="text-red-700 text-sm">{error}</p>
             </div>
           {/if}
-        </div>
-        <div class="icon">
-          <span class="icon-cheveron-down" aria-hidden="true"></span>
-        </div>
-      </summary>
-      <div class="flex w-full flex-col lg:flex-row">
-        <div class="flex flex-col border-r border-[#EDEDF0]">
-          <div
-            class="border-y border-[#EDEDF0] bg-[#FAFAFB] px-4 py-2 text-[#97979B]"
+
+          <button
+            onclick={handleSubmit}
+            disabled={isSubmitting || !url.trim()}
+            class="w-full py-3 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
           >
-            Project
-          </div>
-          <div class="grid grid-cols-2 gap-4 p-4">
-            <div class="flex flex-col">
-              <span class="text-[#97979B]">Endpoint</span>
-              <span class="truncate">
-                {PUBLIC_APPWRITE_ENDPOINT}
-              </span>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-[#97979B]">Project-ID</span>
-              <span class="truncate">
-                {PUBLIC_APPWRITE_PROJECT_ID}
-              </span>
-            </div>
-            <div class="flex flex-col">
-              <span class="text-[#97979B]">Project name</span>
-              <span class="truncate">
-                {PUBLIC_APPWRITE_PROJECT_NAME}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="flex-grow">
-          <table class="w-full">
-            <thead>
-              <tr class="border-y border-[#EDEDF0] bg-[#FAFAFB] text-[#97979B]">
-                {#if logs.length > 0}
-                  <td class="w-52 py-2 pl-4">Date</td>
-                  <td>Status</td>
-                  <td>Method</td>
-                  <td class="hidden lg:table-cell">Path</td>
-                  <td class="hidden lg:table-cell">Response</td>
-                {:else}
-                  <td class="py-2 pl-4">Logs</td>
-                {/if}
-              </tr>
-            </thead>
-            <tbody>
-              {#if logs.length > 0}
-                {#each logs as log}
-                  <tr>
-                    <td class="py-2 pl-4 font-[Fira_Code]">
-                      {log.date.toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td>
-                      {#if log.status > 400}
-                        <div
-                          class="w-fit rounded-sm bg-[#FF453A3D] px-1 text-[#B31212]"
-                        >
-                          {log.status}
-                        </div>
-                      {:else}
-                        <div
-                          class="w-fit rounded-sm bg-[#10B9813D] px-1 text-[#0A714F]"
-                        >
-                          {log.status}
-                        </div>
-                      {/if}
-                    </td>
-                    <td>{log.method}</td>
-                    <td class="hidden lg:table-cell">{log.path}</td>
-                    <td class="hidden font-[Fira_Code] lg:table-cell">
-                      {log.response}
-                    </td>
-                  </tr>
-                {/each}
-              {:else}
-                <tr>
-                  <td class="py-2 pl-4 font-[Fira_Code]">
-                    There are no logs to show
-                  </td>
-                </tr>
-              {/if}
-            </tbody>
-          </table>
+            {#if isSubmitting}
+              <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Processing...</span>
+            {:else}
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>Analyze Documentation</span>
+            {/if}
+          </button>
         </div>
       </div>
-    </details>
-  </aside>
+
+      <!-- Features Grid -->
+      <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Smart Scraping</h3>
+          <p class="text-gray-600">Extracts content from HTML, Markdown, and PDF documents automatically.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">AI Analysis</h3>
+          <p class="text-gray-600">Powered by advanced language models to understand and summarize complex documentation.</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Rich Visualizations</h3>
+          <p class="text-gray-600">Generates Mermaid diagrams, code examples, and interactive HTML previews.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-50 border-t border-gray-200 py-8">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <p class="text-gray-600">
+        Built with ❤️ using SvelteKit and Appwrite
+      </p>
+    </div>
+  </footer>
 </main>
