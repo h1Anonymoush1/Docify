@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { user, isAuthenticated } from '$lib/stores/auth.js';
   import UserProfile from '$lib/components/auth/UserProfile.svelte';
 
@@ -8,13 +9,12 @@
   let isSearchOpen = $state(false);
   let searchQuery = $state('');
 
-  // Dynamic navigation items based on authentication
+  // Navigation items - always visible
   let navItems = $derived([
-    { href: '/', label: 'Home', active: true },
-    ...($isAuthenticated ? [
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: '/explore', label: 'Explore' }
-    ] : [])
+    { href: '/explore', label: 'Explore' },
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/create', label: 'Create' },
+    ...(!$isAuthenticated ? [{ href: '/auth', label: 'Get Started' }] : [])
   ]);
 
 
@@ -56,6 +56,24 @@
     if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
       event.preventDefault(); // Prevent default browser behavior
       toggleSearch();
+    }
+
+    // Cmd+D for Dashboard
+    if ((event.metaKey || event.ctrlKey) && event.key === 'd') {
+      event.preventDefault();
+      goto('/dashboard');
+    }
+
+    // Cmd+E for Explore
+    if ((event.metaKey || event.ctrlKey) && event.key === 'e') {
+      event.preventDefault();
+      goto('/explore');
+    }
+
+    // Cmd+I for Create New
+    if ((event.metaKey || event.ctrlKey) && event.key === 'i') {
+      event.preventDefault();
+      goto('/create');
     }
   }
 
@@ -108,9 +126,16 @@
         aria-label="Search (Cmd+K)"
         title="Search (Cmd+K)"
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M21 21L16.5 16.5M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
+        <span class="search-shortcut-text">
+          {#if navigator.platform.includes('Mac')}
+            ⌘K
+          {:else}
+            Ctrl+K
+          {/if}
+        </span>
       </button>
 
       <!-- User Profile (if authenticated) -->
@@ -118,12 +143,7 @@
         <div class="user-profile">
           <UserProfile />
         </div>
-                 {:else}
-             <!-- Auth Links (if not authenticated) -->
-             <div class="auth-links">
-               <a href="/auth" class="auth-link auth-link-primary">Get Started</a>
-             </div>
-           {/if}
+      {/if}
 
       <!-- Mobile Menu Button -->
       <button
@@ -150,14 +170,6 @@
             {item.label}
           </a>
         {/each}
-
-                       {#if !$isAuthenticated}
-                 <div class="mobile-auth-links">
-                   <a href="/auth" class="mobile-nav-link mobile-auth-primary" onclick={closeMenu}>
-                     Get Started
-                   </a>
-                 </div>
-               {/if}
       </div>
     {/if}
   </div>
@@ -165,7 +177,7 @@
   <!-- Search Overlay -->
   {#if isSearchOpen}
     <div class="search-overlay" onclick={closeSearch} onkeydown={(e) => { if (e.key === 'Escape') closeSearch(); }} role="dialog" aria-label="Search" aria-modal="true" tabindex="-1">
-      <div class="search-popup" role="document">
+      <div class="search-popup" role="document" onclick={(e) => e.stopPropagation()}>
         <div class="search-header">
           <div class="search-input-container">
             <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -196,35 +208,34 @@
         <div class="search-results">
           {#if searchQuery.trim() === ''}
             <div class="search-placeholder">
-              <h3 class="placeholder-title">Quick Actions</h3>
               <div class="placeholder-actions">
-                <div class="action-item">
+                <div class="action-item" onclick={() => { goto('/dashboard'); closeSearch(); }}>
                   <div class="action-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="currentColor"/>
-                      <path d="M14 8V2L20 8H14Z" fill="currentColor"/>
+                      <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
                     </svg>
                   </div>
-                  <span>Search documentation</span>
+                  <span>Go to Dashboard</span>
+                  <span class="action-shortcut">⌘D</span>
                 </div>
-                <div class="action-item">
+                <div class="action-item" onclick={() => { goto('/explore'); closeSearch(); }}>
                   <div class="action-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
-                      <path d="M2 17L12 22L22 17" fill="currentColor"/>
-                      <path d="M2 12L12 17L22 12" fill="currentColor"/>
+                      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
                     </svg>
                   </div>
-                  <span>Browse categories</span>
+                  <span>Go to Explore</span>
+                  <span class="action-shortcut">⌘E</span>
                 </div>
-                <div class="action-item">
+                <div class="action-item" onclick={() => { goto('/create'); closeSearch(); }}>
                   <div class="action-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z" fill="currentColor"/>
                       <path d="M13 7H11V11H7V13H11V17H13V13H17V11H13V7Z" fill="white"/>
                     </svg>
                   </div>
-                  <span>Create new document</span>
+                  <span>Create New Document</span>
+                  <span class="action-shortcut">⌘I</span>
                 </div>
               </div>
             </div>
@@ -361,13 +372,31 @@
   .nav-link.active::after {
     content: '';
     position: absolute;
-    bottom: -1px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 2px;
-    background-color: var(--color-teal);
-    border-radius: 1px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-teal) 0%, var(--color-teal-light) 100%);
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(1);
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 1;
+  }
+
+  .nav-link:not(.active)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-teal) 0%, var(--color-teal-light) 100%);
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 0;
   }
 
   /* Mobile Menu Button */
@@ -416,20 +445,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
+    gap: var(--spacing-2);
+    padding: 0 var(--spacing-3);
     height: 40px;
-    background: none;
+    background: var(--color-teal-50);
     border: none;
     border-radius: var(--radius-lg);
-    color: rgba(107, 114, 128, 0.8);
+    color: var(--color-teal);
     cursor: pointer;
     transition: all 0.2s ease-in-out;
     margin-left: var(--spacing-4);
+    font-weight: 600;
   }
 
   .search-btn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    color: rgba(17, 24, 39, 0.9);
+    background-color: var(--color-teal-100);
+    color: var(--color-teal);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15);
+  }
+
+  .search-shortcut-text {
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    opacity: 0.7;
+    white-space: nowrap;
+    user-select: none;
   }
 
   /* User Profile */
@@ -439,40 +480,7 @@
     margin-left: var(--spacing-4);
   }
 
-  /* Auth Links */
-  .auth-links {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    margin-left: var(--spacing-4);
-  }
 
-  .auth-link {
-    text-decoration: none;
-    font-weight: 500;
-    font-size: var(--font-size-sm);
-    padding: var(--spacing-2) var(--spacing-3);
-    border-radius: var(--radius-md);
-    transition: all 0.2s ease-in-out;
-    color: var(--text-secondary);
-  }
-
-  .auth-link:hover {
-    color: var(--text-primary);
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .auth-link-primary {
-    background: var(--color-teal);
-    color: white;
-    border: 1px solid var(--color-teal);
-  }
-
-  .auth-link-primary:hover {
-    background: var(--color-teal-dark);
-    border-color: var(--color-teal-dark);
-    color: white;
-  }
 
   /* Search Overlay */
   .search-overlay {
@@ -590,12 +598,7 @@
     text-align: center;
   }
 
-  .placeholder-title {
-    font-size: var(--font-size-lg);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-6);
-  }
+
 
   .placeholder-actions {
     display: grid;
@@ -628,6 +631,18 @@
   .action-item span {
     font-weight: 500;
     color: var(--text-primary);
+  }
+
+  .action-shortcut {
+    margin-left: auto;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    background: var(--color-teal-50);
+    color: var(--color-teal);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-teal-200);
+    user-select: none;
   }
 
   .search-results-content {
@@ -763,23 +778,37 @@
   .mobile-nav-link.active {
     color: var(--color-teal);
     background-color: var(--color-teal-50);
+    position: relative;
   }
 
-  .mobile-auth-links {
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    padding-top: var(--spacing-2);
-    margin-top: var(--spacing-2);
+  .mobile-nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: var(--spacing-4);
+    right: var(--spacing-4);
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-teal) 0%, var(--color-teal-light) 100%);
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(1);
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 1;
   }
 
-  .mobile-auth-primary {
-    background: var(--color-teal);
-    color: white !important;
-    margin: 0 var(--spacing-4);
-    text-align: center;
-  }
-
-  .mobile-auth-primary:hover {
-    background: var(--color-teal-dark) !important;
+  .mobile-nav-link:not(.active)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: var(--spacing-4);
+    right: var(--spacing-4);
+    height: 3px;
+    background: linear-gradient(90deg, var(--color-teal) 0%, var(--color-teal-light) 100%);
+    border-radius: 2px 2px 0 0;
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 0;
   }
 
   /* Mobile responsive */

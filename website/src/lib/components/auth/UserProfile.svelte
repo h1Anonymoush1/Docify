@@ -1,8 +1,14 @@
-<script>
+<script lang="ts">
   import { auth, user, isLoading } from '$lib/stores/auth.js';
   import { credits, initializeCredits } from '$lib/stores/credits.js';
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
+
+  interface User {
+    name?: string;
+    email?: string;
+    $id?: string;
+  }
   
   let showDropdown = false;
   
@@ -121,19 +127,24 @@
   .profile-button {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 1rem;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    gap: var(--spacing-3);
+    padding: var(--spacing-2) var(--spacing-4);
+    background: var(--color-teal-50);
+    border: none;
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    transition: all 0.2s;
-    font-size: 0.875rem;
+    transition: all 0.2s ease-in-out;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-teal);
+    height: 40px;
   }
-  
+
   .profile-button:hover {
-    background: #f9fafb;
-    border-color: #d1d5db;
+    background: var(--color-teal-100);
+    color: var(--color-teal);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15);
   }
   
   .profile-button:disabled {
@@ -161,15 +172,15 @@
   }
   
   .user-name {
-    font-weight: 500;
-    color: #374151;
+    font-weight: 600;
+    color: var(--color-teal);
   }
   
   .dropdown-arrow {
     width: 16px;
     height: 16px;
-    color: #6b7280;
-    transition: transform 0.2s;
+    color: var(--color-teal);
+    transition: transform 0.2s ease-in-out;
   }
   
   .dropdown-arrow.rotated {
@@ -180,23 +191,23 @@
     position: absolute;
     top: 100%;
     right: 0;
-    margin-top: 0.5rem;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    margin-top: var(--spacing-2);
+    background: var(--bg-primary);
+    border: 1px solid var(--color-teal-200);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 15px -3px rgba(20, 184, 166, 0.1), 0 4px 6px -2px rgba(20, 184, 166, 0.05);
     min-width: 240px;
     z-index: 50;
   }
   
   .dropdown-header {
-    padding: 1rem;
+    padding: var(--spacing-4);
   }
   
   .user-info {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--spacing-3);
   }
   
   .user-details {
@@ -204,9 +215,9 @@
   }
   
   .user-email {
-    font-size: 0.75rem;
-    color: #6b7280;
-    margin-top: 0.25rem;
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-top: var(--spacing-1);
   }
   
   .user-credits {
@@ -233,39 +244,42 @@
   
   .dropdown-divider {
     height: 1px;
-    background: #e5e7eb;
-    margin: 0.5rem 0;
+    background: var(--color-teal-200);
+    margin: var(--spacing-2) 0;
   }
   
   .dropdown-items {
-    padding: 0.5rem 0;
+    padding: var(--spacing-2) 0;
   }
   
   .dropdown-item {
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
     background: none;
     border: none;
     text-align: left;
     cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 0.875rem;
-    color: #374151;
+    transition: all 0.2s ease-in-out;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    font-weight: 500;
   }
-  
+
   .dropdown-item:hover {
-    background: #f9fafb;
+    background: var(--color-teal-50);
+    color: var(--color-teal);
   }
   
   .dropdown-item.sign-out {
-    color: #dc2626;
+    color: var(--color-red-600);
   }
-  
+
   .dropdown-item.sign-out:hover {
-    background: #fef2f2;
+    background: var(--color-red-50);
+    color: var(--color-red-700);
   }
   
   .item-icon {
@@ -302,16 +316,7 @@
     border-color: #2563eb;
   }
   
-  .btn-secondary {
-    background: white;
-    color: #374151;
-    border: 1px solid #d1d5db;
-  }
-  
-  .btn-secondary:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
-  }
+
   
   .dropdown-overlay {
     position: fixed;

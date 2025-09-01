@@ -4,6 +4,7 @@
   import { user, isAuthenticated, isLoading, auth } from '$lib/stores/auth.js';
   import UserProfile from '$lib/components/auth/UserProfile.svelte';
   import Navbar from '$lib/components/Navbar.svelte';
+  import CreditsBanner from '$lib/components/CreditsBanner.svelte';
   import { goto } from '$app/navigation';
   import { browser } from '$app/environment';
   import '../app.css';
@@ -26,6 +27,11 @@
 </svelte:head>
 
 <div class="app">
+        <!-- Credits Banner (only show on homepage) -->
+        {#if $page.url.pathname === '/'}
+          <CreditsBanner />
+        {/if}
+
         <!-- Navigation Header -->
       <Navbar />
   

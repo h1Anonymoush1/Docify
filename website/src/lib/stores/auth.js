@@ -3,11 +3,22 @@ import { account, OAuthProvider } from '$lib/appwrite.js';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
 
-// Authentication state
+/** @type {import('svelte/store').Writable<User | null>} */
 export const user = writable(null);
 export const isLoading = writable(false);
 export const error = writable(null);
 export const isAuthenticated = derived(user, ($user) => !!$user);
+
+/**
+ * @typedef {Object} User
+ * @property {string} $id
+ * @property {string} [name]
+ * @property {string} [email]
+ * @property {string} [phone]
+ * @property {boolean} [emailVerification]
+ * @property {boolean} [phoneVerification]
+ * @property {Object} [prefs]
+ */
 
 // Initialize auth state
 if (browser) {

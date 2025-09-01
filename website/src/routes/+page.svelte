@@ -1,6 +1,5 @@
 <script lang="ts">
   import "../app.css";
-  import CreditsBanner from '$lib/components/CreditsBanner.svelte';
 </script>
 
 <svelte:head>
@@ -10,7 +9,6 @@
 
 <!-- Main Content -->
 <main class="main-content">
-  <CreditsBanner />
   <div class="container">
     <!-- Hero Section -->
     <section class="hero-section">
