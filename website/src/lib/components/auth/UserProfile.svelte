@@ -1,6 +1,8 @@
 <script>
   import { auth, user, isLoading } from '$lib/stores/auth.js';
+  import { credits, initializeCredits } from '$lib/stores/credits.js';
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
   
   let showDropdown = false;
   
@@ -21,6 +23,16 @@
     }
   }
   
+  // Initialize credits when component mounts
+  onMount(async () => {
+    if ($user) {
+      try {
+        await initializeCredits();
+      } catch (err) {
+        console.log('Failed to initialize credits:', err);
+      }
+    }
+  });
 
 </script>
 
@@ -60,6 +72,10 @@
             <div class="user-details">
               <div class="user-name">{$user.name || 'User'}</div>
               <div class="user-email">{$user.email}</div>
+              <div class="user-credits">
+                <span class="credits-icon">💳</span>
+                <span class="credits-amount">{$credits} credits</span>
+              </div>
             </div>
           </div>
         </div>
@@ -191,6 +207,28 @@
     font-size: 0.75rem;
     color: #6b7280;
     margin-top: 0.25rem;
+  }
+  
+  .user-credits {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    width: fit-content;
+  }
+  
+  .credits-icon {
+    font-size: 0.875rem;
+  }
+  
+  .credits-amount {
+    font-size: 0.75rem;
   }
   
   .dropdown-divider {

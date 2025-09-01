@@ -4,6 +4,8 @@
   import { AppwriteException } from "appwrite";
   import { onMount } from 'svelte';
   import { auth } from '$lib/stores/auth.js';
+  import { credits, claimCredits, hasClaimedCredits, initializeCredits } from '$lib/stores/credits.js';
+  import { goto } from '$app/navigation';
   import {
     PUBLIC_APPWRITE_ENDPOINT,
     PUBLIC_APPWRITE_PROJECT_ID,
@@ -21,9 +23,23 @@
   let logs = $state<Array<LogEntry>>([]);
   let status = $state<"idle" | "loading" | "success" | "error">("idle");
   let showLogs = $state(false);
+  let claimStatus = $state<"idle" | "loading" | "success" | "error">("idle");
+  let claimMessage = $state("");
+  let hasClaimed = $state(false);
 
   onMount(async () => {
     console.log('🏠 Home page loaded');
+    
+    // Initialize credits if user is authenticated
+    try {
+      const currentUser = await auth.getCurrentUser();
+      if (currentUser) {
+        await initializeCredits();
+        hasClaimed = await hasClaimedCredits();
+      }
+    } catch (err) {
+      console.log('User not authenticated or credits not available');
+    }
   });
 
   async function sendPing() {
@@ -97,6 +113,32 @@
       alert('OAuth test failed: ' + errorMessage);
     }
   }
+
+  async function handleClaimCredits() {
+    if (claimStatus === "loading") return;
+    
+    try {
+      // Check if user is authenticated
+      const currentUser = await auth.getCurrentUser();
+      if (!currentUser) {
+        // Redirect to auth page if not logged in
+        goto('/auth');
+        return;
+      }
+      
+      claimStatus = "loading";
+      claimMessage = "";
+      
+      const result = await claimCredits();
+      claimStatus = "success";
+      claimMessage = `🎉 Successfully claimed 5 credits! You now have ${result.newCredits} credits.`;
+      hasClaimed = true;
+      
+    } catch (err) {
+      claimStatus = "error";
+      claimMessage = err.message || 'Failed to claim credits';
+    }
+  }
 </script>
 
 <svelte:head>
@@ -134,6 +176,22 @@
           <button class="btn btn-secondary" onclick={testOAuth}>
             Test OAuth Config
           </button>
+          
+          <!-- Claim Credits Button -->
+          <button 
+            class="btn btn-credits" 
+            onclick={handleClaimCredits}
+            disabled={claimStatus === "loading" || hasClaimed}
+          >
+            {#if claimStatus === "loading"}
+              <div class="spinner"></div>
+              Claiming...
+            {:else if hasClaimed}
+              ✅ Credits Claimed
+            {:else}
+              🎁 Claim 5 Credits
+            {/if}
+          </button>
       </div>
 
         {#if status === "success"}
@@ -146,6 +204,18 @@
             <div class="status-icon">✕</div>
             <span>Connection failed. Please check your configuration.</span>
     </div>
+        {/if}
+
+        {#if claimStatus === "success"}
+          <div class="status-message success">
+            <div class="status-icon">🎉</div>
+            <span>{claimMessage}</span>
+          </div>
+        {:else if claimStatus === "error"}
+          <div class="status-message error">
+            <div class="status-icon">⚠️</div>
+            <span>{claimMessage}</span>
+          </div>
         {/if}
       </div>
     </section>
@@ -913,6 +983,36 @@
   .cta-actions .btn-secondary:hover {
     background-color: white;
     color: var(--color-teal);
+  }
+
+  /* Credits Button Styles */
+  .btn-credits {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border: 2px solid #f59e0b;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-credits:hover:not(:disabled) {
+    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    border-color: #d97706;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+
+  .btn-credits:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-credits:disabled:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #f59e0b;
+    transform: none;
+    box-shadow: none;
   }
 
   @media (max-width: 768px) {
