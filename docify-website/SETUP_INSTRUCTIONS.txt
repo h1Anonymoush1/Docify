@@ -1,0 +1,22 @@
+🚀 QUICK FIX FOR GOOGLE AUTHENTICATION 404 ERROR
+
+The 404 error on /auth is because Appwrite environment variables are not set.
+
+1. Copy the environment template:
+   cp .env.local.template .env.local
+
+2. Edit .env.local with your Appwrite credentials:
+   - Go to https://cloud.appwrite.io
+   - Select your project  
+   - Go to Settings → General
+   - Copy your Project ID
+   - Replace 'your-project-id-here' in .env.local
+
+3. Restart your development server:
+   npm run dev
+
+4. Test Google authentication:
+   - Visit http://localhost:3000/get-started
+   - Click 'Continue with Google'
+
+The error message will now be more helpful if configuration is missing.

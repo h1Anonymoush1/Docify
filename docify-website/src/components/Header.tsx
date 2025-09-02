@@ -7,40 +7,53 @@ import { Fade, Flex, Line, ToggleButton } from "@/once-ui/components";
 import styles from "@/components/Header.module.scss";
 
 import { routes, display } from "@/app/resources";
-import { person, home, about, blog, work, gallery } from "@/app/resources/content";
+import { person, home, blog, work, gallery } from "@/app/resources/content";
 
 type TimeDisplayProps = {
   timeZone: string;
   locale?: string; // Optionally allow locale, defaulting to 'en-GB'
 };
 
-const TimeDisplay: React.FC<TimeDisplayProps> = ({ timeZone, locale = "en-GB" }) => {
-  const [currentTime, setCurrentTime] = useState("");
+const CountdownDisplay: React.FC = () => {
+  const [countdown, setCountdown] = useState("");
 
   useEffect(() => {
-    const updateTime = () => {
+    const updateCountdown = () => {
       const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
-        timeZone,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      };
-      const timeString = new Intl.DateTimeFormat(locale, options).format(now);
-      setCurrentTime(timeString);
+      // Set target to September 12th of current year
+      const currentYear = now.getFullYear();
+      const targetDate = new Date(currentYear, 8, 12); // September is month 8 (0-indexed)
+
+      // If September 12th has already passed this year, set to next year
+      if (now > targetDate) {
+        targetDate.setFullYear(currentYear + 1);
+      }
+
+      const timeDifference = targetDate.getTime() - now.getTime();
+
+      if (timeDifference <= 0) {
+        setCountdown("Event Started!");
+        return;
+      }
+
+      const days = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDifference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeDifference % (1000 * 60)) / 1000);
+
+      setCountdown(`${days}d ${hours}h ${minutes}m ${seconds}s`);
     };
 
-    updateTime();
-    const intervalId = setInterval(updateTime, 1000);
+    updateCountdown();
+    const intervalId = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(intervalId);
-  }, [timeZone, locale]);
+  }, []);
 
-  return <>{currentTime}</>;
+  return <>{countdown}</>;
 };
 
-export default TimeDisplay;
+export default CountdownDisplay;
 
 export const Header = () => {
   const pathname = usePathname() ?? "";
@@ -59,7 +72,7 @@ export const Header = () => {
         horizontal="center"
       >
         <Flex paddingLeft="12" fillWidth vertical="center" textVariant="body-default-s">
-          {display.location && <Flex hide="s">{person.location}</Flex>}
+          {/* Get Started button removed from header */}
         </Flex>
         <Flex fillWidth horizontal="center">
           <Flex
@@ -75,20 +88,20 @@ export const Header = () => {
                 <ToggleButton prefixIcon="home" href="/" selected={pathname === "/"} />
               )}
               <Line vert maxHeight="24" />
-              {routes["/about"] && (
+              {routes["/get-started"] && (
                 <>
                   <ToggleButton
                     className="s-flex-hide"
-                    prefixIcon="person"
-                    href="/about"
-                    label={about.label}
-                    selected={pathname === "/about"}
+                    prefixIcon="chevronRight"
+                    href="/get-started"
+                    label="Get Started"
+                    selected={pathname === "/get-started"}
                   />
                   <ToggleButton
                     className="s-flex-show"
-                    prefixIcon="person"
-                    href="/about"
-                    selected={pathname === "/about"}
+                    prefixIcon="chevronRight"
+                    href="/get-started"
+                    selected={pathname === "/get-started"}
                   />
                 </>
               )}
@@ -154,7 +167,7 @@ export const Header = () => {
             textVariant="body-default-s"
             gap="20"
           >
-            <Flex hide="s">{display.time && <TimeDisplay timeZone={person.location} />}</Flex>
+            <Flex hide="s">{display.time && <CountdownDisplay />}</Flex>
           </Flex>
         </Flex>
       </Flex>

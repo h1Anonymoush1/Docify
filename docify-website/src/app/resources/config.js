@@ -2,10 +2,10 @@ const baseURL = "demo.magic-portfolio.com";
 
 const routes = {
   "/": true,
-  "/about": true,
   "/work": true,
   "/blog": true,
   "/gallery": true,
+  "/get-started": true,
 };
 
 // Enable password protection on selected routes
@@ -63,7 +63,7 @@ const effects = {
 };
 
 const display = {
-  location: true,
+  location: false, // Location removed and replaced with Get Started button
   time: true,
 };
 

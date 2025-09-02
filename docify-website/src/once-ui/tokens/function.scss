@@ -73,24 +73,24 @@
     --function-success-600-50: var(--scheme-green-600-50);
 }
 
-/* brand */
+/* brand - default to emerald (teal-like) */
 [data-brand="custom"] {
-    --function-brand-100:  var(--scheme-brand-100);
-    --function-brand-200:  var(--scheme-brand-200);
-    --function-brand-300:  var(--scheme-brand-300);
-    --function-brand-400:  var(--scheme-brand-400);
-    --function-brand-500:  var(--scheme-brand-500);
-    --function-brand-600:  var(--scheme-brand-600);
-    --function-brand-700:  var(--scheme-brand-700);
-    --function-brand-800:  var(--scheme-brand-800);
-    --function-brand-900:  var(--scheme-brand-900);
-    --function-brand-1000: var(--scheme-brand-1000);
-    --function-brand-1100: var(--scheme-brand-1100);
-    --function-brand-1200: var(--scheme-brand-1200);
+    --function-brand-100:  var(--scheme-emerald-100);
+    --function-brand-200:  var(--scheme-emerald-200);
+    --function-brand-300:  var(--scheme-emerald-300);
+    --function-brand-400:  var(--scheme-emerald-400);
+    --function-brand-500:  var(--scheme-emerald-500);
+    --function-brand-600:  var(--scheme-emerald-600);
+    --function-brand-700:  var(--scheme-emerald-700);
+    --function-brand-800:  var(--scheme-emerald-800);
+    --function-brand-900:  var(--scheme-emerald-900);
+    --function-brand-1000: var(--scheme-emerald-1000);
+    --function-brand-1100: var(--scheme-emerald-1100);
+    --function-brand-1200: var(--scheme-emerald-1200);
 
-    --function-brand-600-10: var(--scheme-brand-600-10);
-    --function-brand-600-30: var(--scheme-brand-600-30);
-    --function-brand-600-50: var(--scheme-brand-600-50);
+    --function-brand-600-10: var(--scheme-emerald-600-10);
+    --function-brand-600-30: var(--scheme-emerald-600-30);
+    --function-brand-600-50: var(--scheme-emerald-600-50);
 }
 
 [data-brand="red"] {

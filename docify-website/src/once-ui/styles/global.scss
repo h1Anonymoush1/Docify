@@ -67,3 +67,146 @@ a:not(.button) {
 ::-webkit-scrollbar-corner {
     background-color: var(--static-transparent);
 }
+
+/* DOCIFY AUTHENTICATION STYLES */
+.get-started-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--static-space-24);
+    max-width: 400px;
+}
+
+.get-started-header {
+    text-align: center;
+}
+
+.text-teal {
+    color: #08A97C; /* Using emerald-600 from the scheme */
+    font-weight: 600;
+}
+
+/* Authentication Buttons */
+.auth-buttons-container {
+    width: 100%;
+}
+
+.auth-button {
+    position: relative;
+    width: 100%;
+    padding: var(--static-space-16) var(--static-space-20);
+    border-radius: var(--static-space-12);
+    font-size: var(--static-space-14);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border: 2px solid transparent;
+    background: var(--neutral-background-weak);
+    color: var(--neutral-on-background-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--static-space-12);
+    text-decoration: none;
+}
+
+.auth-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(8, 169, 124, 0.15);
+}
+
+.github-button {
+    background: #24292e;
+    color: white;
+    border-color: #24292e;
+}
+
+.github-button:hover {
+    background: #1a1e22;
+    border-color: #1a1e22;
+}
+
+.google-button {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.google-button:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.auth-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* Get Started Button - Navigation Style - Removed from header */
+
+/* Get Started Card Link */
+.get-started-link-card {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: all 0.3s ease-in-out;
+}
+
+.get-started-link-card:hover {
+    transform: translateY(-4px);
+}
+
+/* Get Started Card */
+.get-started-card {
+    background: var(--surface-background);
+    border-radius: var(--static-space-24); /* Match newsletter radius="l" */
+    padding: var(--static-space-20); /* Reduced for inline layout */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--static-neutral-100);
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.get-started-card:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.card-content {
+    text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .get-started-section {
+        max-width: 100%;
+        gap: var(--static-space-20);
+    }
+
+    .auth-button {
+        padding: var(--static-space-14) var(--static-space-16);
+        font-size: var(--static-space-14);
+    }
+
+    .get-started-header h2 {
+        font-size: var(--static-space-20);
+    }
+
+    /* Get Started button styles removed - no longer in header */
+
+    .get-started-link-card {
+        margin: 0 var(--static-space-16);
+    }
+
+    .get-started-card {
+        padding: var(--static-space-20);
+        min-width: unset;
+        max-width: unset;
+        width: 100%;
+    }
+
+    .card-content h2 {
+        font-size: var(--static-space-24);
+    }
+}

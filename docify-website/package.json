@@ -12,6 +12,7 @@
     "@floating-ui/react-dom": "^2.1.1",
     "@mdx-js/loader": "^3.1.0",
     "@next/mdx": "^14.2.16",
+    "appwrite": "^19.0.0",
     "classnames": "^2.5.1",
     "cookie": "^1.0.1",
     "gray-matter": "^4.0.3",
@@ -35,6 +36,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "eslint": "^9.34.0",
     "postcss-custom-media": "^10.0.7",
     "postcss-flexbugs-fixes": "^5.0.2",
     "typescript": "^5"

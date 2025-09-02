@@ -8,7 +8,7 @@ const person = {
   },
   role: "Design Engineer",
   avatar: "/images/avatar.jpg",
-  location: "Asia/Jakarta", // Expecting the IANA time zone identifier, e.g., 'Europe/Vienna'
+  location: "", // Location removed for countdown display
   languages: ["English", "Bahasa"], // optional: Leave the array empty if you don't want to display languages
 };
 
@@ -50,13 +50,12 @@ const social = [
 
 const home = {
   label: "Home",
-  title: `${person.name}'s Portfolio`,
-  description: `Portfolio website showcasing my work as a ${person.role}`,
-  headline: <>Design engineer and builder</>,
+  title: `Docify - Modern Documentation Platform`,
+  description: `A modern documentation platform built for the Appwrite Sites Hackathon 2025. Create, manage, and share your documentation with ease.`,
+  headline: <>Welcome to <span className="text-teal">Docify</span></>,
   subline: (
     <>
-      I'm Selene, a design engineer at <InlineCode>FLY</InlineCode>, where I craft intuitive
-      <br /> user experiences. After hours, I build my own projects.
+      {/* Subline text removed as requested */}
     </>
   ),
 };

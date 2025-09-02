@@ -48,22 +48,22 @@
     --code-violet:                  var(--scheme-violet-800);
     --code-orange:                  var(--scheme-orange-800);
 
-    /* brand */
-    --brand-background-strong:      var(--function-brand-300);
-    --brand-background-medium:      var(--function-brand-200);
-    --brand-background-weak:        var(--function-brand-100);
+    /* brand - using emerald (teal-like) colors */
+    --brand-background-strong:      var(--scheme-emerald-300);
+    --brand-background-medium:      var(--scheme-emerald-200);
+    --brand-background-weak:        var(--scheme-emerald-100);
 
     --brand-on-background-strong:   var(--static-white);
-    --brand-on-background-medium:   var(--function-brand-900);
-    --brand-on-background-weak:     var(--function-brand-600);
+    --brand-on-background-medium:   var(--scheme-emerald-900);
+    --brand-on-background-weak:     var(--scheme-emerald-600);
 
-    --brand-border-strong:          var(--function-brand-400);
-    --brand-border-medium:          var(--function-brand-300);
-    --brand-border-weak:            var(--function-brand-200);
-  
-    --brand-alpha-strong:           var(--function-brand-600-50);
-    --brand-alpha-medium:           var(--function-brand-600-30);
-    --brand-alpha-weak:             var(--function-brand-600-10);
+    --brand-border-strong:          var(--scheme-emerald-400);
+    --brand-border-medium:          var(--scheme-emerald-300);
+    --brand-border-weak:            var(--scheme-emerald-200);
+
+    --brand-alpha-strong:           var(--scheme-emerald-600-50);
+    --brand-alpha-medium:           var(--scheme-emerald-600-30);
+    --brand-alpha-weak:             var(--scheme-emerald-600-10);
 
     /* accent */
     --accent-background-strong:     var(--function-accent-300);
@@ -230,22 +230,22 @@
     --code-violet:                  var(--scheme-violet-600);
     --code-orange:                  var(--scheme-orange-600);
     
-    /* brand */  
-    --brand-background-strong:      var(--function-brand-800);
-    --brand-background-medium:      var(--function-brand-1000);
+    /* brand - using emerald (teal-like) colors */
+    --brand-background-strong:      var(--scheme-emerald-800);
+    --brand-background-medium:      var(--scheme-emerald-1000);
     --brand-background-weak:        var(--static-white);
 
-    --brand-on-background-strong:   var(--function-brand-100);
-    --brand-on-background-medium:   var(--function-brand-400);
-    --brand-on-background-weak:     var(--function-brand-600);
+    --brand-on-background-strong:   var(--scheme-emerald-100);
+    --brand-on-background-medium:   var(--scheme-emerald-400);
+    --brand-on-background-weak:     var(--scheme-emerald-600);
 
-    --brand-border-strong:          var(--function-brand-800);
-    --brand-border-medium:          var(--function-brand-900);
-    --brand-border-weak:            var(--function-brand-1000);
-  
-    --brand-alpha-strong:           var(--function-brand-600-50);
-    --brand-alpha-medium:           var(--function-brand-600-30);
-    --brand-alpha-weak:             var(--function-brand-600-10);
+    --brand-border-strong:          var(--scheme-emerald-800);
+    --brand-border-medium:          var(--scheme-emerald-900);
+    --brand-border-weak:            var(--scheme-emerald-1000);
+
+    --brand-alpha-strong:           var(--scheme-emerald-600-50);
+    --brand-alpha-medium:           var(--scheme-emerald-600-30);
+    --brand-alpha-weak:             var(--scheme-emerald-600-10);
     
     /* accent */
     --accent-background-strong:     var(--function-accent-800);
@@ -450,12 +450,12 @@
 
 [data-theme="dark"][data-solid="color"],
 [data-theme="dark"] [data-solid="color"] {
-    --brand-solid-strong:         var(--function-brand-500);
-    --brand-solid-medium:         var(--function-brand-400);
-    --brand-solid-weak:           var(--function-brand-300);
+    --brand-solid-strong:         var(--scheme-emerald-500);
+    --brand-solid-medium:         var(--scheme-emerald-400);
+    --brand-solid-weak:           var(--scheme-emerald-300);
 
-    --brand-on-solid-strong:      var(--static-white);      
-    --brand-on-solid-weak:        var(--function-brand-900);
+    --brand-on-solid-strong:      var(--static-white);
+    --brand-on-solid-weak:        var(--scheme-emerald-900);
 }
 
 [data-theme="dark"][data-solid="contrast"],
@@ -470,22 +470,22 @@
 
 [data-theme="dark"][data-solid="inverse"],
 [data-theme="dark"] [data-solid="inverse"] {
-    --brand-solid-strong:         var(--function-brand-800);
-    --brand-solid-medium:         var(--function-brand-700);
-    --brand-solid-weak:           var(--function-brand-600);
+    --brand-solid-strong:         var(--scheme-emerald-800);
+    --brand-solid-medium:         var(--scheme-emerald-700);
+    --brand-solid-weak:           var(--scheme-emerald-600);
 
-    --brand-on-solid-strong:      var(--static-black);      
-    --brand-on-solid-weak:        var(--function-brand-200);
+    --brand-on-solid-strong:      var(--static-black);
+    --brand-on-solid-weak:        var(--scheme-emerald-200);
 }
 
 [data-theme="light"][data-solid="color"],
 [data-theme="light"] [data-solid="color"] {
-    --brand-solid-strong:         var(--function-brand-600);
-    --brand-solid-medium:         var(--function-brand-500);
-    --brand-solid-weak:           var(--function-brand-400);
-  
-    --brand-on-solid-strong:      var(--static-white);      
-    --brand-on-solid-weak:        var(--function-brand-1000);
+    --brand-solid-strong:         var(--scheme-emerald-600);
+    --brand-solid-medium:         var(--scheme-emerald-500);
+    --brand-solid-weak:           var(--scheme-emerald-400);
+
+    --brand-on-solid-strong:      var(--static-white);
+    --brand-on-solid-weak:        var(--scheme-emerald-1000);
 }
 
 [data-theme="light"][data-solid="contrast"],
@@ -523,10 +523,10 @@
 
 [data-theme="light"][data-solid="inverse"],
 [data-theme="light"] [data-solid="inverse"] {
-    --brand-solid-strong:         var(--function-brand-900);
-    --brand-solid-medium:         var(--function-brand-800);
-    --brand-solid-weak:           var(--function-brand-700);
-  
-    --brand-on-solid-strong:      var(--static-black);      
-    --brand-on-solid-weak:        var(--function-brand-200);
+    --brand-solid-strong:         var(--scheme-emerald-900);
+    --brand-solid-medium:         var(--scheme-emerald-800);
+    --brand-solid-weak:           var(--scheme-emerald-700);
+
+    --brand-on-solid-strong:      var(--static-black);
+    --brand-on-solid-weak:        var(--scheme-emerald-200);
 }
