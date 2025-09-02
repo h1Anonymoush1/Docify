@@ -20,7 +20,7 @@
         // Check for specific error types and handle them
         if (event.reason && event.reason.message) {
           // Handle encoding/character errors
-          if (event.reason.message.includes('\ufffd')) {
+          if (event.reason.message.includes('�')) {
             console.error('🚨 Encoding error detected - this usually indicates missing environment variables or API configuration issues');
             console.error('Please check: PUBLIC_APPWRITE_ENDPOINT and PUBLIC_APPWRITE_PROJECT_ID');
           }

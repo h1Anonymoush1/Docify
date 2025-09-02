@@ -16,12 +16,8 @@ export default defineConfig({
       }
     }
   },
-  // Ensure environment variables are properly loaded
-  define: {
-    // This ensures that environment variables are available at build time
-    __APPWRITE_ENDPOINT__: JSON.stringify(process.env.PUBLIC_APPWRITE_ENDPOINT),
-    __APPWRITE_PROJECT_ID__: JSON.stringify(process.env.PUBLIC_APPWRITE_PROJECT_ID)
-  },
+  // Environment variables are handled by SvelteKit automatically
+  // No need to manually define them here
   // Optimize dependencies to avoid issues
   optimizeDeps: {
     include: ['appwrite']
