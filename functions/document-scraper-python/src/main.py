@@ -180,13 +180,70 @@ def main(context):
     try:
         print('=== DOCUMENT SCRAPER STARTED ===')
 
+        # Check if this is triggered by document creation (not analysis results)
+        trigger_type = context.req.headers.get('x-appwrite-trigger', 'unknown')
+        print(f'Trigger type: {trigger_type}')
+
+        # Debug: Log all available headers
+        print(f'Available headers: {list(context.req.headers.keys())}')
+        for header_name, header_value in context.req.headers.items():
+            print(f'Header {header_name}: {header_value}')
+
+        if trigger_type == 'event':
+            # Get the collection that triggered this event
+            collection_id = context.req.headers.get('x-appwrite-collection', '')
+            print(f'Event triggered by collection: {collection_id}')
+
+            # If collection header is empty, try alternative approaches
+            if not collection_id:
+                print('Collection header is empty, trying alternative detection methods...')
+
+                # Check if we can determine from the request body structure
+                if context.req.body:
+                    # Document creation: has url and instructions
+                    if 'url' in context.req.body and 'instructions' in context.req.body:
+                        print('Detected document creation based on request body structure')
+                        collection_id = DOCUMENTS_COLLECTION_ID
+                    # Analysis result creation: has summary and charts
+                    elif 'summary' in context.req.body and 'charts' in context.req.body:
+                        print('Detected analysis result creation based on request body structure')
+                        collection_id = ANALYSIS_COLLECTION_ID
+                        print(f'Skipping: Event from {collection_id}, not from documents collection')
+                        return context.res.json({
+                            'success': True,
+                            'message': 'Skipped: Analysis result creation event'
+                        }, 200)
+                    else:
+                        print('Could not determine collection from body structure, checking event header...')
+
+                        # Try to parse collection from x-appwrite-event header
+                        event_header = context.req.headers.get('x-appwrite-event', '')
+                        if 'analysis_results' in event_header:
+                            print('Detected analysis_results from event header')
+                            collection_id = ANALYSIS_COLLECTION_ID
+                            print(f'Skipping: Event from {collection_id}, not from documents collection')
+                            return context.res.json({
+                                'success': True,
+                                'message': 'Skipped: Analysis result creation event'
+                            }, 200)
+                        elif 'documents_table' in event_header:
+                            print('Detected documents_table from event header')
+                            collection_id = DOCUMENTS_COLLECTION_ID
+                        else:
+                            print('Could not determine collection from event header, proceeding anyway...')
+                            collection_id = DOCUMENTS_COLLECTION_ID  # Default assumption
+
+            # Only process if it's from documents_table collection
+            if collection_id != DOCUMENTS_COLLECTION_ID:
+                print(f'Skipping: Event from {collection_id}, not from documents collection')
+                return context.res.json({
+                    'success': True,
+                    'message': 'Skipped: Not a document creation event'
+                }, 200)
+
         # Initialize Appwrite client with dynamic API key
         client = init_appwrite_client(context.req)
         databases = Databases(client)
-
-        # Determine trigger type
-        trigger_type = context.req.headers.get('x-appwrite-trigger', 'unknown')
-        print(f'Trigger type: {trigger_type}')
 
         # Extract data based on trigger type
         if trigger_type == 'event':
