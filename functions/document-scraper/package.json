@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "node-appwrite": "^11.0.0",
-    "puppeteer": "^19.11.1",
-    "cheerio": "^1.0.0-rc.10"
+    "puppeteer": "^24.9.0",
+    "cheerio": "^1.0.0"
   },
   "keywords": ["appwrite", "scraper", "puppeteer"],
   "author": "Docify",

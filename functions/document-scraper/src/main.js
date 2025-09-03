@@ -16,29 +16,6 @@ const DATABASE_ID = process.env.DATABASE_ID || 'docify_db';
 const DOCUMENTS_COLLECTION_ID = process.env.DOCUMENTS_COLLECTION_ID || 'documents';
 const ANALYSIS_COLLECTION_ID = process.env.ANALYSIS_COLLECTION_ID || 'analysis_results';
 
-// Check if this is triggered by an event (row creation)
-const isEventTriggered = process.env.APPWRITE_FUNCTION_EVENT_DATA;
-let eventData = null;
-
-if (isEventTriggered) {
-    try {
-        eventData = JSON.parse(process.env.APPWRITE_FUNCTION_EVENT_DATA);
-        console.log('Event triggered with row data:', JSON.stringify(eventData, null, 2));
-        // Log the structure to understand the event data
-        console.log('Event data structure:', Object.keys(eventData));
-
-        // Check for different possible structures
-        if (eventData.data) {
-            console.log('Found data field:', Object.keys(eventData.data));
-        }
-        if (eventData.row) {
-            console.log('Found row field:', Object.keys(eventData.row));
-        }
-    } catch (error) {
-        console.error('Failed to parse event data:', error);
-    }
-}
-
 async function scrapeWebsite(url) {
     let browser = null;
     try {
@@ -78,7 +55,9 @@ async function scrapeWebsite(url) {
         }
 
         // Wait for content to load
-        await page.waitForTimeout(2000);
+        await page.waitForFunction(() => {
+            return document.readyState === 'complete';
+        }, { timeout: 10000 });
 
         // Extract content using multiple strategies
         const content = await page.evaluate(() => {
@@ -163,14 +142,15 @@ function cleanContent(content) {
         .trim();
 }
 
-async function updateDocumentStatus(documentId, status, scrapedContent = null) {
+async function updateDocumentStatus(documentId, status, scrapedContent = null, url = null) {
     try {
         const updateData = {
             status: status
         };
 
+        // Only include scraped content and title if provided
         if (scrapedContent) {
-            updateData.scraped_content = scrapedContent;
+            updateData.scraped_content = scrapedContent.content;
             updateData.title = scrapedContent.title;
         }
 
@@ -210,109 +190,144 @@ async function triggerLLMAnalysis(documentId, scrapedData) {
 }
 
 module.exports = async ({ req, res, log, error }) => {
+    let documentId = null;
+    let url = null;
+
     try {
-        log('Document scraper function started');
+        log('=== DOCUMENT SCRAPER STARTED ===');
 
-        let documentId, url;
+        // Determine trigger type
+        const triggerType = req.headers['x-appwrite-trigger'] || 'unknown';
+        log(`Trigger type: ${triggerType}`);
 
-        // Check if triggered by event (document creation)
-        if (eventData) {
-            log('Function triggered by document creation event');
-
-            // Handle different event data structures
-            let rowData = eventData;
-
-            // Check if data is nested under 'data' or 'row' field
-            if (eventData.data) {
-                rowData = eventData.data;
-                log('Using nested data field');
-            } else if (eventData.row) {
-                rowData = eventData.row;
-                log('Using nested row field');
+        // Extract data based on trigger type
+        if (triggerType === 'event') {
+            // Event trigger - document data is in req.body
+            log('Processing event trigger');
+            if (req.body && req.body.$id && req.body.url) {
+                documentId = req.body.$id;
+                url = req.body.url;
+                log(`Event data extracted - ID: ${documentId}, URL: ${url}`);
+            } else {
+                throw new Error('Event data missing required fields ($id or url)');
             }
-
-            documentId = rowData.$id || rowData.id;
-            url = rowData.url;
-
-            log(`Extracted documentId: ${documentId}, url: ${url}`);
-
-            if (!documentId || !url) {
-                error('Event data missing required fields. Available fields:', Object.keys(rowData));
-                return res.json({
-                    success: false,
-                    error: 'Event data missing documentId or url'
-                }, 400);
+        } else if (triggerType === 'http') {
+            // Manual API trigger
+            log('Processing HTTP trigger');
+            if (req.body && req.body.documentId && req.body.url) {
+                documentId = req.body.documentId;
+                url = req.body.url;
+                log(`API data extracted - ID: ${documentId}, URL: ${url}`);
+            } else {
+                throw new Error('API request missing required fields (documentId or url)');
             }
         } else {
-            // Manual/API trigger
-            log('Function triggered manually or via API');
-
-            // Validate request body
-            if (!req.body || !req.body.documentId || !req.body.url) {
-                return res.json({
-                    success: false,
-                    error: 'Missing required fields: documentId and url'
-                }, 400);
+            // Unknown trigger - try both approaches
+            log('Processing unknown trigger type, attempting both extraction methods');
+            if (req.body) {
+                // Try event format first
+                if (req.body.$id && req.body.url) {
+                    documentId = req.body.$id;
+                    url = req.body.url;
+                    log(`Extracted using event format - ID: ${documentId}, URL: ${url}`);
+                }
+                // Try API format
+                else if (req.body.documentId && req.body.url) {
+                    documentId = req.body.documentId;
+                    url = req.body.url;
+                    log(`Extracted using API format - ID: ${documentId}, URL: ${url}`);
+                } else {
+                    log('Request body structure:', JSON.stringify(req.body, null, 2));
+                    throw new Error('Unable to extract documentId and url from request');
+                }
+            } else {
+                throw new Error('No request body found');
             }
-
-            documentId = req.body.documentId;
-            url = req.body.url;
         }
 
-        log(`Processing document: ${documentId}, URL: ${url}`);
+        // Validate extracted data
+        if (!documentId || !url) {
+            throw new Error(`Missing required data - documentId: ${!!documentId}, url: ${!!url}`);
+        }
 
-        // Validate URL format
+        // Log extracted data
+        log(`Final data - Document ID: ${documentId}, URL: ${url}`);
+
+        // Validate URL format with detailed error handling
+        log(`Validating URL: ${url}`);
+        if (!url || typeof url !== 'string') {
+            throw new Error('URL is not a valid string');
+        }
+
+        const trimmedUrl = url.trim();
+        if (!trimmedUrl) {
+            throw new Error('URL is empty after trimming');
+        }
+
         try {
-            new URL(url);
-        } catch (e) {
-            return res.json({
-                success: false,
-                error: 'Invalid URL format'
-            }, 400);
+            new URL(trimmedUrl);
+            log('URL validation passed');
+        } catch (urlError) {
+            log(`URL validation failed: ${urlError.message}`);
+            throw new Error(`Invalid URL format: ${urlError.message}`);
         }
 
         // Update document status to scraping
-        await updateDocumentStatus(documentId, 'scraping');
+        log('Updating document status to scraping...');
+        await updateDocumentStatus(documentId, 'scraping', null, trimmedUrl);
 
         // Scrape the website
-        const scrapedData = await scrapeWebsite(url);
+        log(`Starting website scraping for: ${trimmedUrl}`);
+        const scrapedData = await scrapeWebsite(trimmedUrl);
 
-        log(`Successfully scraped ${scrapedData.wordCount} words from ${url}`);
+        log(`Scraping completed - ${scrapedData.wordCount} words scraped`);
 
         // Update document with scraped content
-        await updateDocumentStatus(documentId, 'scraped', scrapedData);
+        log('Updating document with scraped content...');
+        await updateDocumentStatus(documentId, 'scraped', scrapedData, trimmedUrl);
 
         // Trigger LLM analysis
+        log('Triggering LLM analysis...');
         await triggerLLMAnalysis(documentId, scrapedData);
 
         // Update document status to analyzing
-        await updateDocumentStatus(documentId, 'analyzing');
+        log('Updating document status to analyzing...');
+        await updateDocumentStatus(documentId, 'analyzing', null, trimmedUrl);
+
+        log('=== DOCUMENT SCRAPER COMPLETED SUCCESSFULLY ===');
 
         return res.json({
             success: true,
-            message: 'Document scraped successfully',
+            message: 'Document scraped and analysis triggered successfully',
             data: {
                 documentId: documentId,
                 wordCount: scrapedData.wordCount,
-                title: scrapedData.title
+                title: scrapedData.title,
+                url: trimmedUrl
             }
         }, 200);
 
     } catch (err) {
-        error(`Document scraper error: ${err.message}`);
+        error(`Document scraper failed: ${err.message}`);
 
-        // Try to update document status to failed
-        if (req.body && req.body.documentId) {
+        // Try to update document status to failed if we have a documentId
+        if (documentId) {
             try {
-                await updateDocumentStatus(req.body.documentId, 'failed');
+                log(`Updating document ${documentId} status to failed`);
+                await updateDocumentStatus(documentId, 'failed', null, url);
             } catch (updateError) {
                 error(`Failed to update document status: ${updateError.message}`);
             }
         }
 
+        log('=== DOCUMENT SCRAPER FAILED ===');
+
         return res.json({
             success: false,
-            error: err.message
+            error: err.message,
+            documentId: documentId,
+            url: url
         }, 500);
     }
 };
+

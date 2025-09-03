@@ -1,0 +1,13 @@
+{
+  "name": "document-scraper-python",
+  "version": "1.0.0",
+  "description": "Appwrite function to scrape web content from URLs using Python",
+  "main": "src/main.py",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {},
+  "keywords": ["appwrite", "scraper", "python"],
+  "author": "Docify",
+  "license": "MIT"
+}
