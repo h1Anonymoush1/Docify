@@ -6,6 +6,10 @@ const routes = {
   "/blog": true,
   "/gallery": true,
   "/get-started": true,
+  "/auth/login": true,
+  "/auth/signup": true,
+  "/auth/error": true,
+  "/dashboard": true,
 };
 
 // Enable password protection on selected routes

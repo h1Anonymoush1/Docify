@@ -3,14 +3,14 @@
 The 404 error on /auth is because Appwrite environment variables are not set.
 
 1. Copy the environment template:
-   cp .env.local.template .env.local
+   cp .env.template .env
 
-2. Edit .env.local with your Appwrite credentials:
+2. Edit .env with your Appwrite credentials:
    - Go to https://cloud.appwrite.io
    - Select your project  
    - Go to Settings → General
    - Copy your Project ID
-   - Replace 'your-project-id-here' in .env.local
+   - Replace 'your-project-id-here' in .env
 
 3. Restart your development server:
    npm run dev

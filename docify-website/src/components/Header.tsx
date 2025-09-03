@@ -3,11 +3,12 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Fade, Flex, Line, ToggleButton } from "@/once-ui/components";
+import { Fade, Flex, Line, ToggleButton, Text } from "@/once-ui/components";
 import styles from "@/components/Header.module.scss";
 
 import { routes, display } from "@/app/resources";
 import { person, home, blog, work, gallery } from "@/app/resources/content";
+import { useAuth } from "@/lib/auth-context";
 
 type TimeDisplayProps = {
   timeZone: string;
@@ -55,8 +56,82 @@ const CountdownDisplay: React.FC = () => {
 
 export default CountdownDisplay;
 
+const UserIndicator: React.FC = () => {
+  const [mounted, setMounted] = useState(false);
+  const [authData, setAuthData] = useState<{user: any, isAuthenticated: boolean, logout: any} | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      try {
+        const { user, isAuthenticated, logout } = useAuth();
+        setAuthData({ user, isAuthenticated, logout });
+      } catch (error) {
+        // AuthProvider not available yet, will retry on next render
+        console.log('AuthProvider not available yet');
+      }
+    }
+  }, [mounted]);
+
+  const handleLogout = async () => {
+    if (authData?.logout) {
+      try {
+        await authData.logout();
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+  };
+
+  // Don't render on server side or if auth data is not available
+  if (!mounted || !authData || !authData.isAuthenticated) {
+    return null;
+  }
+
+  return (
+    <Flex vertical="center" gap="8">
+      <Flex
+        background="surface"
+        border="neutral-medium"
+        radius="m"
+        padding="8"
+        gap="8"
+        vertical="center"
+      >
+        <Text variant="body-default-s" onBackground="neutral-strong">
+          👋 {authData.user?.name || 'User'}
+        </Text>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--neutral-strong)',
+            cursor: 'pointer',
+            fontSize: '12px',
+            padding: '2px 6px',
+            borderRadius: '4px'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--neutral-weak)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          Logout
+        </button>
+      </Flex>
+    </Flex>
+  );
+};
+
 export const Header = () => {
   const pathname = usePathname() ?? "";
+  const { isAuthenticated } = useAuth();
 
   return (
     <>
@@ -88,7 +163,23 @@ export const Header = () => {
                 <ToggleButton prefixIcon="home" href="/" selected={pathname === "/"} />
               )}
               <Line vert maxHeight="24" />
-              {routes["/get-started"] && (
+              {isAuthenticated ? (
+                <>
+                  <ToggleButton
+                    className="s-flex-hide"
+                    prefixIcon="chevronRight"
+                    href="/dashboard"
+                    label="Dashboard"
+                    selected={pathname === "/dashboard"}
+                  />
+                  <ToggleButton
+                    className="s-flex-show"
+                    prefixIcon="chevronRight"
+                    href="/dashboard"
+                    selected={pathname === "/dashboard"}
+                  />
+                </>
+              ) : (
                 <>
                   <ToggleButton
                     className="s-flex-hide"
@@ -167,6 +258,7 @@ export const Header = () => {
             textVariant="body-default-s"
             gap="20"
           >
+            <UserIndicator />
             <Flex hide="s">{display.time && <CountdownDisplay />}</Flex>
           </Flex>
         </Flex>

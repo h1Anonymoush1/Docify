@@ -6,7 +6,8 @@
     "export": "next export",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:oauth": "node scripts/test-oauth.js"
   },
   "dependencies": {
     "@floating-ui/react-dom": "^2.1.1",

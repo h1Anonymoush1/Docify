@@ -3,14 +3,22 @@ import "@/once-ui/tokens/index.scss";
 
 import classNames from "classnames";
 
-import { Footer, Header, RouteGuard } from "@/components";
+import { Footer, RouteGuard } from "@/components";
+import { AuthProvider } from "@/lib/auth-context";
 import { baseURL, effects, style } from "@/app/resources";
+import dynamic from 'next/dynamic';
 
 import { Inter } from "next/font/google";
 import { Source_Code_Pro } from "next/font/google";
 
 import { person, home } from "@/app/resources/content";
 import { Background, Column, Flex, ToastProvider } from "@/once-ui/components";
+
+// Dynamically import Header to avoid SSR issues with useAuth
+const Header = dynamic(() => import('@/components/Header').then(mod => ({ default: mod.Header })), {
+  ssr: false,
+  loading: () => <div style={{ height: '80px', width: '100%' }} /> // Placeholder for header height
+});
 
 export async function generateMetadata() {
   return {
@@ -140,20 +148,22 @@ export default async function RootLayout({ children }: RootLayoutProps) {
             }}
           />
           <Flex fillWidth minHeight="16"></Flex>
-          <Header />
-          <Flex
-            position="relative"
-            zIndex={0}
-            fillWidth
-            paddingY="l"
-            paddingX="l"
-            horizontal="center"
-            flex={1}
-          >
-            <Flex horizontal="center" fillWidth minHeight="0">
-              <RouteGuard>{children}</RouteGuard>
+          <AuthProvider>
+            <Header />
+            <Flex
+              position="relative"
+              zIndex={0}
+              fillWidth
+              paddingY="l"
+              paddingX="l"
+              horizontal="center"
+              flex={1}
+            >
+              <Flex horizontal="center" fillWidth minHeight="0">
+                <RouteGuard>{children}</RouteGuard>
+              </Flex>
             </Flex>
-          </Flex>
+          </AuthProvider>
           <Footer />
         </Column>
       </ToastProvider>

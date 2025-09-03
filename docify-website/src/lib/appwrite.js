@@ -1,10 +1,10 @@
-import { Client, Account, Databases, Storage } from 'appwrite';
+import { Client, Account, Databases, Storage, ID } from 'appwrite';
 
 // Appwrite configuration
 const client = new Client();
 
 client
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1')
+    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://nyc.cloud.appwrite.io/v1')
     .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id');
 
 // Initialize services
@@ -33,11 +33,21 @@ export const getCurrentUser = async () => {
     }
 };
 
-export const loginWithEmail = async (email, password) => {
+export const getCurrentSession = async () => {
     try {
-        const session = await account.createEmailPasswordSession(email, password);
+        return await account.getSession('current');
+    } catch (error) {
+        console.log('No active session');
+        return null;
+    }
+};
+
+export const refreshSession = async () => {
+    try {
+        const session = await account.updateSession('current');
         return session;
     } catch (error) {
+        console.error('Failed to refresh session:', error);
         throw error;
     }
 };
@@ -47,6 +57,42 @@ export const logoutUser = async () => {
         await account.deleteSession('current');
         return true;
     } catch (error) {
+        throw error;
+    }
+};
+
+// Email OTP functions
+export const sendEmailOTP = async (email) => {
+    try {
+        const token = await account.createEmailToken(ID.unique(), email);
+        console.log('Email OTP sent successfully');
+        return token;
+    } catch (error) {
+        console.error('Failed to send email OTP:', error);
+        throw error;
+    }
+};
+
+export const verifyEmailOTP = async (userId, secret, email) => {
+    try {
+        const session = await account.createSession(userId, secret);
+        console.log('Email OTP verified successfully');
+        return session;
+    } catch (error) {
+        console.error('Failed to verify email OTP:', error);
+        throw error;
+    }
+};
+
+
+
+export const updateUserEmail = async (email) => {
+    try {
+        const user = await account.updateEmail(email);
+        console.log('User email updated successfully');
+        return user;
+    } catch (error) {
+        console.error('Failed to update user email:', error);
         throw error;
     }
 };
