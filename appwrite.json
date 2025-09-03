@@ -42,6 +42,46 @@
             }
         }
     },
+    "functions": [
+        {
+            "$id": "document-scraper",
+            "name": "Document Scraper",
+            "runtime": "node-18",
+            "path": "functions/document-scraper",
+            "entrypoint": "src/main.js",
+            "commands": {
+                "build": "npm install"
+            },
+            "scopes": ["documents.read", "documents.write", "databases.read", "databases.write"],
+            "vars": {
+                "DATABASE_ID": "docify_db",
+                "DOCUMENTS_COLLECTION_ID": "documents",
+                "ANALYSIS_COLLECTION_ID": "analysis_results"
+            },
+            "events": [],
+            "schedule": "",
+            "timeout": 300
+        },
+        {
+            "$id": "llm-analyzer",
+            "name": "LLM Analyzer",
+            "runtime": "node-18",
+            "path": "functions/llm-analyzer",
+            "entrypoint": "src/main.js",
+            "commands": {
+                "build": "npm install"
+            },
+            "scopes": ["documents.read", "documents.write", "databases.read", "databases.write"],
+            "vars": {
+                "DATABASE_ID": "docify_db",
+                "DOCUMENTS_COLLECTION_ID": "documents",
+                "ANALYSIS_COLLECTION_ID": "analysis_results"
+            },
+            "events": ["databases.docify_db.collections.analysis_results.documents.create"],
+            "schedule": "",
+            "timeout": 600
+        }
+    ],
     "sites": [
         {
             "$id": "docify-website",

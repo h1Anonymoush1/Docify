@@ -12,8 +12,8 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 
-// Export the client for direct use
-export { client };
+// Export the client and ID for direct use
+export { client, ID };
 
 // Appwrite service IDs (update these with your actual service IDs)
 export const APPWRITE_CONFIG = {

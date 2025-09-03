@@ -1,180 +1,271 @@
-# Docify
+# Docify - AI-Powered Document Analysis
 
-A modern documentation platform built for the [Appwrite Sites Hackathon 2025](https://hackathon.appwrite.network). Docify combines the power of SvelteKit frontend with Appwrite's backend services to create a seamless documentation experience.
+Docify is a web application that allows users to analyze any website using AI-powered content extraction and visualization. Users can input a URL and instructions, and the system will scrape the content, analyze it with Hugging Face's LLM, and present the results in interactive charts and summaries.
 
-## 🚀 Project Overview
+## 🚀 Features
 
-**Hackathon Details:**
-- **Event**: Appwrite Sites Hackathon 2025
-- **Duration**: Aug 29 - Sept 12, 2025
-- **Deployed URL**: `[Your Deployed URL]`
-- **Site ID**: `[Your Site ID]`
+- **Universal Web Scraping**: Extract content from any website
+- **AI-Powered Analysis**: Uses Hugging Face's Mistral model for intelligent analysis
+- **Interactive Visualizations**: Automatic generation of Mermaid diagrams and charts
+- **Flexible Content Types**: Supports summaries, code examples, API references, guides, and more
+- **Responsive Design**: Works on all devices with adaptive grid layouts
+- **Real-time Processing**: Live status updates during document processing
 
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework**: SvelteKit 2.16.0 with Svelte 5.0
-- **Language**: JavaScript/TypeScript
-- **Styling**: Custom CSS with CSS Variables
-- **Build Tool**: Vite 6.0
-- **Package Manager**: npm
-
-### Backend & Services
-- **Backend-as-a-Service**: Appwrite Cloud
-- **Endpoint**: `[Your Appwrite Endpoint]`
-- **Project ID**: `[Your Project ID]`
-- **Project Name**: `[Your Project Name]`
-
-### Development Tools
-- **Code Quality**: Prettier with Svelte plugin
-- **Type Checking**: TypeScript 5.5.3
-- **Linting**: Svelte-check 4.0.0
-
-## 📁 Project Structure
+## 🏗️ Architecture
 
 ```
-Docify/
-├── website/              # SvelteKit Frontend Application
-│   ├── src/
-│   │   ├── app.css      # Global styles with custom CSS variables
-│   │   ├── app.html     # HTML template
-│   │   ├── lib/
-│   │   │   └── appwrite.js  # Appwrite client configuration
-│   │   └── routes/
-│   │       └── +page.svelte # Main page component
-│   ├── static/          # Static assets
-│   ├── package.json     # Dependencies and scripts
-│   ├── svelte.config.js # SvelteKit configuration
-│   ├── vite.config.js   # Vite build configuration
-│   └── .env             # Environment variables (gitignored)
-├── functions/           # Appwrite Functions Directory
-├── docs/               # Project Documentation
-├── .gitignore          # Git ignore rules
-└── README.md           # This file
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   User Input    │    │   Web Scraper   │    │   LLM Analyzer  │
+│   (Frontend)    │───▶│   (Appwrite     │───▶│   (Appwrite     │
+│                 │    │   Function)     │    │   Function)     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Document DB   │    │   Analysis DB   │    │   Results View  │
+│   (Appwrite)    │    │   (Appwrite)    │    │   (Frontend)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+## 📋 Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Appwrite account and project
+- Hugging Face API token
+
+## 🛠️ Setup Instructions
+
+### 1. Appwrite Project Setup
+
+1. Create a new project on [Appwrite Cloud](https://cloud.appwrite.io)
+2. Note your Project ID and API Endpoint
+3. Enable the following services:
+   - Databases
+   - Functions
+   - Storage (optional)
+
+### 2. Database Configuration
+
+Create the following collections in your Appwrite database:
+
+#### Documents Collection
+```json
+{
+  "name": "documents",
+  "permissions": ["create", "read", "update"],
+  "attributes": [
+    {"key": "url", "type": "string", "required": true},
+    {"key": "instructions", "type": "string", "required": true},
+    {"key": "title", "type": "string", "required": false},
+    {"key": "status", "type": "enum", "elements": ["pending", "scraping", "analyzing", "completed", "failed"], "required": true},
+    {"key": "user_id", "type": "string", "required": true},
+    {"key": "scraped_content", "type": "string", "required": false}
+  ]
+}
+```
+
+#### Analysis Results Collection
+```json
+{
+  "name": "analysis_results",
+  "permissions": ["create", "read"],
+  "attributes": [
+    {"key": "document_id", "type": "string", "required": true},
+    {"key": "summary", "type": "string", "required": true},
+    {"key": "charts", "type": "array", "required": true},
+    {"key": "raw_response", "type": "string", "required": false},
+    {"key": "processing_time", "type": "integer", "required": false}
+  ]
+}
+```
+
+### 3. Environment Variables
+
+Create a `.env.local` file in the `docify-website` directory:
+
+```env
+# Appwrite Configuration
+NEXT_PUBLIC_APPWRITE_ENDPOINT=https://your-region.cloud.appwrite.io/v1
+NEXT_PUBLIC_APPWRITE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_APPWRITE_DATABASE_ID=your-database-id
+NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID=documents
+NEXT_PUBLIC_APPWRITE_ANALYSIS_COLLECTION_ID=analysis_results
+
+# Hugging Face API
+HUGGINGFACE_ACCESS_TOKEN=your-huggingface-token
+
+# Appwrite Server-side (for API routes)
+APPWRITE_ENDPOINT=https://your-region.cloud.appwrite.io/v1
+APPWRITE_PROJECT_ID=your-project-id
+APPWRITE_API_KEY=your-server-api-key
+DATABASE_ID=your-database-id
+DOCUMENTS_COLLECTION_ID=documents
+ANALYSIS_COLLECTION_ID=analysis_results
+```
+
+### 4. Deploy Functions
+
+Deploy the Appwrite functions using the Appwrite CLI:
+
+```bash
+# Install Appwrite CLI
+npm install -g appwrite-cli
+
+# Login to Appwrite
+appwrite login
+
+# Deploy functions
+appwrite deploy function
+```
+
+Or deploy manually through the Appwrite Console by uploading the function code.
+
+### 5. Frontend Setup
+
+```bash
+cd docify-website
+npm install
+npm run dev
+```
+
+## 🎯 Usage
+
+### Creating a Document
+
+1. Navigate to `/documents` in your application
+2. Enter a URL you want to analyze
+3. Provide analysis instructions (e.g., "Create a visual overview of the API endpoints")
+4. Click "Create Document"
+
+### Analysis Results
+
+The system will:
+1. **Scrape** the website content
+2. **Analyze** it using AI
+3. **Generate** multiple content blocks including:
+   - Summary of the document
+   - Mermaid diagrams and charts
+   - Code examples
+   - Key points and highlights
+   - API references
+   - Step-by-step guides
+
+### Content Block Types
+
+- **Summary**: High-level overview
+- **Mermaid**: Visual diagrams and flowcharts
+- **Code**: Code examples with syntax highlighting
+- **Key Points**: Important highlights and takeaways
+- **API Reference**: API documentation
+- **Guide**: Step-by-step instructions
+- **Architecture**: System/component diagrams
+- **Best Practices**: Recommendations
+- **Troubleshooting**: Common issues and solutions
 
 ## 🔧 Configuration
 
-### Environment Variables
-Create a `.env` file in the `website/` directory:
+### Function Environment Variables
 
-```env
-PUBLIC_APPWRITE_ENDPOINT=[Your Appwrite Endpoint]
-PUBLIC_APPWRITE_PROJECT_ID=[Your Project ID]
-PUBLIC_APPWRITE_PROJECT_NAME=[Your Project Name]
+#### Document Scraper Function
+- `DATABASE_ID`: Your database ID
+- `DOCUMENTS_COLLECTION_ID`: Documents collection ID
+- `ANALYSIS_COLLECTION_ID`: Analysis results collection ID
+
+#### LLM Analyzer Function
+- `DATABASE_ID`: Your database ID
+- `DOCUMENTS_COLLECTION_ID`: Documents collection ID
+- `ANALYSIS_COLLECTION_ID`: Analysis results collection ID
+- `HUGGINGFACE_ACCESS_TOKEN`: Your Hugging Face API token
+
+### Customizing the LLM Prompt
+
+Edit the `createAnalysisPrompt` function in `functions/llm-analyzer/src/main.js` to customize how the AI analyzes documents.
+
+## 📊 API Endpoints
+
+### POST `/api/scrape`
+Triggers the document scraping process.
+
+**Request Body:**
+```json
+{
+  "documentId": "document-id",
+  "url": "https://example.com"
+}
 ```
 
-### Appwrite Integration
-The project uses the Appwrite Web SDK for:
-- Client initialization and configuration
-- Database operations
-- User authentication (ready for implementation)
-- Real-time subscriptions (ready for implementation)
+**Response:**
+```json
+{
+  "success": true,
+  "executionId": "execution-id",
+  "message": "Document scraping started successfully"
+}
+```
 
-## 🚦 Getting Started
+## 🐛 Troubleshooting
 
-### Prerequisites
-- Node.js (Latest LTS version)
-- npm or yarn
-- Git
+### Common Issues
 
-### Installation
+1. **Scraping Fails**: Some websites block scraping. Try with different URLs or check if the site has anti-bot measures.
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd Docify
-   ```
+2. **LLM Analysis Fails**: Check your Hugging Face API token and ensure you have sufficient API credits.
 
-2. **Install dependencies**
-   ```bash
-   cd website
-   npm install
-   ```
+3. **Database Errors**: Verify your collection permissions and database configuration.
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Appwrite configuration
-   ```
+4. **Function Timeouts**: Large documents may take longer to process. Consider increasing function timeout limits.
 
-4. **Start development server**
-   ```bash
-   npm run dev
-   ```
+### Debug Mode
 
-5. **Open your browser**
-   Navigate to `http://localhost:5173`
+Enable debug logging by setting the log level in your functions:
 
-### Available Scripts
+```javascript
+log('Debug information here');
+```
 
-In the `website/` directory:
+## 🔒 Security
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run check` - Run Svelte type checking
-- `npm run check:watch` - Run type checking in watch mode
+- All functions require proper authentication
+- Database collections have user-based permissions
+- API keys are stored securely as environment variables
+- Web scraping respects robots.txt (when possible)
 
-## 🌐 Deployment
+## 🚀 Deployment
 
-The project is deployed on **Appwrite Sites** with automatic deployments from the main branch:
+### Production Deployment
 
-- **Production URL**: `[Your Production URL]`
-- **Platform**: Appwrite Sites (Cloud)
-- **Domain**: `.appwrite.network` subdomain
+1. Set up production environment variables
+2. Deploy functions to Appwrite
+3. Build and deploy the Next.js application
+4. Configure custom domain (optional)
 
-## 🎯 Hackathon Compliance
+### Scaling Considerations
 
-This project meets all Appwrite Sites Hackathon requirements:
-
-- ✅ **Built from scratch** during hackathon period
-- ✅ **Solo project** (1 team member)
-- ✅ **Deployed on Appwrite Sites** (mandatory requirement)
-- ✅ **Open source** with public GitHub repository
-- ✅ **Modern tech stack** with AI tools assistance allowed
-
-## 🏆 Judging Criteria Focus
-
-The project will be evaluated on:
-
-1. **Impact of Idea**: Creating a comprehensive documentation platform
-2. **Creativity in Design**: Modern UI/UX with SvelteKit and custom CSS theming
-3. **Technical Execution**: Clean code, proper architecture, and Appwrite integration
-
-## 📦 Key Dependencies
-
-### Production Dependencies
-- `appwrite: ^16.1.0` - Appwrite Web SDK
-- `@appwrite.io/pink-icons: ^0.25.0` - Appwrite icon library
-- `@sveltejs/adapter-node: ^5.2.12` - Node.js adapter for deployment
-
-### Development Dependencies
-- `@sveltejs/kit: ^2.16.0` - SvelteKit framework
-- `svelte: ^5.0.0` - Svelte compiler
-- `typescript: ^5.5.3` - TypeScript support
-- `prettier-plugin-svelte: ^3.3.3` - Code formatting
-
-## 🔮 Future Enhancements
-
-Planned features for the documentation platform:
-- User authentication and authorization
-- Document creation and editing
-- Real-time collaboration
-- File upload and management
-- Search functionality
-- Team workspaces
-- API documentation generator
-- Version control for documents
-
-## 📝 License
-
-MIT License - see [LICENSE](website/LICENSE) file for details.
+- Function execution time limits
+- Database read/write limits
+- API rate limits for external services
+- Storage limits for large documents
 
 ## 🤝 Contributing
 
-This is a hackathon project built for the Appwrite Sites Hackathon 2025. The project showcases modern web development practices with SvelteKit and Appwrite integration.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Check the troubleshooting section above
+- Review the Appwrite documentation
+- Create an issue in the repository
 
 ---
 
-**Built with ❤️ for the Appwrite Sites Hackathon 2025**
+Built with ❤️ using Appwrite, Next.js, and Hugging Face

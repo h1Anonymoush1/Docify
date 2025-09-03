@@ -247,6 +247,23 @@ export const Header = () => {
                   />
                 </>
               )}
+              {routes["/documents"] && isAuthenticated && (
+                <>
+                  <ToggleButton
+                    className="s-flex-hide"
+                    prefixIcon="clipboard"
+                    href="/documents"
+                    label="Documents"
+                    selected={pathname.startsWith("/documents")}
+                  />
+                  <ToggleButton
+                    className="s-flex-show"
+                    prefixIcon="clipboard"
+                    href="/documents"
+                    selected={pathname.startsWith("/documents")}
+                  />
+                </>
+              )}
             </Flex>
           </Flex>
         </Flex>
