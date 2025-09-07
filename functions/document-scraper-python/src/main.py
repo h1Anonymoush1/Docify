@@ -152,443 +152,441 @@ def smart_fetch_html(url, timeout=15):
 
 def detect_content_type_from_response(response, url):
     """Detect the content type of a response."""
-        # Check Content-Type header
+    # Check Content-Type header
     content_type_header = response.headers.get('Content-Type', '').lower()
 
-        # Check URL extension
+    # Check URL extension
     url_path = urlparse(url).path.lower()
 
-        # Determine content type
-        if 'application/pdf' in content_type_header or url_path.endswith('.pdf'):
-            return 'pdf'
-        elif 'application/msword' in content_type_header or url_path.endswith(('.doc', '.docx')):
-            return 'doc'
-        elif 'application/vnd.ms-excel' in content_type_header or url_path.endswith(('.xls', '.xlsx')):
-            return 'excel'
-        elif 'text/csv' in content_type_header or url_path.endswith('.csv'):
-            return 'csv'
-        elif 'application/json' in content_type_header or url_path.endswith('.json'):
-            return 'json'
-        elif 'application/xml' in content_type_header or url_path.endswith(('.xml', '.rss', '.atom')):
-            return 'xml'
-        elif 'text/plain' in content_type_header or url_path.endswith(('.txt', '.md')):
-            return 'text'
-    elif 'text/html' in content_type_header or url.endswith(('.html', '.htm')):
-            return 'html'
-        else:
-            # Default to HTML for web pages
-            return 'html'
+    # Determine content type
+    if 'application/pdf' in content_type_header or url_path.endswith('.pdf'):
+        return 'pdf'
+    elif 'application/msword' in content_type_header or url_path.endswith(('.doc', '.docx')):
+        return 'doc'
+    elif 'application/vnd.ms-excel' in content_type_header or url_path.endswith(('.xls', '.xlsx')):
+        return 'excel'
+    elif 'text/csv' in content_type_header or url_path.endswith('.csv'):
+        return 'csv'
+    elif 'application/json' in content_type_header or url_path.endswith('.json'):
+        return 'json'
+    elif 'application/xml' in content_type_header or url_path.endswith(('.xml', '.rss', '.atom')):
+        return 'xml'
+    elif 'text/plain' in content_type_header or url_path.endswith(('.txt', '.md')):
+        return 'text'
+    else:
+        # Default to HTML for web pages
+        return 'html'
 
 def extract_content_by_type(response, content_type, url):
-        """Extract content based on the detected content type."""
-        try:
-            if content_type == 'pdf':
+    """Extract content based on the detected content type."""
+    try:
+        if content_type == 'pdf':
             return extract_pdf_content(response, url)
-            elif content_type == 'doc':
+        elif content_type == 'doc':
             return extract_doc_content(response, url)
-            elif content_type == 'excel':
+        elif content_type == 'excel':
             return extract_excel_content(response, url)
-            elif content_type == 'csv':
+        elif content_type == 'csv':
             return extract_csv_content(response, url)
-            elif content_type == 'json':
+        elif content_type == 'json':
             return extract_json_content(response, url)
-            elif content_type == 'xml':
+        elif content_type == 'xml':
             return extract_xml_content(response, url)
-            elif content_type == 'text':
+        elif content_type == 'text':
             return extract_text_content(response, url)
-            else:  # Default to HTML
+        else:  # Default to HTML
             return extract_html_content(response, url)
-        except Exception as e:
+    except Exception as e:
         print(f"Error extracting {content_type} content from {url}: {e}")
-            return None
+        return None
 
 def extract_pdf_content(response, url):
-        """Extract content from PDF files."""
-        try:
+    """Extract content from PDF files."""
+    try:
         pdf_file = BytesIO(response.content)
-            pdf_reader = PyPDF2.PdfReader(pdf_file)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
 
-            content = []
-            for page in pdf_reader.pages[:10]:  # Limit to first 10 pages
-                text = page.extract_text()
-                if text.strip():
-                    content.append(text)
+        content = []
+        for page in pdf_reader.pages[:10]:  # Limit to first 10 pages
+            text = page.extract_text()
+            if text.strip():
+                content.append(text)
 
-            full_content = '\n\n'.join(content)
-
-            return {
-            'url': url,
-            'title': extract_title_from_url(url),
-                'description': f'PDF Document - {len(pdf_reader.pages)} pages',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'pdf',
-                'metadata': {
-                    'pages': len(pdf_reader.pages),
-                'file_size': len(response.content)
-                }
-            }
-        except Exception as e:
-        print(f"Error extracting PDF content: {e}")
-            return None
-
-def extract_doc_content(response, url):
-        """Extract content from Word documents."""
-        try:
-        doc_file = BytesIO(response.content)
-            doc = docx.Document(doc_file)
-
-            content = []
-            for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    content.append(paragraph.text)
-
-            full_content = '\n\n'.join(content)
-
-            return {
-            'url': url,
-            'title': extract_title_from_url(url),
-                'description': f'Word Document - {len(doc.paragraphs)} paragraphs',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'doc',
-                'metadata': {
-                    'paragraphs': len(doc.paragraphs),
-                'file_size': len(response.content)
-                }
-            }
-        except Exception as e:
-        print(f"Error extracting DOC content: {e}")
-            return None
-
-def extract_excel_content(response, url):
-        """Extract content from Excel files."""
-        try:
-        excel_file = BytesIO(response.content)
-            df = pd.read_excel(excel_file)
-
-            # Convert DataFrame to readable text
-            content = []
-            content.append(f"Sheet: {df.columns.tolist()}")
-            content.append("Data Preview:")
-            content.append(str(df.head(20)))  # First 20 rows
-
-            full_content = '\n\n'.join(content)
-
-            return {
-            'url': url,
-            'title': extract_title_from_url(url),
-                'description': f'Excel Spreadsheet - {len(df)} rows, {len(df.columns)} columns',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'excel',
-                'metadata': {
-                    'rows': len(df),
-                    'columns': len(df.columns),
-                'file_size': len(response.content)
-                }
-            }
-        except Exception as e:
-        print(f"Error extracting Excel content: {e}")
-            return None
-
-def extract_csv_content(response, url):
-        """Extract content from CSV files."""
-        try:
-            # Try to detect encoding
-        detected = chardet.detect(response.content)
-            encoding = detected.get('encoding', 'utf-8')
-
-        csv_text = response.content.decode(encoding, errors='ignore')
-            lines = csv_text.split('\n')[:50]  # First 50 lines
-
-            content = []
-            content.append("CSV Data Preview:")
-            content.extend(lines[:20])  # First 20 lines
-
-            full_content = '\n'.join(content)
-
-            return {
-            'url': url,
-            'title': extract_title_from_url(url),
-                'description': f'CSV File - {len(lines)} lines',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'csv',
-                'metadata': {
-                    'lines': len(lines),
-                    'encoding': encoding,
-                'file_size': len(response.content)
-                }
-            }
-        except Exception as e:
-        print(f"Error extracting CSV content: {e}")
-            return None
-
-    def extract_json_content(self, response):
-        """Extract content from JSON files."""
-        try:
-            # Try to detect encoding
-            detected = chardet.detect(response.body)
-            encoding = detected.get('encoding', 'utf-8')
-
-            json_text = response.body.decode(encoding, errors='ignore')
-            json_data = json.loads(json_text)
-
-            # Convert JSON to readable text
-            content = []
-            content.append("JSON Structure:")
-            content.append(json.dumps(json_data, indent=2)[:2000])  # First 2000 chars
-
-            full_content = '\n\n'.join(content)
-
-            return {
-                'url': response.url,
-                'title': self.extract_title_from_url(response.url),
-                'description': f'JSON Data - {len(json_text)} characters',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'json',
-                'metadata': {
-                    'encoding': encoding,
-                    'file_size': len(response.body)
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"Error extracting JSON content: {e}")
-            return None
-
-    def extract_xml_content(self, response):
-        """Extract content from XML/RSS files."""
-        try:
-            # Try to detect encoding
-            detected = chardet.detect(response.body)
-            encoding = detected.get('encoding', 'utf-8')
-
-            xml_text = response.body.decode(encoding, errors='ignore')
-
-            # Check if it's an RSS/Atom feed
-            if '<rss' in xml_text.lower() or '<feed' in xml_text.lower():
-                return self.extract_feed_content(xml_text, response.url)
-
-            # Regular XML parsing
-            from xml.etree import ElementTree as ET
-            root = ET.fromstring(xml_text)
-
-            content = []
-            content.append("XML Structure:")
-            content.append(self.xml_to_text(root, level=0)[:2000])
-
-            full_content = '\n\n'.join(content)
-
-            return {
-                'url': response.url,
-                'title': self.extract_title_from_url(response.url),
-                'description': f'XML Document - {len(xml_text)} characters',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'xml',
-                'metadata': {
-                    'encoding': encoding,
-                    'file_size': len(response.body)
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"Error extracting XML content: {e}")
-            return None
-
-    def extract_feed_content(self, xml_text, url):
-        """Extract content from RSS/Atom feeds."""
-        try:
-            feed = feedparser.parse(xml_text)
-
-            content = []
-            content.append(f"Feed Title: {feed.feed.get('title', 'Unknown')}")
-            content.append(f"Feed Description: {feed.feed.get('description', '')}")
-            content.append(f"Total Entries: {len(feed.entries)}")
-
-            # Add recent entries
-            for i, entry in enumerate(feed.entries[:10]):
-                content.append(f"\n--- Entry {i+1} ---")
-                content.append(f"Title: {entry.get('title', '')}")
-                content.append(f"Link: {entry.get('link', '')}")
-                if 'summary' in entry:
-                    content.append(f"Summary: {entry.summary[:500]}...")
-
-            full_content = '\n'.join(content)
-
-            return {
-                'url': url,
-                'title': feed.feed.get('title', self.extract_title_from_url(url)),
-                'description': f'RSS/Atom Feed - {len(feed.entries)} entries',
-                'content': full_content,
-                'word_count': len(full_content.split()),
-                'content_type': 'feed',
-                'metadata': {
-                    'entries': len(feed.entries),
-                    'feed_type': 'rss' if '<rss' in xml_text.lower() else 'atom'
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"Error extracting feed content: {e}")
-            return None
-
-    def extract_text_content(self, response):
-        """Extract content from plain text files."""
-        try:
-            # Try to detect encoding
-            detected = chardet.detect(response.body)
-            encoding = detected.get('encoding', 'utf-8')
-
-            text_content = response.body.decode(encoding, errors='ignore')
-
-            return {
-                'url': response.url,
-                'title': self.extract_title_from_url(response.url),
-                'description': f'Text File - {len(text_content)} characters',
-                'content': text_content[:10000],  # Limit to 10K chars
-                'word_count': len(text_content.split()),
-                'content_type': 'text',
-                'metadata': {
-                    'encoding': encoding,
-                    'file_size': len(response.body)
-                }
-            }
-        except Exception as e:
-            self.logger.error(f"Error extracting text content: {e}")
-            return None
-
-    def extract_html_content(self, response):
-        """Extract content from HTML pages (original logic)."""
-        title = self.extract_title(response)
-        description = self.extract_description(response)
-        content = self.extract_main_content(response)
+        full_content = '\n\n'.join(content)
 
         return {
-            'url': response.url,
-            'title': title,
-            'description': description,
-            'content': content,
-            'word_count': len(content.split()) if content else 0,
-            'content_type': 'html'
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'PDF Document - {len(pdf_reader.pages)} pages',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'pdf',
+            'metadata': {
+                'pages': len(pdf_reader.pages),
+                'file_size': len(response.content)
+            }
         }
+    except Exception as e:
+        print(f"Error extracting PDF content: {e}")
+        return None
 
-    def extract_title_from_url(self, url):
-        """Extract a title from URL when no other title is available."""
-        path = urlparse(url).path
-        filename = path.split('/')[-1]
-        if '.' in filename:
-            filename = filename.split('.')[0]
-        return filename.replace('-', ' ').replace('_', ' ').title() or 'Document'
+def extract_doc_content(response, url):
+    """Extract content from Word documents."""
+    try:
+        doc_file = BytesIO(response.content)
+        doc = docx.Document(doc_file)
 
-    def xml_to_text(self, element, level=0):
-        """Convert XML element to readable text."""
-        indent = "  " * level
-        text = f"{indent}<{element.tag}>"
+        content = []
+        for paragraph in doc.paragraphs:
+            if paragraph.text.strip():
+                content.append(paragraph.text)
 
-        if element.text and element.text.strip():
-            text += f" {element.text.strip()}"
+        full_content = '\n\n'.join(content)
 
-        for child in element:
-            text += "\n" + self.xml_to_text(child, level + 1)
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Word Document - {len(doc.paragraphs)} paragraphs',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'doc',
+            'metadata': {
+                'paragraphs': len(doc.paragraphs),
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting DOC content: {e}")
+        return None
 
-        if not element.text or not element.text.strip():
-            text += f"{indent}</{element.tag}>"
+def extract_excel_content(response, url):
+    """Extract content from Excel files."""
+    try:
+        excel_file = BytesIO(response.content)
+        df = pd.read_excel(excel_file)
 
-        return text
+        # Convert DataFrame to readable text
+        content = []
+        content.append(f"Sheet: {df.columns.tolist()}")
+        content.append("Data Preview:")
+        content.append(str(df.head(20)))  # First 20 rows
 
-    def extract_title(self, response):
-        """Extract page title."""
-        title_selectors = [
-            'title::text',
-            'h1::text',
-            'h1 a::text',
-            '[property="og:title"]::attr(content)',
-            'meta[name="title"]::attr(content)'
-        ]
+        full_content = '\n\n'.join(content)
 
-        for selector in title_selectors:
-            title = response.css(selector).get()
-            if title:
-                return title.strip()
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Excel Spreadsheet - {len(df)} rows, {len(df.columns)} columns',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'excel',
+            'metadata': {
+                'rows': len(df),
+                'columns': len(df.columns),
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting Excel content: {e}")
+        return None
 
-        return response.url.split('/')[-1] or 'Untitled Page'
+def extract_csv_content(response, url):
+    """Extract content from CSV files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
 
-    def extract_description(self, response):
-        """Extract page description."""
-        desc_selectors = [
-            'meta[name="description"]::attr(content)',
-            'meta[property="og:description"]::attr(content)',
-            'meta[name="twitter:description"]::attr(content)'
-        ]
+        csv_text = response.content.decode(encoding, errors='ignore')
+        lines = csv_text.split('\n')[:50]  # First 50 lines
 
-        for selector in desc_selectors:
-            desc = response.css(selector).get()
-            if desc:
-                return desc.strip()
+        content = []
+        content.append("CSV Data Preview:")
+        content.extend(lines[:20])  # First 20 lines
 
+        full_content = '\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'CSV File - {len(lines)} lines',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'csv',
+            'metadata': {
+                'lines': len(lines),
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting CSV content: {e}")
+        return None
+
+def extract_json_content(response, url):
+    """Extract content from JSON files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        json_text = response.content.decode(encoding, errors='ignore')
+        json_data = json.loads(json_text)
+
+        # Convert JSON to readable text
+        content = []
+        content.append("JSON Structure:")
+        content.append(json.dumps(json_data, indent=2)[:2000])  # First 2000 chars
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'JSON Data - {len(json_text)} characters',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'json',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting JSON content: {e}")
+        return None
+
+def extract_xml_content(response, url):
+    """Extract content from XML/RSS files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        xml_text = response.content.decode(encoding, errors='ignore')
+
+        # Check if it's an RSS/Atom feed
+        if '<rss' in xml_text.lower() or '<feed' in xml_text.lower():
+            return extract_feed_content(xml_text, url)
+
+        # Regular XML parsing
+        from xml.etree import ElementTree as ET
+        root = ET.fromstring(xml_text)
+
+        content = []
+        content.append("XML Structure:")
+        content.append(xml_to_text(root, level=0)[:2000])
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'XML Document - {len(xml_text)} characters',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'xml',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting XML content: {e}")
+        return None
+
+def extract_feed_content(xml_text, url):
+    """Extract content from RSS/Atom feeds."""
+    try:
+        feed = feedparser.parse(xml_text)
+
+        content = []
+        content.append(f"Feed Title: {feed.feed.get('title', 'Unknown')}")
+        content.append(f"Feed Description: {feed.feed.get('description', '')}")
+        content.append(f"Total Entries: {len(feed.entries)}")
+
+        # Add recent entries
+        for i, entry in enumerate(feed.entries[:10]):
+            content.append(f"\n--- Entry {i+1} ---")
+            content.append(f"Title: {entry.get('title', '')}")
+            content.append(f"Link: {entry.get('link', '')}")
+            if 'summary' in entry:
+                content.append(f"Summary: {entry.summary[:500]}...")
+
+        full_content = '\n'.join(content)
+
+        return {
+            'url': url,
+            'title': feed.feed.get('title', extract_title_from_url(url)),
+            'description': f'RSS/Atom Feed - {len(feed.entries)} entries',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'feed',
+            'metadata': {
+                'entries': len(feed.entries),
+                'feed_type': 'rss' if '<rss' in xml_text.lower() else 'atom'
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting feed content: {e}")
+        return None
+
+def extract_text_content(response, url):
+    """Extract content from plain text files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        text_content = response.content.decode(encoding, errors='ignore')
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Text File - {len(text_content)} characters',
+            'content': text_content[:10000],  # Limit to 10K chars
+            'word_count': len(text_content.split()),
+            'content_type': 'text',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting text content: {e}")
+        return None
+
+def extract_html_content(response, url):
+    """Extract content from HTML pages."""
+    title = extract_title(response, url)
+    description = extract_description(response)
+    content = extract_main_content(response)
+
+    return {
+        'url': url,
+        'title': title,
+        'description': description,
+        'content': content,
+        'word_count': len(content.split()) if content else 0,
+        'content_type': 'html'
+    }
+
+def extract_title_from_url(url):
+    """Extract a title from URL when no other title is available."""
+    path = urlparse(url).path
+    filename = path.split('/')[-1]
+    if '.' in filename:
+        filename = filename.split('.')[0]
+    return filename.replace('-', ' ').replace('_', ' ').title() or 'Document'
+
+def xml_to_text(element, level=0):
+    """Convert XML element to readable text."""
+    indent = "  " * level
+    text = f"{indent}<{element.tag}>"
+
+    if element.text and element.text.strip():
+        text += f" {element.text.strip()}"
+
+    for child in element:
+        text += "\n" + xml_to_text(child, level + 1)
+
+    if not element.text or not element.text.strip():
+        text += f"{indent}</{element.tag}>"
+
+    return text
+
+def extract_title(response, url):
+    """Extract page title."""
+    title_selectors = [
+        'title::text',
+        'h1::text',
+        'h1 a::text',
+        '[property="og:title"]::attr(content)',
+        'meta[name="title"]::attr(content)'
+    ]
+
+    for selector in title_selectors:
+        title = response.css(selector).get()
+        if title:
+            return title.strip()
+
+    return url.split('/')[-1] or 'Untitled Page'
+
+def extract_description(response):
+    """Extract page description."""
+    desc_selectors = [
+        'meta[name="description"]::attr(content)',
+        'meta[property="og:description"]::attr(content)',
+        'meta[name="twitter:description"]::attr(content)'
+    ]
+
+    for selector in desc_selectors:
+        desc = response.css(selector).get()
+        if desc:
+            return desc.strip()
+
+    return ''
+
+def extract_main_content(response):
+    """Extract main content from the page."""
+    # Try various content selectors in order of preference
+    content_selectors = [
+        'main',
+        '[role="main"]',
+        '.content',
+        '.main-content',
+        '#content',
+        '#main',
+        'article',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.page-content',
+        '.text-content'
+    ]
+
+    for selector in content_selectors:
+        content_elements = response.css(selector)
+        if content_elements:
+            content = content_elements.css('::text').getall()
+            if content:
+                combined_content = ' '.join(content)
+                if len(combined_content.strip()) > 100:  # Minimum content length
+                    return clean_content(combined_content)
+
+    # Fallback: extract all paragraph text
+    paragraphs = response.css('p::text').getall()
+    if paragraphs:
+        content = ' '.join(paragraphs)
+        if len(content.strip()) > 100:
+            return clean_content(content)
+
+    # Final fallback: extract all text from body
+    body_text = response.css('body ::text').getall()
+    combined_text = ' '.join(body_text)
+    return clean_content(combined_text)
+
+def clean_content(content):
+    """Clean and process scraped content."""
+    if not content:
         return ''
 
-    def extract_main_content(self, response):
-        """Extract main content from the page."""
-        # Try various content selectors in order of preference
-        content_selectors = [
-            'main',
-            '[role="main"]',
-            '.content',
-            '.main-content',
-            '#content',
-            '#main',
-            'article',
-            '.article-content',
-            '.post-content',
-            '.entry-content',
-            '.page-content',
-            '.text-content'
-        ]
+    # Remove excessive whitespace
+    content = re.sub(r'\s+', ' ', content)
 
-        for selector in content_selectors:
-            content_elements = response.css(selector)
-            if content_elements:
-                content = content_elements.css('::text').getall()
-                if content:
-                    combined_content = ' '.join(content)
-                    if len(combined_content.strip()) > 100:  # Minimum content length
-                        return self.clean_content(combined_content)
+    # Remove navigation and footer content
+    content = re.sub(r'\b(home|menu|navigation|footer|copyright|privacy|terms|contact|about|login|signup|register|search)\b',
+                    '', content, flags=re.IGNORECASE)
 
-        # Fallback: extract all paragraph text
-        paragraphs = response.css('p::text').getall()
-        if paragraphs:
-            content = ' '.join(paragraphs)
-            if len(content.strip()) > 100:
-                return self.clean_content(content)
+    # Remove emails, URLs, and phone numbers
+    content = re.sub(r'\S+@\S+\.\S+', '[EMAIL]', content)
+    content = re.sub(r'https?://[^\s]+', '[URL]', content)
+    content = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[PHONE]', content)
 
-        # Final fallback: extract all text from body
-        body_text = response.css('body ::text').getall()
-        combined_text = ' '.join(body_text)
-        return self.clean_content(combined_text)
+    # Remove non-printable characters
+    content = re.sub(r'[^\x20-\x7E\n\r\t]', '', content)
 
-    def clean_content(self, content):
-        """Clean and process scraped content."""
-        if not content:
-            return ''
-
-        # Remove excessive whitespace
-        content = re.sub(r'\s+', ' ', content)
-
-        # Remove navigation and footer content
-        content = re.sub(r'\b(home|menu|navigation|footer|copyright|privacy|terms|contact|about|login|signup|register|search)\b',
-                        '', content, flags=re.IGNORECASE)
-
-        # Remove emails, URLs, and phone numbers
-        content = re.sub(r'\S+@\S+\.\S+', '[EMAIL]', content)
-        content = re.sub(r'https?://[^\s]+', '[URL]', content)
-        content = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[PHONE]', content)
-
-        # Remove non-printable characters
-        content = re.sub(r'[^\x20-\x7E\n\r\t]', '', content)
-
-        return content.strip()
+    return content.strip()
 
 
 def scrape_website_with_requests(url, max_pages=10):
