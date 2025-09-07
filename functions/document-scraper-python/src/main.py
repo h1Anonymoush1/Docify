@@ -152,178 +152,178 @@ def smart_fetch_html(url, timeout=15):
 
 def detect_content_type_from_response(response, url):
     """Detect the content type of a response."""
-    # Check Content-Type header
+        # Check Content-Type header
     content_type_header = response.headers.get('Content-Type', '').lower()
 
-    # Check URL extension
+        # Check URL extension
     url_path = urlparse(url).path.lower()
 
-    # Determine content type
-    if 'application/pdf' in content_type_header or url_path.endswith('.pdf'):
-        return 'pdf'
-    elif 'application/msword' in content_type_header or url_path.endswith(('.doc', '.docx')):
-        return 'doc'
-    elif 'application/vnd.ms-excel' in content_type_header or url_path.endswith(('.xls', '.xlsx')):
-        return 'excel'
-    elif 'text/csv' in content_type_header or url_path.endswith('.csv'):
-        return 'csv'
-    elif 'application/json' in content_type_header or url_path.endswith('.json'):
-        return 'json'
-    elif 'application/xml' in content_type_header or url_path.endswith(('.xml', '.rss', '.atom')):
-        return 'xml'
-    elif 'text/plain' in content_type_header or url_path.endswith(('.txt', '.md')):
-        return 'text'
+        # Determine content type
+        if 'application/pdf' in content_type_header or url_path.endswith('.pdf'):
+            return 'pdf'
+        elif 'application/msword' in content_type_header or url_path.endswith(('.doc', '.docx')):
+            return 'doc'
+        elif 'application/vnd.ms-excel' in content_type_header or url_path.endswith(('.xls', '.xlsx')):
+            return 'excel'
+        elif 'text/csv' in content_type_header or url_path.endswith('.csv'):
+            return 'csv'
+        elif 'application/json' in content_type_header or url_path.endswith('.json'):
+            return 'json'
+        elif 'application/xml' in content_type_header or url_path.endswith(('.xml', '.rss', '.atom')):
+            return 'xml'
+        elif 'text/plain' in content_type_header or url_path.endswith(('.txt', '.md')):
+            return 'text'
     elif 'text/html' in content_type_header or url.endswith(('.html', '.htm')):
-        return 'html'
-    else:
-        # Default to HTML for web pages
-        return 'html'
+            return 'html'
+        else:
+            # Default to HTML for web pages
+            return 'html'
 
 def extract_content_by_type(response, content_type, url):
-    """Extract content based on the detected content type."""
-    try:
-        if content_type == 'pdf':
+        """Extract content based on the detected content type."""
+        try:
+            if content_type == 'pdf':
             return extract_pdf_content(response, url)
-        elif content_type == 'doc':
+            elif content_type == 'doc':
             return extract_doc_content(response, url)
-        elif content_type == 'excel':
+            elif content_type == 'excel':
             return extract_excel_content(response, url)
-        elif content_type == 'csv':
+            elif content_type == 'csv':
             return extract_csv_content(response, url)
-        elif content_type == 'json':
+            elif content_type == 'json':
             return extract_json_content(response, url)
-        elif content_type == 'xml':
+            elif content_type == 'xml':
             return extract_xml_content(response, url)
-        elif content_type == 'text':
+            elif content_type == 'text':
             return extract_text_content(response, url)
-        else:  # Default to HTML
+            else:  # Default to HTML
             return extract_html_content(response, url)
-    except Exception as e:
+        except Exception as e:
         print(f"Error extracting {content_type} content from {url}: {e}")
-        return None
+            return None
 
 def extract_pdf_content(response, url):
-    """Extract content from PDF files."""
-    try:
+        """Extract content from PDF files."""
+        try:
         pdf_file = BytesIO(response.content)
-        pdf_reader = PyPDF2.PdfReader(pdf_file)
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
 
-        content = []
-        for page in pdf_reader.pages[:10]:  # Limit to first 10 pages
-            text = page.extract_text()
-            if text.strip():
-                content.append(text)
+            content = []
+            for page in pdf_reader.pages[:10]:  # Limit to first 10 pages
+                text = page.extract_text()
+                if text.strip():
+                    content.append(text)
 
-        full_content = '\n\n'.join(content)
+            full_content = '\n\n'.join(content)
 
-        return {
+            return {
             'url': url,
             'title': extract_title_from_url(url),
-            'description': f'PDF Document - {len(pdf_reader.pages)} pages',
-            'content': full_content,
-            'word_count': len(full_content.split()),
-            'content_type': 'pdf',
-            'metadata': {
-                'pages': len(pdf_reader.pages),
+                'description': f'PDF Document - {len(pdf_reader.pages)} pages',
+                'content': full_content,
+                'word_count': len(full_content.split()),
+                'content_type': 'pdf',
+                'metadata': {
+                    'pages': len(pdf_reader.pages),
                 'file_size': len(response.content)
+                }
             }
-        }
-    except Exception as e:
+        except Exception as e:
         print(f"Error extracting PDF content: {e}")
-        return None
+            return None
 
 def extract_doc_content(response, url):
-    """Extract content from Word documents."""
-    try:
+        """Extract content from Word documents."""
+        try:
         doc_file = BytesIO(response.content)
-        doc = docx.Document(doc_file)
+            doc = docx.Document(doc_file)
 
-        content = []
-        for paragraph in doc.paragraphs:
-            if paragraph.text.strip():
-                content.append(paragraph.text)
+            content = []
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    content.append(paragraph.text)
 
-        full_content = '\n\n'.join(content)
+            full_content = '\n\n'.join(content)
 
-        return {
+            return {
             'url': url,
             'title': extract_title_from_url(url),
-            'description': f'Word Document - {len(doc.paragraphs)} paragraphs',
-            'content': full_content,
-            'word_count': len(full_content.split()),
-            'content_type': 'doc',
-            'metadata': {
-                'paragraphs': len(doc.paragraphs),
+                'description': f'Word Document - {len(doc.paragraphs)} paragraphs',
+                'content': full_content,
+                'word_count': len(full_content.split()),
+                'content_type': 'doc',
+                'metadata': {
+                    'paragraphs': len(doc.paragraphs),
                 'file_size': len(response.content)
+                }
             }
-        }
-    except Exception as e:
+        except Exception as e:
         print(f"Error extracting DOC content: {e}")
-        return None
+            return None
 
 def extract_excel_content(response, url):
-    """Extract content from Excel files."""
-    try:
+        """Extract content from Excel files."""
+        try:
         excel_file = BytesIO(response.content)
-        df = pd.read_excel(excel_file)
+            df = pd.read_excel(excel_file)
 
-        # Convert DataFrame to readable text
-        content = []
-        content.append(f"Sheet: {df.columns.tolist()}")
-        content.append("Data Preview:")
-        content.append(str(df.head(20)))  # First 20 rows
+            # Convert DataFrame to readable text
+            content = []
+            content.append(f"Sheet: {df.columns.tolist()}")
+            content.append("Data Preview:")
+            content.append(str(df.head(20)))  # First 20 rows
 
-        full_content = '\n\n'.join(content)
+            full_content = '\n\n'.join(content)
 
-        return {
+            return {
             'url': url,
             'title': extract_title_from_url(url),
-            'description': f'Excel Spreadsheet - {len(df)} rows, {len(df.columns)} columns',
-            'content': full_content,
-            'word_count': len(full_content.split()),
-            'content_type': 'excel',
-            'metadata': {
-                'rows': len(df),
-                'columns': len(df.columns),
+                'description': f'Excel Spreadsheet - {len(df)} rows, {len(df.columns)} columns',
+                'content': full_content,
+                'word_count': len(full_content.split()),
+                'content_type': 'excel',
+                'metadata': {
+                    'rows': len(df),
+                    'columns': len(df.columns),
                 'file_size': len(response.content)
+                }
             }
-        }
-    except Exception as e:
+        except Exception as e:
         print(f"Error extracting Excel content: {e}")
-        return None
+            return None
 
 def extract_csv_content(response, url):
-    """Extract content from CSV files."""
-    try:
-        # Try to detect encoding
+        """Extract content from CSV files."""
+        try:
+            # Try to detect encoding
         detected = chardet.detect(response.content)
-        encoding = detected.get('encoding', 'utf-8')
+            encoding = detected.get('encoding', 'utf-8')
 
         csv_text = response.content.decode(encoding, errors='ignore')
-        lines = csv_text.split('\n')[:50]  # First 50 lines
+            lines = csv_text.split('\n')[:50]  # First 50 lines
 
-        content = []
-        content.append("CSV Data Preview:")
-        content.extend(lines[:20])  # First 20 lines
+            content = []
+            content.append("CSV Data Preview:")
+            content.extend(lines[:20])  # First 20 lines
 
-        full_content = '\n'.join(content)
+            full_content = '\n'.join(content)
 
-        return {
+            return {
             'url': url,
             'title': extract_title_from_url(url),
-            'description': f'CSV File - {len(lines)} lines',
-            'content': full_content,
-            'word_count': len(full_content.split()),
-            'content_type': 'csv',
-            'metadata': {
-                'lines': len(lines),
-                'encoding': encoding,
+                'description': f'CSV File - {len(lines)} lines',
+                'content': full_content,
+                'word_count': len(full_content.split()),
+                'content_type': 'csv',
+                'metadata': {
+                    'lines': len(lines),
+                    'encoding': encoding,
                 'file_size': len(response.content)
+                }
             }
-        }
-    except Exception as e:
+        except Exception as e:
         print(f"Error extracting CSV content: {e}")
-        return None
+            return None
 
     def extract_json_content(self, response):
         """Extract content from JSON files."""
