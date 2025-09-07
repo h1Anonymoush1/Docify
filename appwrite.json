@@ -75,11 +75,12 @@
             "vars": {
                 "DATABASE_ID": "docify_db",
                 "DOCUMENTS_COLLECTION_ID": "documents_table",
-                "ANALYSIS_COLLECTION_ID": "analysis_results"
+                "ANALYSIS_COLLECTION_ID": "analysis_results",
+                "MAX_PAGES_TO_CRAWL": "10"
             },
-            "events": [],
+            "events": ["databases.docify_db.collections.documents_table.documents.create"],
             "schedule": "",
-            "timeout": 300
+            "timeout": 900
         }
     ],
     "sites": [
