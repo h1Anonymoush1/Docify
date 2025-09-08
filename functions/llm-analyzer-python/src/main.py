@@ -21,6 +21,7 @@ from appwrite.query import Query
 import requests
 from bs4 import BeautifulSoup
 import chardet
+from openai import OpenAI
 
 # Environment variables
 DATABASE_ID = os.environ.get('DATABASE_ID', 'docify_db')
@@ -37,7 +38,9 @@ client.set_key(os.environ.get('APPWRITE_API_KEY'))
 databases = Databases(client)
 
 # Hugging Face API configuration
-HF_API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+# Use the OpenAI-compatible router endpoint
+HF_BASE_URL = "https://router.huggingface.co/v1"
+HF_MODEL = "meta-llama/Llama-3.1-8B-Instruct:cerebras"
 
 
 def create_analysis_prompt(scraped_data: Dict[str, Any], user_instructions: str) -> str:
@@ -223,67 +226,103 @@ def optimize_block_sizes(blocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
     """
-    Call Hugging Face API with retry logic
+    Call Hugging Face API using OpenAI client with retry logic and comprehensive logging
     """
     max_retries = 3
     base_delay = 1  # 1 second
 
     try:
-        print(f"Calling Hugging Face API... (attempt {retry_count + 1}/{max_retries + 1})")
+        print(f"🤖 API CALL ATTEMPT {retry_count + 1}/{max_retries + 1}")
+        print(f"   Prompt length: {len(prompt)} characters")
+        print(f"   Model: {HF_MODEL}")
+        print(f"   Base URL: {HF_BASE_URL}")
+        print("   Using Llama 3.1 8B model via Cerebras")
 
         if not HUGGINGFACE_ACCESS_TOKEN:
+            print("❌ FAIL: HUGGINGFACE_ACCESS_TOKEN not configured")
             raise ValueError("HUGGINGFACE_ACCESS_TOKEN not configured")
 
-        # Use the Inference API for free tier
-        api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
-        headers = {
-            "Authorization": f"Bearer {HUGGINGFACE_ACCESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
+        print("✓ Token validated")
 
-        payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": 4000,
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "do_sample": True,
-                "return_full_text": False
-            }
-        }
+        # Initialize OpenAI client with Hugging Face router
+        print("🔧 Initializing OpenAI client...")
+        client = OpenAI(
+            base_url=HF_BASE_URL,
+            api_key=HUGGINGFACE_ACCESS_TOKEN,
+        )
 
-        response = requests.post(api_url, headers=headers, json=payload, timeout=60)
+        print("📤 Sending request to Hugging Face API...")
+        print(f"   Timeout: 60s")
+        print(f"   Max tokens: 2000")
+        print(f"   Authorization: Bearer {HUGGINGFACE_ACCESS_TOKEN[:10]}...")
 
-        if response.status_code != 200:
-            raise ValueError(f"API request failed with status {response.status_code}: {response.text}")
+        start_api_call = time.time()
 
-        result = response.json()
+        # Create chat completion
+        completion = client.chat.completions.create(
+            model=HF_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            max_tokens=2000,
+            temperature=0.7,
+            top_p=0.95
+        )
 
-        if isinstance(result, list) and len(result) > 0:
-            generated_text = result[0].get('generated_text', '')
-        else:
-            generated_text = result.get('generated_text', '')
+        api_call_time = time.time() - start_api_call
 
-        print("Hugging Face response received")
+        print(f"📥 Response received in {api_call_time:.2f}s")
+
+        # Extract the response content
+        generated_text = completion.choices[0].message.content
+        print(f"✓ Generated text length: {len(generated_text) if generated_text else 0} characters")
+
+        if not generated_text:
+            print("❌ FAIL: No generated text in response")
+            raise ValueError('Empty response from Hugging Face API')
+
+        print("✓ Generated text extracted")
+        print(f"   Preview: {generated_text[:200]}...")
 
         # Try to extract JSON from the response
+        print("🧩 Extracting JSON from response...")
         json_match = re.search(r'\{[\s\S]*\}', generated_text)
         if not json_match:
+            print("❌ FAIL: No JSON pattern found in response")
+            print(f"   Full response: {generated_text[:1000]}...")
             raise ValueError('No JSON found in LLM response')
 
         json_string = json_match.group(0)
+        print(f"✓ JSON extracted: {len(json_string)} characters")
 
         try:
+            print("📋 Parsing JSON...")
             parsed_response = json.loads(json_string)
+            print("✓ JSON parsing successful")
         except json.JSONDecodeError as parse_error:
-            print(f"JSON parsing error: {parse_error}")
+            print(f"❌ FAIL: JSON parsing error: {parse_error}")
+            print(f"   JSON string: {json_string[:500]}...")
             raise ValueError(f"Invalid JSON in LLM response: {parse_error}")
 
         # Validate the response structure
-        if not parsed_response.get('summary') or not isinstance(parsed_response.get('blocks'), list):
-            raise ValueError('Invalid response structure: missing summary or blocks array')
+        print("🔎 Validating response structure...")
+        if not parsed_response.get('summary'):
+            print("❌ FAIL: Missing summary in response")
+            raise ValueError('Invalid response structure: missing summary')
+
+        if not isinstance(parsed_response.get('blocks'), list):
+            print("❌ FAIL: Invalid blocks format")
+            raise ValueError('Invalid response structure: blocks must be an array')
+
+        print("✓ Response structure validated")
+        print(f"   Summary length: {len(parsed_response.get('summary', ''))} characters")
+        print(f"   Raw blocks count: {len(parsed_response.get('blocks', []))}")
 
         # Validate and clean blocks
+        print("🧹 Validating and cleaning blocks...")
         valid_block_types = [
             'summary', 'key_points', 'architecture', 'mermaid', 'code',
             'api_reference', 'guide', 'comparison', 'best_practices', 'troubleshooting'
@@ -291,6 +330,7 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
 
         valid_sizes = ['small', 'medium', 'large']
 
+        original_blocks_count = len(parsed_response['blocks'])
         parsed_response['blocks'] = [
             block for block in parsed_response['blocks']
             if block.get('id') and block.get('type') and block.get('size') and
@@ -299,13 +339,21 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
                block['size'] in valid_sizes
         ][:6]  # Limit to 6 blocks maximum
 
+        filtered_blocks_count = len(parsed_response['blocks'])
+        print(f"✓ Block validation completed")
+        print(f"   Original blocks: {original_blocks_count}")
+        print(f"   Valid blocks: {filtered_blocks_count}")
+        print(f"   Filtered out: {original_blocks_count - filtered_blocks_count}")
+
         # Add default metadata
-        for block in parsed_response['blocks']:
+        for i, block in enumerate(parsed_response['blocks']):
             if 'metadata' not in block:
                 block['metadata'] = {}
+            print(f"   Block {i+1}: {block.get('type', 'unknown')} ({block.get('size', 'unknown')})")
 
         # Ensure we have at least a summary block
         if not parsed_response['blocks']:
+            print("⚠️ No valid blocks found, creating fallback summary")
             parsed_response['blocks'] = [{
                 'id': 'fallback-summary',
                 'type': 'summary',
@@ -315,98 +363,159 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
                 'metadata': {'priority': 'high'}
             }]
 
+        total_processing_time = time.time() - start_api_call
+        print(f"✅ API CALL COMPLETED SUCCESSFULLY")
+        print(f"   Total time: {total_processing_time:.2f}s")
+        print(f"   Final blocks: {len(parsed_response['blocks'])}")
+
         return parsed_response
 
     except Exception as error:
-        print(f"Hugging Face API error (attempt {retry_count + 1}): {error}")
+        print(f"❌ API CALL ERROR (attempt {retry_count + 1}): {error}")
 
         # Check if this is a retryable error
         error_str = str(error).lower()
+        print(f"   Analyzing error for retry: '{error_str}'")
+
         is_retryable = any(keyword in error_str for keyword in
                           ['rate limit', 'timeout', 'network', 'server error', '429', '500', '502', '503', '504'])
 
+        print(f"   Is retryable: {is_retryable}")
+
         if is_retryable and retry_count < max_retries:
             delay = base_delay * (2 ** retry_count)  # Exponential backoff
-            print(f"Retrying in {delay}s...")
+            print(f"⏳ RETRYING in {delay}s... (attempt {retry_count + 2}/{max_retries + 1})")
             time.sleep(delay)
             return call_hugging_face_api(prompt, retry_count + 1)
 
+        print("❌ MAX RETRIES EXCEEDED or NON-RETRYABLE ERROR")
         raise ValueError(f"Failed to generate analysis: {error}")
 
 
 def update_document_status(document_id: str, status: str) -> None:
     """
-    Update document status in database
+    Update document status in database with detailed logging
     """
     try:
+        print(f"📝 Updating document status...")
+        print(f"   Document ID: {document_id}")
+        print(f"   New status: {status}")
+
+        update_data = {
+            'status': status,
+            'updated_at': time.time()
+        }
+
+        print("   Sending update request...")
         databases.update_document(
             DATABASE_ID,
             DOCUMENTS_COLLECTION_ID,
             document_id,
-            {
-                'status': status,
-                'updated_at': time.time()
-            }
+            update_data
         )
-        print(f"Document {document_id} status updated to {status}")
+
+        print(f"✓ Document status updated to {status}")
+        print(f"   Database: {DATABASE_ID}")
+        print(f"   Collection: {DOCUMENTS_COLLECTION_ID}")
+
     except Exception as error:
-        print(f"Failed to update document status: {error}")
+        print(f"❌ STATUS UPDATE ERROR: {error}")
+        print(f"   Document ID: {document_id}")
+        print(f"   Target status: {status}")
         raise error
 
 
 def save_analysis_result(analysis_id: str, document_id: str, analysis_data: Dict[str, Any],
                         raw_response: str, processing_time: float) -> None:
     """
-    Save analysis result to database
+    Save analysis result to database with detailed logging
     """
+    import json  # Ensure json is available in this function scope
+
     try:
+        print("💾 Saving analysis results to database...")
+        print(f"   Analysis ID: {analysis_id}")
+        print(f"   Document ID: {document_id}")
+        print(f"   Processing time: {processing_time:.2f}s")
+        print(f"   Summary length: {len(analysis_data.get('summary', ''))} characters")
+        print(f"   Blocks count: {len(analysis_data.get('blocks', []))}")
+        print(f"   Raw response length: {len(raw_response)} characters")
+
+        # Prepare update data
+        update_data = {
+            'document_id': document_id,
+            'summary': analysis_data['summary'],
+            'charts': analysis_data['blocks'],  # blocks array stored as 'charts' in database
+            'raw_response': raw_response,
+            'processing_time': processing_time,
+            'status': 'completed'
+        }
+
+        print("   Updating analysis record...")
         databases.update_document(
             DATABASE_ID,
             ANALYSIS_COLLECTION_ID,
             analysis_id,
-            {
-                'document_id': document_id,
-                'summary': analysis_data['summary'],
-                'charts': analysis_data['blocks'],  # blocks array stored as 'charts' in database
-                'raw_response': raw_response,
-                'processing_time': processing_time,
-                'status': 'completed'
-            }
+            update_data
         )
-        print(f"Analysis result saved for document {document_id}")
+
+        print("✓ Analysis results saved successfully")
+        print(f"   Database: {DATABASE_ID}")
+        print(f"   Collection: {ANALYSIS_COLLECTION_ID}")
+        print(f"   Record updated: {analysis_id}")
+
     except Exception as error:
-        print(f"Failed to save analysis result: {error}")
+        print(f"❌ DATABASE SAVE ERROR: {error}")
+        print(f"   Analysis ID: {analysis_id}")
+        print(f"   Document ID: {document_id}")
         raise error
 
 
 def get_document_and_analysis(document_id: str) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
     """
-    Get document and analysis data
+    Get document and analysis data with detailed logging
     """
     try:
+        print("🔍 Retrieving document data...")
+        print(f"   Document ID: {document_id}")
+
         # Get the document (scraped content is stored here)
+        print("   Fetching document record...")
         document = databases.get_document(
             DATABASE_ID,
             DOCUMENTS_COLLECTION_ID,
             document_id
         )
+        print("✓ Document retrieved successfully")
+        print(f"   Title: {document.get('title', 'N/A')}")
+        print(f"   URL: {document.get('url', 'N/A')}")
+        print(f"   Status: {document.get('status', 'N/A')}")
+        print(f"   Word count: {document.get('word_count', 'N/A')}")
+        print(f"   Content length: {len(document.get('scraped_content', ''))} characters")
 
-        # Get the pending analysis record
+        # Get the most recent analysis record for this document
+        print("   Fetching analysis record...")
         analysis_records = databases.list_documents(
             DATABASE_ID,
             ANALYSIS_COLLECTION_ID,
             [
                 Query.equal('document_id', document_id),
-                Query.equal('status', 'pending'),
                 Query.order_desc('$createdAt'),
                 Query.limit(1)
             ]
         )
 
         if len(analysis_records['documents']) == 0:
-            raise ValueError('No pending analysis record found')
+            print("❌ FAIL: No analysis record found for this document")
+            raise ValueError('No analysis record found for this document')
+
+        analysis_id = analysis_records['documents'][0]['$id']
+        print("✓ Analysis record found")
+        print(f"   Analysis ID: {analysis_id}")
+        print(f"   Created: {analysis_records['documents'][0].get('$createdAt', 'N/A')}")
 
         # Prepare scraped data from document record
+        print("   Preparing scraped data...")
         scraped_data = {
             'title': document.get('title', 'Untitled Document'),
             'description': document.get('description', ''),
@@ -415,95 +524,248 @@ def get_document_and_analysis(document_id: str) -> Tuple[Dict[str, Any], str, Di
             'word_count': document.get('word_count', 0)
         }
 
-        return document, analysis_records['documents'][0]['$id'], scraped_data
+        print("✓ Scraped data prepared")
+        print(f"   Content preview: {scraped_data['content'][:100]}..." if scraped_data['content'] else "   No content")
+
+        return document, analysis_id, scraped_data
 
     except Exception as error:
-        print(f"Failed to get document and analysis: {error}")
+        print(f"❌ DATABASE QUERY ERROR: {error}")
+        print(f"   Document ID: {document_id}")
         raise error
 
 
 def main(context: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Main function handler for Appwrite
+    Main function handler for Appwrite with comprehensive logging
     """
+    import json  # Ensure json is available in this function scope
+
     start_time = time.time()
+    log = getattr(context, 'log', print)
+    error = getattr(context, 'error', print)
+
+    log("=== LLM ANALYZER FUNCTION STARTED ===")
+    log(f"Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}")
+    log("Environment check:")
+    log(f"  - Database ID: {DATABASE_ID}")
+    log(f"  - Documents Collection: {DOCUMENTS_COLLECTION_ID}")
+    log(f"  - Analysis Collection: {ANALYSIS_COLLECTION_ID}")
+    log(f"  - Hugging Face Token: {'✓ Configured' if HUGGINGFACE_ACCESS_TOKEN else '✗ Missing'}")
 
     try:
-        print('LLM analyzer function started')
+        log("\n--- STEP 1: REQUEST VALIDATION ---")
+        log("Validating incoming request...")
 
         # Validate request body - Appwrite Context uses attributes, not dict access
-        if not hasattr(context, 'req') or not context.req or not hasattr(context.req, 'body') or not context.req.body:
+        if not hasattr(context, 'req') or not context.req:
+            log("❌ FAIL: Context missing 'req' attribute")
+            return {
+                'success': False,
+                'error': 'Invalid context: missing req attribute',
+                'statusCode': 400
+            }
+
+        log("✓ Context has 'req' attribute")
+
+        if not hasattr(context.req, 'body') or not context.req.body:
+            log("❌ FAIL: Request missing body")
             return {
                 'success': False,
                 'error': 'Missing request body',
                 'statusCode': 400
             }
 
+        log("✓ Request has body")
+
         # Access documentId from request body
-        document_id = None
-        if hasattr(context.req.body, 'get'):
-            document_id = context.req.body.get('documentId')
+        log("Extracting documentId from request body...")
+
+        # Log body type for debugging
+        log(f"Request body type: {type(context.req.body)}")
+        if isinstance(context.req.body, str):
+            log(f"Body content preview: {context.req.body[:100]}...")
         elif isinstance(context.req.body, dict):
-            document_id = context.req.body.get('documentId')
+            log(f"Body keys: {list(context.req.body.keys()) if context.req.body else 'Empty dict'}")
+            if context.req.body:
+                for key, value in context.req.body.items():
+                    if key == 'documentId' or key == 'document_id' or key == '$id':
+                        log(f"  {key}: {value}")
+                    elif isinstance(value, str) and len(value) > 50:
+                        log(f"  {key}: {value[:50]}...")
+                    else:
+                        log(f"  {key}: {value}")
         else:
+            log(f"Body content: {str(context.req.body)[:100]}...")
+
+        document_id = None
+
+        if isinstance(context.req.body, dict):
+            # Try multiple possible field names for documentId
+            document_id = (context.req.body.get('documentId') or
+                          context.req.body.get('document_id') or
+                          context.req.body.get('$id'))
+
+            if document_id:
+                log(f"✓ Found documentId in dict: {document_id}")
+            else:
+                log("❌ FAIL: No documentId field found in dict")
+                # Check if this is an event trigger with the created document
+                if 'document_id' in context.req.body:
+                    document_id = context.req.body['document_id']
+                    log(f"✓ Found document_id (event trigger): {document_id}")
+
+        elif isinstance(context.req.body, str):
             # Handle string JSON body
             import json
             try:
+                log("Parsing JSON string body...")
                 body_data = json.loads(context.req.body)
-                document_id = body_data.get('documentId')
+                document_id = (body_data.get('documentId') or
+                              body_data.get('document_id') or
+                              body_data.get('$id'))
+                log(f"✓ JSON parsed, documentId: {document_id}")
+            except Exception as json_error:
+                log(f"❌ FAIL: JSON parsing error: {json_error}")
+        else:
+            # Try generic get method (fallback)
+            try:
+                document_id = context.req.body.get('documentId')
+                log(f"✓ Generic get method, documentId: {document_id}")
             except:
-                pass
+                log("❌ FAIL: Cannot extract documentId from body")
 
         if not document_id:
+            log("❌ FAIL: Missing required field: documentId")
             return {
                 'success': False,
                 'error': 'Missing required field: documentId',
                 'statusCode': 400
             }
-        log = getattr(context, 'log', print)
-        error = getattr(context, 'error', print)
 
-        log(f'Processing analysis for document: {document_id}')
+        log(f"✓ Document ID validated: {document_id}")
+        log(f"✓ Request validation completed in {(time.time() - start_time):.3f}s")
 
-        # Get document and analysis data
-        document, analysis_id, scraped_data = get_document_and_analysis(document_id)
+        log("\n--- STEP 2: DATABASE QUERY ---")
+        log(f"Retrieving document and analysis data for: {document_id}")
 
+        try:
+            document, analysis_id, scraped_data = get_document_and_analysis(document_id)
+            log("✓ Document retrieved successfully")
+            log(f"  - Title: {scraped_data.get('title', 'N/A')}")
+            log(f"  - URL: {scraped_data.get('url', 'N/A')}")
+            log(f"  - Analysis ID: {analysis_id}")
+            log(f"  - Original content length: {len(scraped_data.get('content', ''))} characters")
+        except Exception as db_error:
+            log(f"❌ FAIL: Database query error: {db_error}")
+            raise ValueError(f"Failed to retrieve document data: {db_error}")
+
+        log(f"✓ Database query completed in {(time.time() - start_time):.3f}s")
+
+        log("\n--- STEP 3: CONTENT VALIDATION ---")
         if not scraped_data or not scraped_data.get('content'):
+            log("❌ FAIL: No scraped content available for analysis")
             raise ValueError('No scraped content available for analysis')
 
-        # Optimize content for analysis
+        content_length = len(scraped_data['content'])
+        log(f"✓ Content validation passed: {content_length} characters")
+
+        log("\n--- STEP 4: CONTENT OPTIMIZATION ---")
+        log("Optimizing content for LLM processing...")
+        original_length = len(scraped_data['content'])
+
         scraped_data['content'] = optimize_content_for_analysis(scraped_data['content'])
-        log(f"Optimized content length: {len(scraped_data['content'])} characters")
+        optimized_length = len(scraped_data['content'])
 
-        # Create analysis prompt
-        prompt = create_analysis_prompt(scraped_data, document.get('instructions', 'Analyze this documentation comprehensively'))
+        log(f"✓ Content optimization completed")
+        log(f"  - Original: {original_length} characters")
+        log(f"  - Optimized: {optimized_length} characters")
+        log(f"  - Reduction: {original_length - optimized_length} characters ({((original_length - optimized_length) / original_length * 100):.1f}%)")
 
-        # Call Hugging Face API with retry logic
+        log("\n--- STEP 5: PROMPT GENERATION ---")
+        user_instructions = document.get('instructions', 'Analyze this documentation comprehensively')
+        log(f"User instructions: {user_instructions}")
+
+        prompt = create_analysis_prompt(scraped_data, user_instructions)
+        prompt_length = len(prompt)
+        log(f"✓ Analysis prompt created: {prompt_length} characters")
+        log(f"✓ Prompt generation completed in {(time.time() - start_time):.3f}s")
+
+        log("\n--- STEP 6: LLM API CALL ---")
+        log("Initiating Hugging Face API call...")
+
         analysis_result = call_hugging_face_api(prompt)
 
-        # Validate and optimize block sizes
+        log("✓ LLM API call completed successfully")
+        log(f"  - Summary length: {len(analysis_result.get('summary', ''))} characters")
+        log(f"  - Blocks generated: {len(analysis_result.get('blocks', []))}")
+
+        log("\n--- STEP 7: RESPONSE VALIDATION ---")
+        log("Validating LLM response structure...")
+
+        if not analysis_result.get('summary'):
+            log("❌ FAIL: Missing summary in LLM response")
+            raise ValueError('Invalid LLM response: missing summary')
+
+        if not isinstance(analysis_result.get('blocks'), list):
+            log("❌ FAIL: Invalid blocks format in LLM response")
+            raise ValueError('Invalid LLM response: blocks must be an array')
+
+        log("✓ Response structure validation passed")
+
+        log("\n--- STEP 8: BLOCK OPTIMIZATION ---")
+        log("Optimizing block sizes for grid layout...")
+
+        original_block_count = len(analysis_result['blocks'])
         analysis_result['blocks'] = optimize_block_sizes(analysis_result['blocks'])
 
-        # Log analysis results
-        log(f"Generated {len(analysis_result['blocks'])} analysis blocks")
-        block_types = [block['type'] for block in analysis_result['blocks']]
-        log(f"Block types: {', '.join(block_types)}")
+        # Calculate total grid units
+        size_values = {'small': 1, 'medium': 2, 'large': 3}
+        total_units = sum(size_values.get(block.get('size', 'medium'), 2) for block in analysis_result['blocks'])
+
+        log("✓ Block optimization completed")
+        log(f"  - Blocks: {len(analysis_result['blocks'])}")
+        log(f"  - Total grid units: {total_units}")
+
+        # Log detailed block information
+        for i, block in enumerate(analysis_result['blocks'], 1):
+            log(f"  Block {i}: {block.get('type', 'unknown')} ({block.get('size', 'medium')}) - {block.get('title', 'No title')}")
 
         processing_time = time.time() - start_time
+        log(f"✓ Analysis processing completed in {processing_time:.2f}s")
 
-        # Save analysis result
-        save_analysis_result(
-            analysis_id,
-            document_id,
-            analysis_result,
-            json.dumps(analysis_result),
-            processing_time
-        )
+        log("\n--- STEP 9: DATABASE SAVE ---")
+        log("Saving analysis results to database...")
 
-        # Update document status to completed
-        update_document_status(document_id, 'completed')
+        try:
+            save_analysis_result(
+                analysis_id,
+                document_id,
+                analysis_result,
+                json.dumps(analysis_result),
+                processing_time
+            )
+            log("✓ Analysis results saved successfully")
+        except Exception as save_error:
+            log(f"❌ FAIL: Failed to save analysis results: {save_error}")
+            raise ValueError(f"Database save failed: {save_error}")
 
-        log(f"Analysis completed for document {document_id} in {processing_time:.2f}s")
+        log("\n--- STEP 10: STATUS UPDATE ---")
+        log("Updating document status to completed...")
+
+        try:
+            update_document_status(document_id, 'completed')
+            log("✓ Document status updated to completed")
+        except Exception as status_error:
+            log(f"❌ FAIL: Failed to update document status: {status_error}")
+            raise ValueError(f"Status update failed: {status_error}")
+
+        log("\n=== ANALYSIS COMPLETED SUCCESSFULLY ===")
+        log(f"Document: {document_id}")
+        log(f"Analysis: {analysis_id}")
+        log(f"Processing Time: {processing_time:.2f}s")
+        log(f"Blocks Generated: {len(analysis_result['blocks'])}")
+        log("=" * 50)
 
         return {
             'success': True,
@@ -520,55 +782,94 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as err:
         processing_time = time.time() - start_time
+        error = getattr(context, 'error', print)
+
+        log("\n!!! ERROR OCCURRED DURING ANALYSIS !!!")
+        log(f"Error timestamp: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}")
+        log(f"Processing time before error: {processing_time:.2f}s")
+        log(f"Error type: {type(err).__name__}")
+        log(f"Error message: {str(err)}")
 
         # Safely extract document_id from context
+        log("Extracting document_id for error handling...")
         document_id = None
         try:
             if hasattr(context, 'req') and context.req and hasattr(context.req, 'body') and context.req.body:
                 if hasattr(context.req.body, 'get'):
                     document_id = context.req.body.get('documentId')
+                    log(f"✓ Document ID extracted from body.get(): {document_id}")
                 elif isinstance(context.req.body, dict):
                     document_id = context.req.body.get('documentId')
+                    log(f"✓ Document ID extracted from dict: {document_id}")
                 else:
                     import json
                     body_data = json.loads(context.req.body)
                     document_id = body_data.get('documentId')
-        except:
-            pass
+                    log(f"✓ Document ID extracted from JSON string: {document_id}")
+            else:
+                log("❌ Could not extract document_id from context")
+        except Exception as extract_error:
+            log(f"❌ Error extracting document_id: {extract_error}")
 
-        error = getattr(context, 'error', print)
+        error(f"LLM analyzer error for document {document_id or 'unknown'}: {err}")
 
-        error(f"LLM analyzer error: {err}")
-
+        log("\n--- ERROR CATEGORIZATION ---")
         # Categorize the error for better user messaging
         user_message = 'Analysis failed. Please try again.'
         is_retryable = True
         suggested_action = 'retry'
 
         error_str = str(err).lower()
+        log(f"Analyzing error string: '{error_str}'")
+
         if 'rate limit' in error_str or 'quota' in error_str:
+            log("✓ Error category: Rate limit/Quota exceeded")
             user_message = 'Analysis service is busy. Please try again in a few minutes.'
             is_retryable = True
             suggested_action = 'retry_later'
         elif 'timeout' in error_str or 'network' in error_str:
+            log("✓ Error category: Network/Timeout issue")
             user_message = 'Connection issue occurred. The analysis may still complete.'
             is_retryable = True
             suggested_action = 'check_later'
-        elif 'No scraped content' in error_str:
+        elif 'no scraped content' in error_str:
+            log("✓ Error category: Missing content")
             user_message = 'Document content is not available. Please check the URL and try scraping again.'
             is_retryable = False
             suggested_action = 'rescrape'
-        elif 'JSON' in error_str or 'Invalid response' in error_str:
+        elif 'json' in error_str or 'invalid response' in error_str:
+            log("✓ Error category: Response format issue")
             user_message = 'Analysis format issue. We\'ll retry with a different approach.'
             is_retryable = True
             suggested_action = 'retry'
+        elif 'document with the requested id could not be found' in error_str:
+            log("✓ Error category: Document not found")
+            user_message = 'Document not found. Please check the document ID and try again.'
+            is_retryable = False
+            suggested_action = 'check_document'
+        else:
+            log("✓ Error category: General/Unknown")
+
+        log(f"User message: {user_message}")
+        log(f"Is retryable: {is_retryable}")
+        log(f"Suggested action: {suggested_action}")
 
         # Try to update document status to failed
         if document_id:
+            log(f"\n--- STATUS UPDATE ATTEMPT ---")
+            log(f"Attempting to update document {document_id} status to 'failed'")
             try:
                 update_document_status(document_id, 'failed')
+                log("✓ Document status updated to 'failed'")
             except Exception as update_error:
-                error(f"Failed to update document status: {update_error}")
+                log(f"❌ Failed to update document status: {update_error}")
+                error(f"Failed to update document status for {document_id}: {update_error}")
+        else:
+            log("⚠️ Skipping status update: no document_id available")
+
+        log("\n=== ERROR HANDLING COMPLETED ===")
+        log(f"Final processing time: {processing_time:.2f}s")
+        log("=" * 50)
 
         return {
             'success': False,
@@ -580,7 +881,8 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
                     'isRetryable': is_retryable,
                     'suggestedAction': suggested_action,
                     'documentId': document_id,
-                    'processingTime': processing_time
+                    'processingTime': processing_time,
+                    'errorType': type(err).__name__
                 }
             },
             'statusCode': 500
