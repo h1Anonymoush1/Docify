@@ -29,8 +29,8 @@ appwrite functions deploy --functionId llm-analyzer-python
 # Required environment variables
 appwrite functions variables create \
   --functionId llm-analyzer-python \
-  --key HUGGINGFACE_ACCESS_TOKEN \
-  --value your_huggingface_token_here
+  --key GEMINI_API_KEY \
+  --value your_gemini_api_key_here
 
 appwrite functions variables create \
   --functionId llm-analyzer-python \
@@ -76,7 +76,7 @@ appwrite functions update \
 ### Environment Variables Reference
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
-| `HUGGINGFACE_ACCESS_TOKEN` | Hugging Face API token | ✅ | - |
+| `GEMINI_API_KEY` | Google Gemini API key | ✅ | - |
 | `DATABASE_ID` | Appwrite database ID | ❌ | `docify_db` |
 | `DOCUMENTS_COLLECTION_ID` | Documents collection ID | ❌ | `documents_table` |
 | `ANALYSIS_COLLECTION_ID` | Analysis collection ID | ❌ | `analysis_results` |

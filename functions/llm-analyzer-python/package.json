@@ -1,7 +1,7 @@
 {
   "name": "llm-analyzer-python",
   "version": "1.0.0",
-  "description": "Appwrite function to analyze web content using Hugging Face LLM (Python)",
+  "description": "Appwrite function to analyze web content using Google Gemini AI (Python)",
   "main": "src/main.py",
   "scripts": {
     "test": "python -m pytest tests/ -v",

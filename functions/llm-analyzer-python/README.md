@@ -1,6 +1,6 @@
 # Docify Python LLM Analyzer
 
-This Appwrite function analyzes web content using Hugging Face transformers and generates structured visual analysis blocks for the Docify platform.
+This Appwrite function analyzes web content using Google Gemini AI and generates structured visual analysis blocks for the Docify platform.
 
 ## 🚀 Features
 
@@ -42,15 +42,21 @@ DATABASE_ID=docify_db
 DOCUMENTS_COLLECTION_ID=documents_table
 ANALYSIS_COLLECTION_ID=analysis_results
 
-# Hugging Face Configuration
-HUGGINGFACE_ACCESS_TOKEN=your_huggingface_token
+# Google Gemini Configuration
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
-### Hugging Face Token
-1. Sign up at [Hugging Face](https://huggingface.co/)
-2. Go to Settings → Access Tokens
-3. Create a new token with "Read" permissions
-4. Set the `HUGGINGFACE_ACCESS_TOKEN` environment variable
+### Google Gemini API Key
+1. Sign up at [Google AI Studio](https://aistudio.google.com/)
+2. Go to Settings → API Keys
+3. Create a new API key
+4. Set the `GEMINI_API_KEY` environment variable
+
+### Installation
+```bash
+# Install Google GenAI SDK
+pip install google-genai
+```
 
 ## 🛠️ Installation
 
@@ -78,19 +84,24 @@ appwrite functions deploy --functionId llm-analyzer-python
 ```bash
 appwrite functions variables create \
   --functionId llm-analyzer-python \
-  --key HUGGINGFACE_ACCESS_TOKEN \
-  --value your_token_here
+  --key GEMINI_API_KEY \
+  --value your_api_key_here
 ```
 
 ## 🔧 Configuration
 
 ### Model Configuration
-The function uses Mistral-7B-Instruct-v0.2 by default. To use a different model:
+The function uses Gemini 2.5 Flash by default. To use a different model:
 
 ```python
-# In main.py, modify the model_name parameter
-model_name = "microsoft/DialoGPT-medium"  # Example alternative
+# In main.py, modify the GEMINI_MODEL parameter
+GEMINI_MODEL = "gemini-1.5-pro"  # Example alternative
 ```
+
+Available Gemini models:
+- `gemini-2.5-flash` (default - fastest with thinking capabilities)
+- `gemini-1.5-pro` (more capable but slower)
+- `gemini-1.5-flash` (fast and capable)
 
 ### Processing Limits
 ```python

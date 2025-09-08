@@ -21,13 +21,13 @@ from appwrite.query import Query
 import requests
 from bs4 import BeautifulSoup
 import chardet
-from openai import OpenAI
+from google import genai
 
 # Environment variables
 DATABASE_ID = os.environ.get('DATABASE_ID', 'docify_db')
 DOCUMENTS_COLLECTION_ID = os.environ.get('DOCUMENTS_COLLECTION_ID', 'documents_table')
 ANALYSIS_COLLECTION_ID = os.environ.get('ANALYSIS_COLLECTION_ID', 'analysis_results')
-HUGGINGFACE_ACCESS_TOKEN = os.environ.get('HUGGINGFACE_ACCESS_TOKEN', '')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 # Initialize Appwrite client
 client = Client()
@@ -37,10 +37,8 @@ client.set_key(os.environ.get('APPWRITE_API_KEY'))
 
 databases = Databases(client)
 
-# Hugging Face API configuration
-# Use the OpenAI-compatible router endpoint
-HF_BASE_URL = "https://router.huggingface.co/v1"
-HF_MODEL = "meta-llama/Llama-3.1-8B-Instruct:cerebras"
+# Google Gemini API configuration
+GEMINI_MODEL = "gemini-2.5-flash"  # Latest Gemini model with thinking capabilities
 
 
 def create_analysis_prompt(scraped_data: Dict[str, Any], user_instructions: str) -> str:
@@ -224,9 +222,9 @@ def optimize_block_sizes(blocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return blocks
 
 
-def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
+def call_gemini_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
     """
-    Call Hugging Face API using OpenAI client with retry logic and comprehensive logging
+    Call Google Gemini API with retry logic and comprehensive logging
     """
     max_retries = 3
     base_delay = 1  # 1 second
@@ -234,55 +232,63 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
     try:
         print(f"🤖 API CALL ATTEMPT {retry_count + 1}/{max_retries + 1}")
         print(f"   Prompt length: {len(prompt)} characters")
-        print(f"   Model: {HF_MODEL}")
-        print(f"   Base URL: {HF_BASE_URL}")
-        print("   Using Llama 3.1 8B model via Cerebras")
+        print(f"   Model: {GEMINI_MODEL}")
+        print("   Using Google Gemini 2.5 Flash")
 
-        if not HUGGINGFACE_ACCESS_TOKEN:
-            print("❌ FAIL: HUGGINGFACE_ACCESS_TOKEN not configured")
-            raise ValueError("HUGGINGFACE_ACCESS_TOKEN not configured")
+        if not GEMINI_API_KEY:
+            print("❌ FAIL: GEMINI_API_KEY not configured")
+            raise ValueError("GEMINI_API_KEY not configured")
 
-        print("✓ Token validated")
+        print("✓ API key validated")
 
-        # Initialize OpenAI client with Hugging Face router
-        print("🔧 Initializing OpenAI client...")
-        client = OpenAI(
-            base_url=HF_BASE_URL,
-            api_key=HUGGINGFACE_ACCESS_TOKEN,
-        )
+        # Initialize Gemini client
+        print("🔧 Initializing Gemini client...")
+        client = genai.Client()
 
-        print("📤 Sending request to Hugging Face API...")
+        print("📤 Sending request to Gemini API...")
+        print(f"   Model: {GEMINI_MODEL}")
         print(f"   Timeout: 60s")
-        print(f"   Max tokens: 2000")
-        print(f"   Authorization: Bearer {HUGGINGFACE_ACCESS_TOKEN[:10]}...")
+        print(f"   Max tokens: 4000 (Gemini default)")
 
         start_api_call = time.time()
 
-        # Create chat completion
-        completion = client.chat.completions.create(
-            model=HF_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            max_tokens=2000,
+        # Configure generation parameters
+        generation_config = genai.types.GenerateContentConfig(
             temperature=0.7,
-            top_p=0.95
+            top_p=0.95,
+            max_output_tokens=4000,
+            candidate_count=1,
+            thinking_config=genai.types.ThinkingConfig(thinking_budget=0),  # Disable thinking for faster responses
+        )
+
+        print("⚙️ Generation config:")
+        print(f"   Temperature: {generation_config.temperature}")
+        print(f"   Top P: {generation_config.top_p}")
+        print(f"   Max tokens: {generation_config.max_output_tokens}")
+
+        # Generate content
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=generation_config
         )
 
         api_call_time = time.time() - start_api_call
-
         print(f"📥 Response received in {api_call_time:.2f}s")
 
-        # Extract the response content
-        generated_text = completion.choices[0].message.content
-        print(f"✓ Generated text length: {len(generated_text) if generated_text else 0} characters")
+        # Extract the response text
+        if not response.candidates or not response.candidates[0].content:
+            print("❌ FAIL: No candidates in response")
+            raise ValueError('Empty response from Gemini API')
 
+        generated_text = response.candidates[0].content.parts[0].text
+
+        # Handle case where text might be None
         if not generated_text:
-            print("❌ FAIL: No generated text in response")
-            raise ValueError('Empty response from Hugging Face API')
+            print("❌ FAIL: Empty text in response")
+            raise ValueError('Empty text in Gemini API response')
+
+        print(f"✓ Generated text length: {len(generated_text)} characters")
 
         print("✓ Generated text extracted")
         print(f"   Preview: {generated_text[:200]}...")
@@ -293,7 +299,7 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
         if not json_match:
             print("❌ FAIL: No JSON pattern found in response")
             print(f"   Full response: {generated_text[:1000]}...")
-            raise ValueError('No JSON found in LLM response')
+            raise ValueError('No JSON found in Gemini response')
 
         json_string = json_match.group(0)
         print(f"✓ JSON extracted: {len(json_string)} characters")
@@ -305,7 +311,7 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
         except json.JSONDecodeError as parse_error:
             print(f"❌ FAIL: JSON parsing error: {parse_error}")
             print(f"   JSON string: {json_string[:500]}...")
-            raise ValueError(f"Invalid JSON in LLM response: {parse_error}")
+            raise ValueError(f"Invalid JSON in Gemini response: {parse_error}")
 
         # Validate the response structure
         print("🔎 Validating response structure...")
@@ -378,7 +384,9 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
         print(f"   Analyzing error for retry: '{error_str}'")
 
         is_retryable = any(keyword in error_str for keyword in
-                          ['rate limit', 'timeout', 'network', 'server error', '429', '500', '502', '503', '504'])
+                          ['rate limit', 'timeout', 'network', 'server error', '429', '500', '502', '503', '504',
+                           'resource exhausted', 'quota exceeded', 'temporarily unavailable', 'unavailable',
+                           'connection', 'dns', 'ssl'])
 
         print(f"   Is retryable: {is_retryable}")
 
@@ -386,7 +394,7 @@ def call_hugging_face_api(prompt: str, retry_count: int = 0) -> Dict[str, Any]:
             delay = base_delay * (2 ** retry_count)  # Exponential backoff
             print(f"⏳ RETRYING in {delay}s... (attempt {retry_count + 2}/{max_retries + 1})")
             time.sleep(delay)
-            return call_hugging_face_api(prompt, retry_count + 1)
+            return call_gemini_api(prompt, retry_count + 1)
 
         print("❌ MAX RETRIES EXCEEDED or NON-RETRYABLE ERROR")
         raise ValueError(f"Failed to generate analysis: {error}")
@@ -445,10 +453,9 @@ def save_analysis_result(analysis_id: str, document_id: str, analysis_data: Dict
         update_data = {
             'document_id': document_id,
             'summary': analysis_data['summary'],
-            'charts': analysis_data['blocks'],  # blocks array stored as 'charts' in database
+            'charts': json.dumps(analysis_data['blocks']),  # Convert blocks array to JSON string
             'raw_response': raw_response,
-            'processing_time': processing_time,
-            'status': 'completed'
+            'processing_time': int(processing_time)  # Convert float to integer
         }
 
         print("   Updating analysis record...")
@@ -551,7 +558,7 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
     log(f"  - Database ID: {DATABASE_ID}")
     log(f"  - Documents Collection: {DOCUMENTS_COLLECTION_ID}")
     log(f"  - Analysis Collection: {ANALYSIS_COLLECTION_ID}")
-    log(f"  - Hugging Face Token: {'✓ Configured' if HUGGINGFACE_ACCESS_TOKEN else '✗ Missing'}")
+    log(f"  - Gemini API Key: {'✓ Configured' if GEMINI_API_KEY else '✗ Missing'}")
 
     try:
         log("\n--- STEP 1: REQUEST VALIDATION ---")
@@ -692,9 +699,9 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
         log(f"✓ Prompt generation completed in {(time.time() - start_time):.3f}s")
 
         log("\n--- STEP 6: LLM API CALL ---")
-        log("Initiating Hugging Face API call...")
+        log("Initiating Gemini API call...")
 
-        analysis_result = call_hugging_face_api(prompt)
+        analysis_result = call_gemini_api(prompt)
 
         log("✓ LLM API call completed successfully")
         log(f"  - Summary length: {len(analysis_result.get('summary', ''))} characters")
@@ -751,14 +758,9 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError(f"Database save failed: {save_error}")
 
         log("\n--- STEP 10: STATUS UPDATE ---")
-        log("Updating document status to completed...")
+        log("Analysis completed successfully - no status update needed")
 
-        try:
-            update_document_status(document_id, 'completed')
-            log("✓ Document status updated to completed")
-        except Exception as status_error:
-            log(f"❌ FAIL: Failed to update document status: {status_error}")
-            raise ValueError(f"Status update failed: {status_error}")
+        log("✓ Analysis process completed")
 
         log("\n=== ANALYSIS COMPLETED SUCCESSFULLY ===")
         log(f"Document: {document_id}")

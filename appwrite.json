@@ -46,7 +46,7 @@
         {
             "$id": "llm-analyzer-python",
             "name": "LLM Analyzer Python",
-            "runtime": "python-3.12",
+            "runtime": "python-3.9",
             "path": "functions/llm-analyzer-python",
             "entrypoint": "src/main.py",
             "commands": {
@@ -57,7 +57,7 @@
                 "DATABASE_ID": "docify_db",
                 "DOCUMENTS_COLLECTION_ID": "documents_table",
                 "ANALYSIS_COLLECTION_ID": "analysis_results",
-                "HUGGINGFACE_ACCESS_TOKEN": "${HUGGINGFACE_ACCESS_TOKEN}"
+                "GEMINI_API_KEY": "${GEMINI_API_KEY}"
             },
             "events": ["databases.docify_db.collections.analysis_results.documents.create"],
             "schedule": "",
