@@ -2,6 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import { Flex, Heading, Text, Button, IconButton } from '@/once-ui/components';
+import MermaidChart from '@/components/MermaidChart';
 
 interface ContentBlock {
   id: string;
@@ -41,7 +42,6 @@ const getBlockStyles = (type: string) => {
 const getBlockIcon = (type: string) => {
   const icons = {
     summary: '📝',
-    mermaid: '📊',
     code: '💻',
     key_points: '🔑',
     architecture: '🏗️',
@@ -85,7 +85,7 @@ export function ContentBlockCard({
     switch (block.type) {
       case 'mermaid':
         return (
-          <Flex fillWidth style={{ flex: 1, minHeight: '200px', maxHeight: '350px' }}>
+          <Flex fillWidth style={{ flex: 1 }}>
             <Suspense fallback={
               <div className="flex flex-col items-center justify-center w-full h-full space-y-2">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -93,10 +93,7 @@ export function ContentBlockCard({
               </div>
             }>
               <div className="w-full h-full overflow-auto scrollbar-thin">
-                {/* We'll render the actual MermaidChart component here */}
-                <div className="w-full h-full flex items-center justify-center text-2xl opacity-50">
-                  {styles.icon} Interactive Chart
-                </div>
+                <MermaidChart chart={block.content} />
               </div>
             </Suspense>
           </Flex>
