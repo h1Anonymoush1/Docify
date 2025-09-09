@@ -416,32 +416,31 @@ export default function Dashboard() {
                     >
                       {/* Summary */}
                       {documentAnalysis.summary && (
-                        <Flex
-                          direction="row"
-                          gap="s"
-                          style={{ width: 'fit-content', maxWidth: '100%' }}
-                        >
+                        <Flex fillWidth gap="s" style={{ flexWrap: 'wrap' }}>
                           {/* Small Title/URL Card */}
-                          <SmallDashboardCard>
-                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
-                              <Text variant="body-strong-s" onBackground="neutral-strong">
-                                {selectedDocument.title || 'Untitled Document'}
-                              </Text>
-                              <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-all' }}>
-                                {selectedDocument.url}
-                              </Text>
-                            </Flex>
-                          </SmallDashboardCard>
+                          <div style={{ flex: '0 0 300px' }}>
+                            <SmallDashboardCard type="content" title="Document Info">
+                              <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                                <Text variant="body-strong-s" onBackground="neutral-strong">
+                                  {selectedDocument.title || 'Untitled Document'}
+                                </Text>
+                                <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-all' }}>
+                                  {selectedDocument.url}
+                                </Text>
+                              </Flex>
+                            </SmallDashboardCard>
+                          </div>
 
                           {/* Medium Summary Card */}
-                          <MediumDashboardCard>
-                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
-                              <Heading variant="heading-strong-m">Summary</Heading>
-                              <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
-                                {documentAnalysis.summary}
-                              </Text>
-                            </Flex>
-                          </MediumDashboardCard>
+                          <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
+                            <MediumDashboardCard type="content" title="Summary">
+                              <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                                <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
+                                  {documentAnalysis.summary}
+                                </Text>
+                              </Flex>
+                            </MediumDashboardCard>
+                          </div>
                         </Flex>
                       )}
 
