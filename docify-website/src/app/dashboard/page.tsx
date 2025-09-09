@@ -42,7 +42,10 @@ export default function Dashboard() {
       <Flex
         fillWidth
         fillHeight
-        padding="l"
+        paddingLeft="l"
+        paddingRight="l"
+        paddingTop="s"
+        paddingBottom="xs"
         horizontal="center"
         vertical="center"
       >
@@ -170,11 +173,270 @@ export default function Dashboard() {
 
           {/* Main Content */}
           <Flex
-            fillWidth
-            fillHeight
             direction="column"
+            paddingLeft="l"
+            paddingRight="l"
+            paddingTop="s"
+            paddingBottom="xs"
+            style={{ flex: 1, minHeight: 0 }}
           >
-            {/* Main content goes here */}
+            {/* Dashboard Grid - 9 Squares */}
+            <Flex
+              fillWidth
+              direction="column"
+              gap="m"
+              style={{ flex: 1, minHeight: 0 }}
+            >
+              {/* 9-Square Grid */}
+              <Flex
+                fillWidth
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateRows: 'repeat(3, 1fr)',
+                  gap: 'var(--space-l)',
+                  minHeight: '300px',
+                  overflowY: 'auto',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--neutral-weak) transparent',
+                  flex: 1
+                }}
+              >
+                {/* Square 1: Recent Documents */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 2: Processing Status */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 3: Credit Balance */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 4: Quick Actions */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 5: Analytics */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 6: Recent Activity */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 7: Public Gallery */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 8: Templates */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+
+                {/* Square 9: Settings */}
+                <Flex
+                  background="surface"
+                  border="neutral-weak"
+                  radius="m"
+                  padding="s"
+                  direction="column"
+                  gap="m"
+                  style={{
+                    boxShadow: 'var(--shadow-s)',
+                    transition: 'all 0.2s ease',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                  }}
+                >
+                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  </Flex>
+                </Flex>
+              </Flex>
+            </Flex>
           </Flex>
         </Flex>
       </Flex>
