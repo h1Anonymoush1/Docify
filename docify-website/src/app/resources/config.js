@@ -10,6 +10,7 @@ const routes = {
   "/auth/error": true,
   "/dashboard": true,
   "/documents": true,
+  "/account": true,
 };
 
 // Enable password protection on selected routes
