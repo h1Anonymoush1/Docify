@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Flex, Button, Text, Skeleton } from '@/once-ui/components';
+import { Flex, Button, Text } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
+import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard } from '@/components/dashboard';
 
 export default function Dashboard() {
   const [documents, setDocuments] = useState<any[]>([]);
@@ -187,7 +188,7 @@ export default function Dashboard() {
               gap="m"
               style={{ flex: 1, minHeight: 0 }}
             >
-              {/* 9-Square Grid */}
+              {/* 3x3 Grid with Spanning Components */}
               <Flex
                 fillWidth
                 style={{
@@ -202,266 +203,21 @@ export default function Dashboard() {
                   flex: 1
                 }}
               >
-                {/* Square 1: Recent Documents */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
+                {/* Large Component: Top Row (spans 3 columns) */}
+                <LargeDashboardCard delay={1} />
 
-                {/* Square 2: Processing Status */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
+                {/* Medium Component: Analytics */}
+                <MediumDashboardCard delay={1} />
 
-                {/* Square 3: Credit Balance */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
+                {/* Small Component: Recent Activity */}
+                <SmallDashboardCard delay={2} />
 
-                {/* Square 4: Quick Actions */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
+                {/* Small Component: Templates */}
+                <SmallDashboardCard delay={3} />
 
-                {/* Square 5: Analytics */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
+                {/* Small Component: Credit Balance */}
+                <MediumDashboardCard delay={2} />
 
-                {/* Square 6: Recent Activity */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
-
-                {/* Square 7: Public Gallery */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
-
-                {/* Square 8: Templates */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
-
-                {/* Square 9: Settings */}
-                <Flex
-                  background="surface"
-                  border="neutral-weak"
-                  radius="m"
-                  padding="s"
-                  direction="column"
-                  gap="m"
-                  style={{
-                    boxShadow: 'var(--shadow-s)',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                  }}
-                >
-                  <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
-                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
-                  </Flex>
-                </Flex>
               </Flex>
             </Flex>
           </Flex>
