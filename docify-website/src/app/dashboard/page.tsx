@@ -541,15 +541,14 @@ export default function Dashboard() {
                                 }
                               };
 
-                              // Dynamic card sizing based on block type
+                              // Dynamic card sizing based on JSON size field
                               const getCardComponent = () => {
-                                switch (block.type) {
-                                  case 'mermaid':
+                                switch (block.size) {
+                                  case 'large':
                                     return LargeDashboardCard;
-                                  case 'key_points':
+                                  case 'small':
                                     return SmallDashboardCard;
-                                  case 'code':
-                                    return MediumDashboardCard;
+                                  case 'medium':
                                   default:
                                     return MediumDashboardCard;
                                 }
