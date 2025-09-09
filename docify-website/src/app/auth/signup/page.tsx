@@ -232,6 +232,7 @@ export default function Signup() {
                   <Input
                     key={index}
                     id={`otp-${index}`}
+                    label=""
                     type="text"
                     value={otp[index] || ''}
                     onChange={(e) => {

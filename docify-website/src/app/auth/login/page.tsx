@@ -231,6 +231,7 @@ export default function Login() {
                   <Input
                     key={index}
                     id={`otp-${index}`}
+                    label=""
                     type="text"
                     value={otp[index] || ''}
                     onChange={(e) => {
