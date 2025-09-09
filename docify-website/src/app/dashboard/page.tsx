@@ -217,7 +217,7 @@ export default function Dashboard() {
           leftRadius="l"
           direction="column"
           padding="l"
-          gap="m"
+          gap="s"
           style={{
             width: '320px',
             minWidth: '280px',
@@ -233,7 +233,7 @@ export default function Dashboard() {
               {/* Analysis Results List - Scrollable Container */}
               <Flex
                 direction="column"
-                gap="m"
+                gap="s"
                 style={{
                   flex: 1,
                   overflowY: 'auto',
@@ -345,7 +345,7 @@ export default function Dashboard() {
               <Flex
                 fillWidth
                 direction="column"
-                gap="m"
+                gap="s"
                 style={{ flex: 1, minHeight: 0 }}
               >
                 {/* Chart Content */}
@@ -380,7 +380,7 @@ export default function Dashboard() {
                       horizontal="center"
                       vertical="center"
                       direction="column"
-                      gap="m"
+                      gap="s"
                     >
                       <Flex
                         background="danger-weak"
@@ -418,7 +418,7 @@ export default function Dashboard() {
                       {documentAnalysis.summary && (
                         <Flex
                           direction="row"
-                          gap="l"
+                          gap="s"
                           style={{ width: 'fit-content', maxWidth: '100%' }}
                         >
                           {/* Small Title/URL Card */}
@@ -435,7 +435,7 @@ export default function Dashboard() {
 
                           {/* Medium Summary Card */}
                           <MediumDashboardCard>
-                            <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
+                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
                               <Heading variant="heading-strong-m">Summary</Heading>
                               <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
                                 {documentAnalysis.summary}
@@ -447,7 +447,7 @@ export default function Dashboard() {
 
                       {/* Analysis Blocks - JSON-like Structure */}
                         {documentAnalysis.blocks && documentAnalysis.blocks.length > 0 && (
-                          <Flex fillWidth direction="column" gap="xs">
+                          <Flex fillWidth direction="column" gap="s">
                             {/* Smart grid layout that fills rows efficiently */}
                             {(() => {
                               // Helper function to get column span for each block size
@@ -557,7 +557,7 @@ export default function Dashboard() {
                                   style={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(3, 1fr)',
-                                    gap: 'var(--space-xs)',
+                                    gap: 'var(--space-s)',
                                     alignItems: 'start'
                                   }}
                                 >
@@ -601,7 +601,7 @@ export default function Dashboard() {
             <Flex
               fillWidth
               direction="column"
-              gap="m"
+              gap="s"
               style={{ flex: 1, minHeight: 0 }}
             >
               {/* 3x3 Grid with Spanning Components */}
@@ -611,7 +611,7 @@ export default function Dashboard() {
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gridTemplateRows: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: 'var(--space-l)',
+                  gap: 'var(--space-s)',
                   alignItems: 'start'
                 }}
               >
