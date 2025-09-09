@@ -21,7 +21,8 @@ export function MediumDashboardCard({ delay = 1, className }: MediumDashboardCar
         gridColumn: 'span 2',
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        minHeight: '220px'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -33,8 +34,8 @@ export function MediumDashboardCard({ delay = 1, className }: MediumDashboardCar
       }}
     >
       <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Skeleton shape="line" width="l" height="xs" delay={delay} />
-        <Skeleton shape="line" width="m" height="xs" delay={delay + 1} />
+        <Skeleton shape="line" width="l" height="xs" delay={delay.toString() as "1" | "2" | "3" | "4" | "5" | "6"} />
+        <Skeleton shape="line" width="m" height="xs" delay={(delay + 1).toString() as "1" | "2" | "3" | "4" | "5" | "6"} />
       </Flex>
     </Flex>
   );

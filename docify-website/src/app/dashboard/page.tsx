@@ -196,7 +196,7 @@ export default function Dashboard() {
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gridTemplateRows: 'repeat(3, 1fr)',
                   gap: 'var(--space-l)',
-                  minHeight: '300px',
+                  maxHeight: '500px',
                   overflowY: 'auto',
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'var(--neutral-weak) transparent',

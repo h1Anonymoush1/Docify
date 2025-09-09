@@ -21,7 +21,8 @@ export function SmallDashboardCard({ delay = 1, className }: SmallDashboardCardP
         gridColumn: 'span 1',
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        minHeight: '220px'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -33,7 +34,7 @@ export function SmallDashboardCard({ delay = 1, className }: SmallDashboardCardP
       }}
     >
       <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Skeleton shape="line" width="m" height="xs" delay={delay} />
+        <Skeleton shape="line" width="m" height="xs" delay={delay.toString() as "1" | "2" | "3" | "4" | "5" | "6"} />
       </Flex>
     </Flex>
   );
