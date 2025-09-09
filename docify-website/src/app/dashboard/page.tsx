@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Flex, Button, Text, Heading } from '@/once-ui/components';
+import { Flex, Button, Text, Heading, Switch } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
@@ -29,6 +29,10 @@ export default function Dashboard() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [zoomedBlocks, setZoomedBlocks] = useState<Set<string>>(new Set());
+  const [isPublic, setIsPublic] = useState(false);
+  const [updatingPublic, setUpdatingPublic] = useState(false);
+  const [wordCount, setWordCount] = useState<number>(0);
+  const [documentStatus, setDocumentStatus] = useState<string>('unknown');
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -143,6 +147,19 @@ export default function Dashboard() {
           blocks: []
         });
       }
+
+      // Set the public status, word count, and status from the document
+      setIsPublic(docData.public || false);
+      setWordCount(docData.word_count || 0);
+      setDocumentStatus(docData.status || 'unknown');
+
+      console.log('📊 Document word count:', docData.word_count, 'Full doc data:', {
+        id: docData.$id,
+        title: docData.title,
+        url: docData.url,
+        word_count: docData.word_count,
+        public: docData.public
+      });
     } catch (error: any) {
       console.error('❌ Error fetching document analysis:', error);
       console.error('Error details:', {
@@ -177,6 +194,9 @@ export default function Dashboard() {
     setAnalysisError(null);
     setAnalysisLoading(false);
     setZoomedBlocks(new Set()); // Reset zoom state
+    setIsPublic(false); // Reset public state
+    setWordCount(0); // Reset word count
+    setDocumentStatus('unknown'); // Reset document status
   };
 
   // Action handlers for content blocks
@@ -200,6 +220,35 @@ export default function Dashboard() {
       newSet.delete(blockId);
       return newSet;
     });
+  };
+
+  const handlePublicToggle = async (isPublicValue: boolean) => {
+    if (!selectedDocument) return;
+
+    try {
+      setUpdatingPublic(true);
+
+      // Update the document's public status in the database
+      await databases.updateDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.documentsCollectionId,
+        selectedDocument.$id,
+        {
+          public: isPublicValue
+        }
+      );
+
+      // Update local state
+      setIsPublic(isPublicValue);
+
+      console.log(`✅ Document ${isPublicValue ? 'made public' : 'made private'}`);
+    } catch (error: any) {
+      console.error('❌ Error updating document public status:', error);
+      // Revert the toggle on error
+      setIsPublic(!isPublicValue);
+    } finally {
+      setUpdatingPublic(false);
+    }
   };
 
   return (
@@ -427,6 +476,49 @@ export default function Dashboard() {
                                 <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-all' }}>
                                   {selectedDocument.url}
                                 </Text>
+
+                                {/* Status */}
+                                <Flex horizontal="space-between" vertical="center" gap="s" style={{ paddingTop: 'var(--space-s)' }}>
+                                  <Text variant="body-default-xs" onBackground="neutral-weak">
+                                    Status
+                                  </Text>
+                                  <Text variant="body-default-s" onBackground={
+                                    documentStatus === 'completed' ? 'success-strong' :
+                                    documentStatus === 'failed' ? 'danger-strong' :
+                                    documentStatus === 'analyzing' || documentStatus === 'scraping' ? 'warning-strong' :
+                                    'neutral-strong'
+                                  }>
+                                    {documentStatus.charAt(0).toUpperCase() + documentStatus.slice(1)}
+                                  </Text>
+                                </Flex>
+
+                                {/* Word Count */}
+                                <Flex horizontal="space-between" vertical="center" gap="s" style={{ paddingTop: 'var(--space-s)' }}>
+                                  <Text variant="body-default-xs" onBackground="neutral-weak">
+                                    Scraped Content
+                                  </Text>
+                                  <Text variant="body-default-s" onBackground="brand-strong">
+                                    {wordCount > 0 ? wordCount.toLocaleString() + ' words' : 'Not available'}
+                                  </Text>
+                                </Flex>
+
+                                {/* Public Toggle */}
+                                <Flex horizontal="space-between" vertical="center" gap="s" style={{ marginTop: 'auto', paddingTop: 'var(--space-s)' }}>
+                                  <Text variant="body-default-xs" onBackground="neutral-weak">
+                                    Make Public
+                                  </Text>
+                                  <Flex vertical="center" gap="s">
+                                    <Switch
+                                      isChecked={isPublic}
+                                      onToggle={() => handlePublicToggle(!isPublic)}
+                                      disabled={updatingPublic}
+                                      ariaLabel="Toggle document public visibility"
+                                    />
+                                    <Text variant="body-default-xs" onBackground="neutral-weak">
+                                      {updatingPublic ? 'Updating...' : (isPublic ? 'Public' : 'Private')}
+                                    </Text>
+                                  </Flex>
+                                </Flex>
                               </Flex>
                             </SmallDashboardCard>
                           </div>
