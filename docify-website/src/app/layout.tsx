@@ -147,14 +147,14 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               opacity: effects.lines.opacity as any,
             }}
           />
-          <Flex fillWidth minHeight="16"></Flex>
+          <Flex fillWidth minHeight="8"></Flex>
           <AuthProvider>
             <Header />
             <Flex
               position="relative"
               zIndex={0}
               fillWidth
-              paddingY="l"
+              paddingY="m"
               paddingX="l"
               horizontal="center"
               flex={1}

@@ -105,7 +105,7 @@ export function ContentBlockCard({
 
       case 'code':
         return (
-          <Flex fillWidth direction="column" gap="s" style={{ flex: 1 }}>
+          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1 }}>
             <Flex fillWidth horizontal="space-between" vertical="center">
               <Text variant="body-default-s" onBackground="neutral-weak">
                 Language:
@@ -136,9 +136,9 @@ export function ContentBlockCard({
       case 'key_points':
         const points = block.content.split('\n').filter((point: string) => point.trim());
         return (
-          <Flex fillWidth direction="column" gap="s" style={{ flex: 1 }}>
+          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1 }}>
             {points.map((point: string, index: number) => (
-              <Flex key={index} fillWidth gap="s" vertical="start">
+              <Flex key={index} fillWidth gap="xs" vertical="start">
                 <Text variant="body-default-s" onBackground="brand-strong" style={{ minWidth: '20px' }}>
                   {index + 1}.
                 </Text>
@@ -224,7 +224,7 @@ export function ContentBlockCard({
       radius="m"
       padding="m"
       direction="column"
-      gap="m"
+      gap="xs"
       style={{
         gridColumn: getGridSpan(block.size),
         boxShadow: 'var(--shadow-s)',

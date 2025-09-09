@@ -209,7 +209,7 @@ export default function Dashboard() {
         fillHeight
         paddingLeft="l"
         paddingRight="l"
-        paddingTop="s"
+        paddingTop="xs"
         paddingBottom="xs"
         horizontal="center"
         vertical="center"
@@ -220,7 +220,7 @@ export default function Dashboard() {
           background="surface"
           border="neutral-medium"
           radius="l"
-          padding="xl"
+          padding="m"
           gap="l"
           horizontal="start"
         >
@@ -470,7 +470,7 @@ export default function Dashboard() {
 
                       {/* Analysis Blocks - JSON-like Structure */}
                         {documentAnalysis.blocks && documentAnalysis.blocks.length > 0 && (
-                          <Flex fillWidth direction="column" gap="l">
+                          <Flex fillWidth direction="column" gap="xs">
                             {/* Smart grid layout that fills rows efficiently */}
                             {(() => {
                               // Helper function to get column span for each block size
@@ -580,7 +580,7 @@ export default function Dashboard() {
                                   style={{
                                     display: 'grid',
                                     gridTemplateColumns: 'repeat(3, 1fr)',
-                                    gap: 'var(--space-l)',
+                                    gap: 'var(--space-xs)',
                                     alignItems: 'start'
                                   }}
                                 >
@@ -633,13 +633,9 @@ export default function Dashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridTemplateRows: 'repeat(3, 1fr)',
+                  gridTemplateRows: 'repeat(auto-fit, minmax(240px, 1fr))',
                   gap: 'var(--space-l)',
-                  maxHeight: '500px',
-                  overflowY: 'auto',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'var(--neutral-weak) transparent',
-                  flex: 1
+                  alignItems: 'start'
                 }}
               >
                 {/* Large Component: Top Row (spans 3 columns) */}
