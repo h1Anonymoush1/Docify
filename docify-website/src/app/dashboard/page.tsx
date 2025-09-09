@@ -5,7 +5,7 @@ import { Flex, Button, Text, Heading } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
-import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard } from '@/components/dashboard';
+import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard, ContentBlockCard } from '@/components/dashboard';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [documentAnalysis, setDocumentAnalysis] = useState<any>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [zoomedBlocks, setZoomedBlocks] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -175,6 +176,30 @@ export default function Dashboard() {
     setDocumentAnalysis(null);
     setAnalysisError(null);
     setAnalysisLoading(false);
+    setZoomedBlocks(new Set()); // Reset zoom state
+  };
+
+  // Action handlers for content blocks
+  const handleCopyContent = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      // You could add a toast notification here
+      console.log('Content copied to clipboard');
+    } catch (error) {
+      console.error('Failed to copy content:', error);
+    }
+  };
+
+  const handleZoomBlock = (blockId: string) => {
+    setZoomedBlocks(prev => new Set([...prev, blockId]));
+  };
+
+  const handleUnzoomBlock = (blockId: string) => {
+    setZoomedBlocks(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(blockId);
+      return newSet;
+    });
   };
 
   return (
@@ -559,148 +584,16 @@ export default function Dashboard() {
                                     alignItems: 'start'
                                   }}
                                 >
-                                  {row.map((block: any) => {
-                              // Create JSON-like structure for different block types
-                              const renderBlockContent = () => {
-                                switch (block.type) {
-                                  case 'mermaid':
-                                    return (
-                                      <Flex fillWidth style={{ flex: 1, minHeight: '300px' }}>
-                                        <Suspense fallback={
-                                          <div className="flex flex-col items-center justify-center w-full h-full space-y-2">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                                            <div className="text-gray-500 text-sm">Loading chart...</div>
-                                          </div>
-                                        }>
-                                          <MermaidChart
-                                            chart={block.content}
-                                            className="w-full h-full"
-                                          />
-                                        </Suspense>
-                                      </Flex>
-                                    );
-
-                                  case 'key_points':
-                                    const points = block.content.split('\n').filter((point: string) => point.trim());
-                                    return (
-                                      <Flex fillWidth direction="column" gap="s" style={{ flex: 1 }}>
-                                        {points.map((point: string, index: number) => (
-                                          <Flex key={index} fillWidth gap="s" vertical="start">
-                                            <Text variant="body-default-s" onBackground="brand-strong" style={{ minWidth: '20px' }}>
-                                              {index + 1}.
-                                            </Text>
-                                            <Text variant="body-default-s" onBackground="neutral-strong">
-                                              {point.replace(/^[-•*]\s*/, '')}
-                                            </Text>
-                                          </Flex>
-                                        ))}
-                                      </Flex>
-                                    );
-
-                                  case 'code':
-                                    return (
-                                      <Flex fillWidth direction="column" gap="s" style={{ flex: 1 }}>
-                                        <Flex fillWidth horizontal="space-between" vertical="center">
-                                          <Text variant="body-default-s" onBackground="neutral-weak">
-                                            Language:
-                                          </Text>
-                                          <Text variant="body-default-s" onBackground="brand-strong">
-                                            {block.metadata?.language || 'text'}
-                                          </Text>
-                                        </Flex>
-                                        <Flex
-                                          fillWidth
-                                          style={{
-                                            backgroundColor: 'var(--neutral-weak)',
-                                            borderRadius: 'var(--radius-s)',
-                                            padding: 'var(--space-m)',
-                                            fontFamily: 'monospace',
-                                            fontSize: '14px',
-                                            overflow: 'auto',
-                                            whiteSpace: 'pre-wrap'
-                                          }}
-                                        >
-                                          <Text variant="body-default-s" onBackground="neutral-strong">
-                                            {block.content}
-                                          </Text>
-                                        </Flex>
-                                      </Flex>
-                                    );
-
-                                  default:
-                                    return (
-                                      <Flex fillWidth style={{ flex: 1 }}>
-                                        <Text
-                                          variant="body-default-m"
-                                          onBackground="neutral-strong"
-                                          style={{
-                                            lineHeight: '1.6',
-                                            whiteSpace: 'pre-wrap'
-                                          }}
-                                        >
-                                          {block.content}
-                                        </Text>
-                                      </Flex>
-                                    );
-                                }
-                              };
-
-                              // Dynamic card sizing based on JSON size field
-                              const getCardComponent = () => {
-                                switch (block.size) {
-                                  case 'large':
-                                    return LargeDashboardCard;
-                                  case 'small':
-                                    return SmallDashboardCard;
-                                  case 'medium':
-                                  default:
-                                    return MediumDashboardCard;
-                                }
-                              };
-
-                              const CardComponent = getCardComponent();
-
-                              return (
-                                <CardComponent key={block.id}>
-                                  <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
-                                    {/* Block Type Indicator */}
-                                    <Flex fillWidth horizontal="space-between" vertical="center" paddingBottom="s">
-                                      <Heading variant="heading-strong-s">{block.title}</Heading>
-                                      <Flex
-                                        background="brand-weak"
-                                        radius="s"
-                                        paddingX="s"
-                                        paddingY="xs"
-                                      >
-                                        <Text variant="body-default-xs" onBackground="brand-strong">
-                                          {block.type.toUpperCase()}
-                                        </Text>
-                                      </Flex>
-                                    </Flex>
-
-                                    {/* Block Metadata */}
-                                    <Flex fillWidth direction="column" gap="xs" paddingBottom="s">
-                                      <Text variant="body-default-xs" onBackground="neutral-weak">
-                                        Block ID: {block.id}
-                                      </Text>
-                                      <Text variant="body-default-xs" onBackground="neutral-weak">
-                                        Size: {block.size}
-                                      </Text>
-                                      {block.metadata && Object.keys(block.metadata).length > 0 && (
-                                        <Text variant="body-default-xs" onBackground="neutral-weak">
-                                          Metadata: {JSON.stringify(block.metadata, null, 2)}
-                                        </Text>
-                                      )}
-                                    </Flex>
-
-                                    {/* Block Content */}
-                                    <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
-                                      {renderBlockContent()}
-                                    </Flex>
-                                  </Flex>
-                                </CardComponent>
-                                    );
-                                  })}
+                                    {row.map((block: any) => (
+                                      <ContentBlockCard
+                                        key={block.id}
+                                        block={block}
+                                        onCopy={handleCopyContent}
+                                        onZoom={handleZoomBlock}
+                                        onUnzoom={handleUnzoomBlock}
+                                        isZoomed={zoomedBlocks.has(block.id)}
+                                      />
+                                    ))}
                                 </Flex>
                               ));
                             })()}

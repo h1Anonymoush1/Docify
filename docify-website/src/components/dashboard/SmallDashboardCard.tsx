@@ -26,7 +26,8 @@ export function SmallDashboardCard({ delay = 1, className, title, content, type 
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
-        minHeight: '220px'
+        minHeight: '220px',
+        maxHeight: '220px'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';
@@ -38,9 +39,11 @@ export function SmallDashboardCard({ delay = 1, className, title, content, type 
       }}
     >
       {children ? (
-        children
+        <div style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
+          {children}
+        </div>
       ) : type === 'content' ? (
-        <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+        <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', overflow: 'auto', scrollbarWidth: 'thin' }}>
           {title && <Heading variant="heading-strong-s">{title}</Heading>}
           {content && typeof content === 'string' ? (
             <Text variant="body-default-s" onBackground="neutral-strong">{content}</Text>
