@@ -22,6 +22,7 @@ export default function Login() {
   const [otp, setOtp] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [error, setError] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -37,10 +38,15 @@ export default function Login() {
 
     try {
       setError('');
-      await sendOTP(emailInput);
+      setSendingOtp(true);
+      await sendOTP(emailInput, false);
+      setEmail(emailInput);
+      setAuthStep('otp');
     } catch (error: any) {
       console.error('Send OTP failed:', error);
       setError(error.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setSendingOtp(false);
     }
   };
 
@@ -93,23 +99,91 @@ export default function Login() {
       padding="l"
     >
       <Column maxWidth="m" gap="l" horizontal="center">
-        <RevealFx translateY="4" fillWidth horizontal="start" paddingBottom="m">
-          <Heading wrap="balance" variant="display-strong-l" style={{ textAlign: 'center' }}>
-            Welcome to <span style={{ color: 'var(--brand-on-background-strong)' }}>Docify</span>
-          </Heading>
-        </RevealFx>
-
-        <RevealFx translateY="8" delay={0.2}>
-          <Text
-            variant="body-default-l"
-            onBackground="neutral-weak"
-            style={{ textAlign: 'center', maxWidth: '500px' }}
-          >
-            {authStep === 'email'
-              ? 'Enter your email address to receive a one-time password'
-              : `Enter the 6-digit code sent to ${email}`
-            }
-          </Text>
+        <RevealFx translateY="8" delay={0.1}>
+          <Flex gap="32" horizontal="center">
+            <Button
+              variant="tertiary"
+              size="s"
+              onClick={() => router.push('/auth/login')}
+              style={{
+                borderBottom: '3px solid white',
+                borderRadius: '0',
+                paddingBottom: '11px',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderTop: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                color: 'var(--neutral-on-background-strong)',
+                fontWeight: '600',
+                position: 'relative',
+                transition: 'all 0.3s ease',
+                height: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              Login
+            </Button>
+            <Button
+              variant="tertiary"
+              size="s"
+              onClick={() => router.push('/auth/signup')}
+              style={{
+                borderBottom: '3px solid transparent',
+                borderRadius: '0',
+                paddingBottom: '11px',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderTop: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                color: 'var(--neutral-on-background-medium)',
+                fontWeight: '500',
+                position: 'relative',
+                transition: 'color 0.3s ease, font-weight 0.3s ease',
+                height: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              onMouseEnter={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                const underline = target.querySelector('.animated-underline') as HTMLElement;
+                target.style.color = 'var(--neutral-on-background-strong)';
+                target.style.fontWeight = '600';
+                if (underline) {
+                  underline.style.width = '100%';
+                }
+              }}
+              onMouseLeave={(e) => {
+                const target = e.currentTarget as HTMLElement;
+                const underline = target.querySelector('.animated-underline') as HTMLElement;
+                target.style.color = 'var(--neutral-on-background-medium)';
+                target.style.fontWeight = '500';
+                if (underline) {
+                  underline.style.width = '0%';
+                }
+              }}
+            >
+              Sign up
+              <div
+                className="animated-underline"
+                style={{
+                  position: 'absolute',
+                  bottom: '-3px',
+                  left: '0',
+                  width: '0%',
+                  height: '3px',
+                  backgroundColor: 'white',
+                  transform: 'translateX(0%)',
+                  opacity: 1,
+                  transition: 'width 0.4s ease-in-out'
+                }}
+              />
+            </Button>
+          </Flex>
         </RevealFx>
 
         {error && (
@@ -130,7 +204,6 @@ export default function Login() {
                 id="email"
                 label="Email Address"
                 type="email"
-                placeholder="Enter your email address"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 style={{ maxWidth: '400px' }}
@@ -146,36 +219,77 @@ export default function Login() {
                 size="m"
                 fillWidth
                 style={{ maxWidth: '400px' }}
-                disabled={loading}
+                disabled={sendingOtp}
               >
-                {loading ? 'Sending...' : 'Send OTP'}
-              </Button>
-              <Button
-                onClick={() => router.push('/auth/signup')}
-                variant="tertiary"
-                size="s"
-                style={{ maxWidth: '400px' }}
-              >
-                Don't have an account? Sign up
+                {sendingOtp ? 'Sending...' : 'Send OTP'}
               </Button>
             </Flex>
           ) : (
             <Flex direction="column" gap="16">
-              <Input
-                id="otp"
-                label="Verification Code"
-                type="text"
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                style={{ maxWidth: '400px', textAlign: 'center', fontSize: '24px', letterSpacing: '4px' }}
-                maxLength={6}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleVerifyOTP();
-                  }
-                }}
-              />
+              <Flex gap="8" horizontal="center" style={{ maxWidth: '400px', margin: '0 auto' }}>
+                {[0, 1, 2, 3, 4, 5].map((index) => (
+                  <Input
+                    key={index}
+                    id={`otp-${index}`}
+                    type="text"
+                    value={otp[index] || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      const newOtp = otp.split('');
+                      if (value) {
+                        newOtp[index] = value;
+                        setOtp(newOtp.join('').slice(0, 6));
+
+                        // Auto-focus next field
+                        if (index < 5) {
+                          const nextField = document.getElementById(`otp-${index + 1}`);
+                          nextField?.focus();
+                        }
+                      } else {
+                        // Handle deletion
+                        newOtp[index] = '';
+                        setOtp(newOtp.join('').slice(0, 6));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                      if (pastedData) {
+                        const newOtp = pastedData.split('');
+                        // Fill remaining fields with empty strings if paste is shorter than 6 digits
+                        while (newOtp.length < 6) {
+                          newOtp.push('');
+                        }
+                        setOtp(newOtp.join(''));
+
+                        // Focus the next empty field or the last field
+                        const nextEmptyIndex = newOtp.findIndex((digit, i) => !digit && i >= index);
+                        const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : 5;
+                        const focusField = document.getElementById(`otp-${focusIndex}`);
+                        focusField?.focus();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace' && !otp[index] && index > 0) {
+                        // Move to previous field on backspace
+                        const prevField = document.getElementById(`otp-${index - 1}`);
+                        prevField?.focus();
+                      } else if (e.key === 'Enter' && otp.length === 6) {
+                        handleVerifyOTP();
+                      }
+                    }}
+                    style={{
+                      width: '50px',
+                      height: '50px',
+                      textAlign: 'center',
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      borderRadius: '8px'
+                    }}
+                    maxLength={1}
+                  />
+                ))}
+              </Flex>
               <Button
                 onClick={handleVerifyOTP}
                 variant="primary"

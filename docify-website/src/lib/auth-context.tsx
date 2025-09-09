@@ -20,9 +20,9 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  sendOTP: (email: string) => Promise<{ userId: string }>;
+  sendOTP: (email: string, showGlobalLoading?: boolean) => Promise<{ userId: string }>;
   verifyOTP: (userId: string, secret: string) => Promise<void>;
-  createAccount: (email: string) => Promise<void>;
+  createAccount: (email: string, showGlobalLoading?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   refreshAuthStatus: () => Promise<void>;
@@ -116,19 +116,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const handleSendOTP = async (email: string) => {
+  const handleSendOTP = async (email: string, showGlobalLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (showGlobalLoading) {
+        setLoading(true);
+      }
       const token = await sendEmailOTP(email);
       setEmail(email);
       setUserId(token.userId);
-      setAuthStep('otp');
+      if (showGlobalLoading) {
+        setAuthStep('otp');
+      }
       return { userId: token.userId };
     } catch (error) {
       console.error('Send OTP error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (showGlobalLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -147,17 +153,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const handleCreateAccount = async (email: string) => {
+  const handleCreateAccount = async (email: string, showGlobalLoading: boolean = true) => {
     try {
-      setLoading(true);
+      if (showGlobalLoading) {
+        setLoading(true);
+      }
       // For email OTP, we don't need to create user manually
       // createEmailToken automatically creates user if email doesn't exist
-      await handleSendOTP(email);
+      await handleSendOTP(email, showGlobalLoading);
     } catch (error) {
       console.error('Create account error:', error);
       throw error;
     } finally {
-      setLoading(false);
+      if (showGlobalLoading) {
+        setLoading(false);
+      }
     }
   };
 
