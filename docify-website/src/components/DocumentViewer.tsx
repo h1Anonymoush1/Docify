@@ -9,9 +9,10 @@ interface DocumentViewerProps {
   documentId: string;
 }
 
-interface AnalysisResult {
+// Analysis data is now part of the document (consolidated schema)
+interface AnalysisData {
   summary: string;
-  charts: Array<{
+  blocks: Array<{
     id: string;
     type: string;
     size: 'small' | 'medium' | 'large';
@@ -25,7 +26,14 @@ interface DocumentData {
   $id: string;
   url: string;
   title?: string;
+  instructions?: string;
   status: 'pending' | 'scraping' | 'analyzing' | 'completed' | 'failed';
+  word_count?: number;
+  scraped_content?: string;
+  analysis_summary?: string;
+  analysis_blocks?: string; // JSON string of analysis blocks
+  error_message?: string;
+  public?: boolean;
   $createdAt: string;
   $updatedAt: string;
   [key: string]: any; // Allow additional properties from Appwrite
@@ -33,7 +41,7 @@ interface DocumentData {
 
 export default function DocumentViewer({ documentId }: DocumentViewerProps) {
   const [document, setDocument] = useState<DocumentData | null>(null);
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +58,7 @@ export default function DocumentViewer({ documentId }: DocumentViewerProps) {
     try {
       setError(null);
 
-      // Load document
+      // Load document (consolidated schema - analysis data is in the document)
       const docData = await databases.getDocument(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.documentsCollectionId,
@@ -59,21 +67,23 @@ export default function DocumentViewer({ documentId }: DocumentViewerProps) {
 
       setDocument(docData);
 
-      // Load analysis results if document is completed
-      if (docData.status === 'completed') {
-        const analysisResults = await databases.listDocuments(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.analysisCollectionId,
-          [`document_id=${documentId}`]
-        );
-
-        if (analysisResults.documents.length > 0) {
-          const analysisData = analysisResults.documents[0];
+      // Extract analysis data from document if completed
+      if (docData.status === 'completed' && docData.analysis_summary && docData.analysis_blocks) {
+        try {
+          const blocks = JSON.parse(docData.analysis_blocks);
           setAnalysis({
-            summary: analysisData.summary,
-            charts: analysisData.charts || []
+            summary: docData.analysis_summary,
+            blocks: blocks || []
+          });
+        } catch (parseError) {
+          console.error('Error parsing analysis blocks:', parseError);
+          setAnalysis({
+            summary: docData.analysis_summary,
+            blocks: []
           });
         }
+      } else {
+        setAnalysis(null);
       }
 
     } catch (err) {
@@ -198,11 +208,11 @@ export default function DocumentViewer({ documentId }: DocumentViewerProps) {
           )}
 
           {/* Content Blocks Grid */}
-          {analysis.charts && analysis.charts.length > 0 && (
+          {analysis.blocks && analysis.blocks.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Analysis Results</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {analysis.charts.map((block) => (
+                {analysis.blocks.map((block) => (
                   <ContentBlockRenderer key={block.id} block={block} />
                 ))}
               </div>

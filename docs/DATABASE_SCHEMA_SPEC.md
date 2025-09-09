@@ -3,29 +3,30 @@
 ## Database Overview
 **Database ID**: `docify_db`
 **Platform**: Appwrite Database
-**Collections**: 2 main collections (documents_table, analysis_results)
+**Collections**: 1 consolidated collection (documents_table)
+**Architecture**: Single-table design with all document data, scraped content, and analysis results
 
 ## Collections Schema
 
-### 1. Documents Collection
+### Consolidated Documents Collection
 **Collection ID**: `documents_table`
-**Purpose**: Stores user-created documents with URLs and analysis prompts
+**Purpose**: Single consolidated table storing documents, scraped content, and analysis results
 
 #### Attributes
 
 | Attribute | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `user_id` | `string` | ✅ | - | Appwrite user ID (for user isolation) |
-| `title` | `string` | ✅ | - | Document title provided by user |
+| `title` | `string` | ❌ | - | Document title provided by user |
 | `url` | `string` | ✅ | - | URL to be scraped and analyzed |
 | `instructions` | `string` | ✅ | - | User prompt for what to focus on/understand |
 | `status` | `string` | ✅ | `"pending"` | Processing status enum |
-| `scraped_content` | `string` | ❌ | `null` | Full scraped content (large text) |
+| `public` | `boolean` | ❌ | `false` | Whether document is publicly accessible |
+| `scraped_content` | `string` | ❌ | - | Full scraped content (large text) |
 | `word_count` | `integer` | ❌ | `0` | Total words in scraped content |
-| `pages_crawled` | `integer` | ❌ | `0` | Number of pages scraped |
-| `content_types` | `object` | ❌ | `{}` | Breakdown of content types found |
-| `subpages` | `array` | ❌ | `[]` | List of subpages scraped |
-| `error_message` | `string` | ❌ | `null` | Error message if processing failed |
+| `analysis_summary` | `string` | ❌ | - | LLM-generated summary |
+| `analysis_blocks` | `string` | ❌ | - | JSON array of analysis blocks |
+| `error_message` | `string` | ❌ | - | Error message if processing failed |
 | `created_at` | `datetime` | ✅ | `auto` | Document creation timestamp |
 | `updated_at` | `datetime` | ✅ | `auto` | Last update timestamp |
 
@@ -35,6 +36,25 @@
 - `"analyzing"`: Scraping complete, analyzing with LLM
 - `"completed"`: Analysis complete, ready for display
 - `"failed"`: Processing failed, see error_message
+
+#### Analysis Block Structure
+Analysis blocks are stored as JSON in the `analysis_blocks` field:
+
+```json
+[
+  {
+    "id": "unique-block-id",
+    "type": "summary|key_points|architecture|mermaid|code|api_reference|guide|comparison|best_practices|troubleshooting",
+    "size": "small|medium|large",
+    "title": "Block title",
+    "content": "Block content (mermaid syntax for mermaid type)",
+    "metadata": {
+      "language": "javascript|python|etc (for code blocks)",
+      "priority": "high|medium|low"
+    }
+  }
+]
+```
 
 #### Indexes
 1. **User Documents Index**
@@ -52,137 +72,109 @@
    - Order: Descending on `created_at`
    - Purpose: User's documents filtered by status
 
-### 2. Analysis Results Collection
-**Collection ID**: `analysis_results`
-**Purpose**: Stores LLM analysis results with structured blocks
-
-#### Attributes
-
-| Attribute | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `document_id` | `string` | ✅ | - | Reference to documents_table.$id |
-| `summary` | `string` | ✅ | - | Overall summary of the document |
-| `charts` | `array` | ✅ | `[]` | Array of analysis blocks (JSON) |
-| `raw_response` | `string` | ❌ | `null` | Raw LLM API response |
-| `processing_time` | `integer` | ❌ | `0` | Analysis time in milliseconds |
-| `status` | `string` | ✅ | `"pending"` | Analysis status |
-| `error_message` | `string` | ❌ | `null` | Error message if analysis failed |
-| `created_at` | `datetime` | ✅ | `auto` | Analysis creation timestamp |
-| `updated_at` | `datetime` | ✅ | `auto` | Last update timestamp |
-
-#### Analysis Status Enum Values
-- `"pending"`: Analysis record created, waiting for LLM
-- `"processing"`: Currently running LLM analysis
-- `"completed"`: Analysis successful
-- `"failed"`: Analysis failed
-
-#### Block Structure (charts array items)
-Each block in the `charts` array follows this JSON structure:
-
-```json
-{
-  "id": "unique-block-id",
-  "type": "summary|key_points|architecture|mermaid|code|api_reference|guide|comparison|best_practices|troubleshooting",
-  "size": "small|medium|large",
-  "title": "Block title",
-  "content": "Block content (mermaid syntax for mermaid type)",
-  "metadata": {
-    "language": "javascript|python|etc (for code blocks)",
-    "priority": "high|medium|low",
-    "position": "1-6 (grid position)"
-  }
-}
-```
-
-#### Indexes
-1. **Document Analysis Index**
-   - Attributes: `document_id`, `created_at`
-   - Order: Descending on `created_at`
-   - Purpose: Get latest analysis for a document
-
-2. **Status Index**
-   - Attributes: `status`, `created_at`
-   - Order: Descending on `created_at`
-   - Purpose: Find analysis records by status
-
-3. **Processing Time Index**
-   - Attributes: `processing_time`
-   - Order: Descending
-   - Purpose: Performance monitoring
-
 ## Relationships
 
-### One-to-Many Relationship
-- **Documents** (1) → **Analysis Results** (Many)
-- Each document can have multiple analysis results (for retries, different prompts, etc.)
-- Only the latest analysis result should be displayed to users
+### Consolidated Schema
+- **Single Table Design**: All document data, scraped content, and analysis results stored in one `documents_table`
+- **No Cross-Table Relationships**: Eliminates JOINs and simplifies queries
+- **Atomic Operations**: Document creation, scraping, and analysis are all handled within one record
 
 ## Data Constraints
 
-### Document Constraints
+### Consolidated Document Constraints
 1. `url` must be a valid HTTP/HTTPS URL
 2. `instructions` cannot exceed 1000 characters
-3. `title` cannot exceed 200 characters
+3. `title` cannot exceed 200 characters (optional)
 4. Only users can access their own documents (`user_id` filter)
-
-### Analysis Constraints
-1. Maximum 6 blocks in `charts` array
-2. Block IDs must be unique within each analysis
-3. Block sizes must follow: small=1, medium=2, large=3 units
-4. Total grid units cannot exceed 8 (for 3x3 grid minus summary)
+5. Maximum 6 blocks in `analysis_blocks` JSON array
+6. Block IDs must be unique within each document
+7. Block sizes must follow: small=1, medium=2, large=3 units
+8. Total grid units cannot exceed 8 (for 3x3 grid layout)
+9. `analysis_blocks` stored as JSON string, parsed on client-side
 
 ## Data Validation Rules
 
-### Document Validation
+### Consolidated Validation
 ```javascript
 // URL format validation
 const urlPattern = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 // Content length limits
-title: maxLength(200)
-instructions: maxLength(1000)
-```
+title: maxLength(200) // optional
+instructions: maxLength(1000) // required
+analysis_summary: maxLength(2000) // optional
+error_message: maxLength(1000) // optional
 
-### Analysis Validation
-```javascript
-// Block validation
-blocks: maxLength(6)
-blockTypes: ['summary', 'key_points', 'architecture', 'mermaid', 'code', 'api_reference', 'guide', 'comparison', 'best_practices', 'troubleshooting']
-blockSizes: ['small', 'medium', 'large']
+// JSON validation for analysis_blocks
+try {
+  const blocks = JSON.parse(analysis_blocks);
+  validateAnalysisBlocks(blocks);
+} catch (error) {
+  throw new Error('Invalid analysis_blocks JSON format');
+}
 
-// Grid constraint validation
-const sizeValues = { small: 1, medium: 2, large: 3 };
-const totalUnits = blocks.reduce((sum, block) => sum + sizeValues[block.size], 0);
-if (totalUnits > 8) throw new Error('Total grid units exceed limit');
+// Block validation function
+function validateAnalysisBlocks(blocks) {
+  if (!Array.isArray(blocks)) throw new Error('analysis_blocks must be an array');
+
+  blocks.forEach((block, index) => {
+    // Required block properties
+    if (!block.id || !block.type || !block.size || !block.title || !block.content) {
+      throw new Error(`Block ${index} missing required properties`);
+    }
+
+    // Validate block types
+    const validTypes = ['summary', 'key_points', 'architecture', 'mermaid', 'code', 'api_reference', 'guide', 'comparison', 'best_practices', 'troubleshooting'];
+    if (!validTypes.includes(block.type)) {
+      throw new Error(`Block ${index} has invalid type: ${block.type}`);
+    }
+
+    // Validate block sizes
+    const validSizes = ['small', 'medium', 'large'];
+    if (!validSizes.includes(block.size)) {
+      throw new Error(`Block ${index} has invalid size: ${block.size}`);
+    }
+  });
+
+  // Grid constraint validation
+  const sizeValues = { small: 1, medium: 2, large: 3 };
+  const totalUnits = blocks.reduce((sum, block) => sum + sizeValues[block.size], 0);
+  if (totalUnits > 8) throw new Error('Total grid units exceed limit of 8');
+
+  // Maximum blocks constraint
+  if (blocks.length > 6) throw new Error('Maximum 6 analysis blocks allowed');
+}
 ```
 
 ## Database Permissions
 
-### Collection Permissions
+### Consolidated Collection Permissions
 ```javascript
-// Documents collection
+// Single documents_table collection
 read: ["user:$userId"]  // Users can only read their own documents
-write: ["user:$userId"] // Users can only write their own documents
+write: ["user:$userId", "role:apps"] // Users + functions can write to documents
 delete: ["user:$userId"] // Users can only delete their own documents
 
-// Analysis Results collection
-read: ["user:$userId"]  // Users can only read analysis for their documents
-write: ["role:apps"]   // Only functions can write analysis results
-delete: ["user:$userId"] // Users can delete their analysis results
+// Function permissions for automated processing:
+- Document scraper: Updates document with scraped content
+- LLM analyzer: Updates document with analysis results
+- Both functions write to the same consolidated document record
 ```
 
-## Data Migration Strategy
+## Implementation Strategy
 
-### Version 1.0 Initial Schema
-- Basic document and analysis collections
-- Simple status tracking
-- Block-based analysis storage
+### Version 2.0 Consolidated Schema
+- **Single Table Design**: All data consolidated into `documents_table`
+- **No Migration Needed**: Fresh implementation with consolidated approach
+- **Simplified Architecture**: Eliminates cross-table relationships
+- **Atomic Operations**: Document lifecycle managed in one record
 
-### Future Migrations
-- Add user preferences table
-- Add document sharing features
-- Add analysis templates
+### Future Enhancements
+- Add document sharing based on `public` boolean field
 - Add document categories/tags
+- Add user preferences for analysis types
+- Add document templates
+- Add collaborative features
 
 ## Backup and Recovery
 

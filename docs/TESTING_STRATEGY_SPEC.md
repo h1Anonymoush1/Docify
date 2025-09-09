@@ -422,7 +422,7 @@ export DATABASE_URL=postgresql://localhost/docify_test
 ```typescript
 const cleanupTestData = async () => {
   // Clean database
-  await db.query('DELETE FROM analysis_results');
+  // No separate analysis_results table in consolidated schema
   await db.query('DELETE FROM documents');
 
   // Clean file system

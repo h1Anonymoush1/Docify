@@ -26,7 +26,6 @@ from google import genai
 # Environment variables
 DATABASE_ID = os.environ.get('DATABASE_ID', 'docify_db')
 DOCUMENTS_COLLECTION_ID = os.environ.get('DOCUMENTS_COLLECTION_ID', 'documents_table')
-ANALYSIS_COLLECTION_ID = os.environ.get('ANALYSIS_COLLECTION_ID', 'analysis_results')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 
 # Initialize Appwrite client
@@ -449,27 +448,26 @@ def save_analysis_result(analysis_id: str, document_id: str, analysis_data: Dict
         print(f"   Blocks count: {len(analysis_data.get('blocks', []))}")
         print(f"   Raw response length: {len(raw_response)} characters")
 
-        # Prepare update data
+        # Prepare update data for consolidated schema
         update_data = {
-            'document_id': document_id,
-            'summary': analysis_data['summary'],
-            'charts': json.dumps(analysis_data['blocks']),  # Convert blocks array to JSON string
-            'raw_response': raw_response,
-            'processing_time': int(processing_time)  # Convert float to integer
+            'status': 'completed',  # Mark as completed
+            'analysis_summary': analysis_data['summary'],
+            'analysis_blocks': json.dumps(analysis_data['blocks']),  # Convert blocks array to JSON string
+            'error_message': None  # Clear any previous errors
         }
 
-        print("   Updating analysis record...")
+        print("   Updating document with analysis results...")
         databases.update_document(
             DATABASE_ID,
-            ANALYSIS_COLLECTION_ID,
-            analysis_id,
+            DOCUMENTS_COLLECTION_ID,
+            analysis_id,  # analysis_id is the same as document_id in consolidated schema
             update_data
         )
 
         print("✓ Analysis results saved successfully")
         print(f"   Database: {DATABASE_ID}")
-        print(f"   Collection: {ANALYSIS_COLLECTION_ID}")
-        print(f"   Record updated: {analysis_id}")
+        print(f"   Collection: {DOCUMENTS_COLLECTION_ID}")
+        print(f"   Document updated: {analysis_id}")
 
     except Exception as error:
         print(f"❌ DATABASE SAVE ERROR: {error}")
@@ -500,32 +498,21 @@ def get_document_and_analysis(document_id: str) -> Tuple[Dict[str, Any], str, Di
         print(f"   Word count: {document.get('word_count', 'N/A')}")
         print(f"   Content length: {len(document.get('scraped_content', ''))} characters")
 
-        # Get the most recent analysis record for this document
-        print("   Fetching analysis record...")
-        analysis_records = databases.list_documents(
-            DATABASE_ID,
-            ANALYSIS_COLLECTION_ID,
-            [
-                Query.equal('document_id', document_id),
-                Query.order_desc('$createdAt'),
-                Query.limit(1)
-            ]
-        )
+        # Check if document has been scraped (consolidated schema)
+        if not document.get('scraped_content'):
+            print("❌ FAIL: Document has not been scraped yet")
+            raise ValueError('Document has not been scraped yet')
 
-        if len(analysis_records['documents']) == 0:
-            print("❌ FAIL: No analysis record found for this document")
-            raise ValueError('No analysis record found for this document')
-
-        analysis_id = analysis_records['documents'][0]['$id']
-        print("✓ Analysis record found")
+        # Use document ID as analysis ID (consolidated schema)
+        analysis_id = document_id
+        print("✓ Using consolidated document for analysis")
         print(f"   Analysis ID: {analysis_id}")
-        print(f"   Created: {analysis_records['documents'][0].get('$createdAt', 'N/A')}")
 
         # Prepare scraped data from document record
         print("   Preparing scraped data...")
         scraped_data = {
             'title': document.get('title', 'Untitled Document'),
-            'description': document.get('description', ''),
+            'description': '',  # Not used in consolidated schema
             'content': document.get('scraped_content', ''),
             'url': document.get('url', ''),
             'word_count': document.get('word_count', 0)
@@ -557,8 +544,101 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
     log("Environment check:")
     log(f"  - Database ID: {DATABASE_ID}")
     log(f"  - Documents Collection: {DOCUMENTS_COLLECTION_ID}")
-    log(f"  - Analysis Collection: {ANALYSIS_COLLECTION_ID}")
     log(f"  - Gemini API Key: {'✓ Configured' if GEMINI_API_KEY else '✗ Missing'}")
+
+    # Check trigger type and filter events
+    trigger_type = getattr(context.req.headers, 'get', lambda x: None)('x-appwrite-trigger')
+    log(f"Trigger type: {trigger_type}")
+
+    if trigger_type == 'event':
+        collection_id = getattr(context.req.headers, 'get', lambda x: None)('x-appwrite-collection')
+        event_type = getattr(context.req.headers, 'get', lambda x: None)('x-appwrite-event')
+        log(f"Event collection: {collection_id}")
+        log(f"Event type: {event_type}")
+
+        # Extract collection name from event string if collection header is empty
+        if not collection_id and event_type and 'collections.' in event_type:
+            # Parse collection from event: databases.db.collections.collection_name.documents.doc_id.create
+            try:
+                parts = event_type.split('.')
+                if len(parts) >= 4 and parts[2] == 'collections':
+                    collection_id = parts[3]  # collection_name
+                    log(f'Extracted collection from event: {collection_id}')
+            except Exception as e:
+                log(f'Could not extract collection from event: {e}')
+
+        # Only process document UPDATE events from documents_table
+        if collection_id != DOCUMENTS_COLLECTION_ID:
+            log(f"❌ SKIP: Event from {collection_id}, not from documents collection")
+            return {
+                'success': True,
+                'message': 'Skipped: Not a document event',
+                'statusCode': 200
+            }
+
+        # With tables.*.rows.*.create trigger, check if this is actually an UPDATE operation
+        # We need to check the event payload to determine if it's a create or update
+        is_update_operation = False
+
+        if hasattr(context.req, 'body') and context.req.body:
+            if isinstance(context.req.body, dict):
+                # For updates, we typically see status changes or other field updates
+                # Check if this has status field (indicating an update operation)
+                if 'status' in context.req.body:
+                    is_update_operation = True
+                    log('Detected UPDATE operation based on request body (has status field)')
+                else:
+                    log('Request body missing status field - likely a creation event')
+
+            elif isinstance(context.req.body, str):
+                import json
+                try:
+                    body_data = json.loads(context.req.body)
+                    if 'status' in body_data:
+                        is_update_operation = True
+                        log('Detected UPDATE operation from JSON body (has status field)')
+                    else:
+                        log('JSON body missing status field - likely a creation event')
+                except:
+                    log("⚠️ Could not parse JSON body for operation type")
+
+        if not is_update_operation:
+            log("❌ SKIP: Not a document update operation")
+            return {
+                'success': True,
+                'message': 'Skipped: Not a document update event',
+                'statusCode': 200
+            }
+
+        # Check if status changed to 'analyzing'
+        if hasattr(context.req, 'body') and context.req.body:
+            if isinstance(context.req.body, dict):
+                new_status = context.req.body.get('status')
+                log(f"Document status in update: {new_status}")
+
+                if new_status != 'analyzing':
+                    log(f"❌ SKIP: Status is {new_status}, not 'analyzing'")
+                    return {
+                        'success': True,
+                        'message': 'Skipped: Document status is not analyzing',
+                        'statusCode': 200
+                    }
+            elif isinstance(context.req.body, str):
+                import json
+                try:
+                    body_data = json.loads(context.req.body)
+                    new_status = body_data.get('status')
+                    log(f"Document status in update (JSON): {new_status}")
+
+                    if new_status != 'analyzing':
+                        log(f"❌ SKIP: Status is {new_status}, not 'analyzing'")
+                        return {
+                            'success': True,
+                            'message': 'Skipped: Document status is not analyzing',
+                            'statusCode': 200
+                        }
+                except:
+                    log("⚠️ Could not parse status from JSON body")
 
     try:
         log("\n--- STEP 1: REQUEST VALIDATION ---")

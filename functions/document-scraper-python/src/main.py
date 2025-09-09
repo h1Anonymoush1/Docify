@@ -1232,7 +1232,6 @@ def init_appwrite_client(req):
 # Database configuration
 DATABASE_ID = os.environ.get('DATABASE_ID', 'docify_db')
 DOCUMENTS_COLLECTION_ID = os.environ.get('DOCUMENTS_COLLECTION_ID', 'documents_table')
-ANALYSIS_COLLECTION_ID = os.environ.get('ANALYSIS_COLLECTION_ID', 'analysis_results')
 
 
 def scrape_website(url, max_pages=20):
@@ -1241,14 +1240,16 @@ def scrape_website(url, max_pages=20):
 
 
 def update_document_status(databases, document_id, status, scraped_content=None):
-    """Update document status in database."""
+    """Update document status in consolidated database."""
     try:
         update_data = {'status': status}
 
-        # Only include scraped content and title if provided
+        # Include all scraped content data in the consolidated document
         if scraped_content:
             update_data['scraped_content'] = scraped_content['content']
+            update_data['word_count'] = scraped_content['word_count']
             update_data['title'] = scraped_content['title']
+            update_data['error_message'] = None  # Clear any previous errors
 
         databases.update_document(
             DATABASE_ID,
@@ -1264,22 +1265,23 @@ def update_document_status(databases, document_id, status, scraped_content=None)
 
 
 def trigger_llm_analysis(databases, document_id, scraped_data):
-    """Trigger LLM analysis by creating analysis record."""
+    """Trigger LLM analysis by updating document status (consolidated schema)."""
     try:
-        databases.create_document(
+        # Just update the document status - the LLM analyzer will be triggered by event
+        update_data = {
+            'status': 'analyzing',
+            'analysis_summary': 'Analysis in progress...',  # Placeholder
+            'analysis_blocks': '[]'  # Empty JSON array as string
+        }
+
+        databases.update_document(
             DATABASE_ID,
-            ANALYSIS_COLLECTION_ID,
-            ID.unique(),
-            {
-                'document_id': document_id,
-                'summary': 'Analysis in progress...',  # Placeholder
-                'charts': '[]',  # Empty array placeholder
-                'raw_response': None,
-                'processing_time': 0
-            }
+            DOCUMENTS_COLLECTION_ID,
+            document_id,
+            update_data
         )
 
-        print(f'LLM analysis triggered for document {document_id}')
+        print(f'LLM analysis triggered for document {document_id} (consolidated schema)')
     except Exception as error:
         print(f'Failed to trigger LLM analysis: {error}')
         raise error
@@ -1303,52 +1305,59 @@ def main(context):
             print(f'Header {header_name}: {header_value}')
 
         if trigger_type == 'event':
-            # Get the collection that triggered this event
+            # Check if this is a document creation event
             collection_id = context.req.headers.get('x-appwrite-collection', '')
+            event_type = context.req.headers.get('x-appwrite-event', '')
             print(f'Event triggered by collection: {collection_id}')
+            print(f'Event type: {event_type}')
 
-            # If collection header is empty, try alternative approaches
-            if not collection_id:
-                print('Collection header is empty, trying alternative detection methods...')
+            # Extract collection name from event string if collection header is empty
+            if not collection_id and 'collections.' in event_type:
+                # Parse collection from event: databases.db.collections.collection_name.documents.doc_id.create
+                try:
+                    parts = event_type.split('.')
+                    if len(parts) >= 4 and parts[2] == 'collections':
+                        collection_id = parts[3]  # collection_name
+                        print(f'Extracted collection from event: {collection_id}')
+                except Exception as e:
+                    print(f'Could not extract collection from event: {e}')
 
-                # Check if we can determine from the request body structure
-                if context.req.body:
-                    # Document creation: has url and instructions
-                    if 'url' in context.req.body and 'instructions' in context.req.body:
-                        print('Detected document creation based on request body structure')
-                        collection_id = DOCUMENTS_COLLECTION_ID
-                    # Analysis result creation: has summary and charts
-                    elif 'summary' in context.req.body and 'charts' in context.req.body:
-                        print('Detected analysis result creation based on request body structure')
-                        collection_id = ANALYSIS_COLLECTION_ID
-                        print(f'Skipping: Event from {collection_id}, not from documents collection')
-                        return context.res.json({
-                            'success': True,
-                            'message': 'Skipped: Analysis result creation event'
-                        }, 200)
-                    else:
-                        print('Could not determine collection from body structure, checking event header...')
-
-                        # Try to parse collection from x-appwrite-event header
-                        event_header = context.req.headers.get('x-appwrite-event', '')
-                        if 'analysis_results' in event_header:
-                            print('Detected analysis_results from event header')
-                            collection_id = ANALYSIS_COLLECTION_ID
-                            print(f'Skipping: Event from {collection_id}, not from documents collection')
-                            return context.res.json({
-                                'success': True,
-                                'message': 'Skipped: Analysis result creation event'
-                            }, 200)
-                        elif 'documents_table' in event_header:
-                            print('Detected documents_table from event header')
-                            collection_id = DOCUMENTS_COLLECTION_ID
-                        else:
-                            print('Could not determine collection from event header, proceeding anyway...')
-                            collection_id = DOCUMENTS_COLLECTION_ID  # Default assumption
-
-            # Only process if it's from documents_table collection
+            # Only process document CREATION events from documents_table
             if collection_id != DOCUMENTS_COLLECTION_ID:
                 print(f'Skipping: Event from {collection_id}, not from documents collection')
+                return context.res.json({
+                    'success': True,
+                    'message': 'Skipped: Not a document event'
+                }, 200)
+
+            # With tables.*.rows.*.create trigger, check if this is actually a CREATE operation
+            # We need to check the event payload to determine if it's a create or update
+            is_create_operation = False
+
+            # Check if this is a new document creation by looking for required fields
+            if hasattr(context.req, 'body') and context.req.body:
+                if isinstance(context.req.body, dict):
+                    # For creation, we expect url and instructions to be present
+                    if context.req.body.get('url') and context.req.body.get('instructions'):
+                        is_create_operation = True
+                        print('Detected CREATE operation based on request body')
+                    else:
+                        print('Request body missing url/instructions - not a creation event')
+
+                elif isinstance(context.req.body, str):
+                    import json
+                    try:
+                        body_data = json.loads(context.req.body)
+                        if body_data.get('url') and body_data.get('instructions'):
+                            is_create_operation = True
+                            print('Detected CREATE operation from JSON body')
+                        else:
+                            print('JSON body missing url/instructions - not a creation event')
+                    except Exception as e:
+                        print(f'Could not parse JSON body: {e}')
+
+            if not is_create_operation:
+                print('Skipping: Not a document creation operation')
                 return context.res.json({
                     'success': True,
                     'message': 'Skipped: Not a document creation event'
@@ -1452,9 +1461,7 @@ def main(context):
                 'documentId': document_id,
                 'wordCount': scraped_data['word_count'],
                 'title': scraped_data['title'],
-                'url': url,
-                'pagesCrawled': scraped_data.get('pages_crawled', 1),
-                'subpages': scraped_data.get('subpages', [])
+                'url': url
             }
         }, 200)
 

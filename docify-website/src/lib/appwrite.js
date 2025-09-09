@@ -20,7 +20,6 @@ export const APPWRITE_CONFIG = {
     databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || 'your-database-id',
     userCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USER_COLLECTION_ID || 'users',
     documentsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID || 'documents_table',
-    analysisCollectionId: process.env.NEXT_PUBLIC_APPWRITE_ANALYSIS_COLLECTION_ID || 'analysis_results',
     storageBucketId: process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'documents',
 };
 

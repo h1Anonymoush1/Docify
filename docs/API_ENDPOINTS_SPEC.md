@@ -186,25 +186,19 @@ Authorization: Bearer <jwt_token>
       "created_at": "2024-01-01T10:00:00Z",
       "updated_at": "2024-01-01T10:05:00Z"
     },
-    "analysis": {
-      "id": "analysis_id",
-      "summary": "This document provides comprehensive API documentation...",
-      "blocks": [
-        {
-          "id": "summary-block",
-          "type": "summary",
-          "size": "large",
-          "title": "Document Overview",
-          "content": "Complete summary content...",
-          "metadata": {
-            "priority": "high",
-            "position": 1
-          }
+    "analysis_summary": "This document provides comprehensive API documentation...",
+    "analysis_blocks": [
+      {
+        "id": "summary-block",
+        "type": "summary",
+        "size": "large",
+        "title": "Document Overview",
+        "content": "Complete summary content...",
+        "metadata": {
+          "priority": "high"
         }
-      ],
-      "processing_time": 5000,
-      "created_at": "2024-01-01T10:05:00Z"
-    }
+      }
+    ]
   }
 }
 ```
@@ -347,7 +341,6 @@ x-appwrite-key: <dynamic_api_key>
   "success": true,
   "data": {
     "documentId": "doc_id",
-    "analysisId": "analysis_id",
     "summary": "Analysis summary...",
     "blockCount": 5,
     "processingTime": 5000
@@ -365,10 +358,10 @@ These are internal Appwrite triggers, not exposed as REST endpoints:
    - Triggers: `document-scraper-python` function
    - Payload: New document data
 
-2. **Analysis Creation Trigger**
-   - Event: `databases.docify_db.collections.analysis_results.documents.*.create`
-   - Triggers: `llm-analyzer` function
-   - Payload: New analysis record data
+2. **Document Status Update Trigger**
+   - Event: `databases.docify_db.collections.documents_table.documents.*.update`
+   - Triggers: `llm-analyzer` function when status changes to 'analyzing'
+   - Payload: Document update with status change
 
 ## Error Response Format
 

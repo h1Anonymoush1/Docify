@@ -11,7 +11,7 @@ Docify is deployed using Appwrite Cloud with serverless functions, providing sca
 - **Type**: Appwrite Database
 - **Configuration**:
   - Database ID: `docify_db`
-  - Collections: `documents_table`, `analysis_results`
+  - Collections: `documents_table` (consolidated)
   - Backup: Daily automated backups
   - Retention: 30 days
 
@@ -106,7 +106,7 @@ NEXT_PUBLIC_ENABLE_ERROR_REPORTING=true
 # Database
 DATABASE_ID=docify_db
 DOCUMENTS_COLLECTION_ID=documents_table
-ANALYSIS_COLLECTION_ID=analysis_results
+# Single consolidated collection - no separate analysis collection needed
 
 # Appwrite
 APPWRITE_FUNCTION_API_ENDPOINT=https://cloud.appwrite.io/v1

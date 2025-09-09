@@ -1,54 +1,48 @@
 # Database Schema for Docify
 
-## Collections
+## Consolidated Collection
 
-### 1. Documents Collection
-Stores the original document information and user instructions.
+### Documents Collection
+Single consolidated table storing all document data, scraped content, and analysis results.
 
-**Collection ID:** `documents`
+**Collection ID:** `documents_table`
 
 **Attributes:**
-- `url` (string, required) - The URL of the document to scrape
-- `instructions` (string, required) - User instructions for analysis
-- `title` (string, optional) - Document title
-- `status` (enum: 'pending', 'scraping', 'analyzing', 'completed', 'failed') - Processing status
-- `scraped_content` (string, optional) - Raw scraped content
-- `user_id` (string, required) - ID of the user who created the document
-- `$createdAt` (datetime, auto) - Creation timestamp (Appwrite automatic field)
-- `$updatedAt` (datetime, auto) - Last update timestamp (Appwrite automatic field)
+- `user_id` (string, required) - Appwrite user ID for isolation
+- `title` (string, optional) - User-provided document title
+- `url` (string, required) - URL to be scraped and analyzed
+- `instructions` (string, required) - User analysis instructions
+- `status` (enum: 'pending', 'scraping', 'analyzing', 'completed', 'failed') - Processing state
+- `public` (boolean, optional) - Whether document is publicly accessible
+- `scraped_content` (string, optional) - Full scraped text content
+- `word_count` (integer, optional) - Total words scraped
+- `analysis_summary` (string, optional) - LLM-generated summary
+- `analysis_blocks` (string, optional) - JSON array of analysis blocks
+- `error_message` (string, optional) - Error details if processing failed
+- `$createdAt` (datetime, auto) - Creation timestamp
+- `$updatedAt` (datetime, auto) - Last update timestamp
+
+**Analysis Blocks Structure:**
+```json
+[
+  {
+    "id": "unique-block-id",
+    "type": "summary|key_points|architecture|mermaid|code|api_reference|guide|comparison|best_practices|troubleshooting",
+    "size": "small|medium|large",
+    "title": "Block title",
+    "content": "Block content (mermaid syntax for diagrams)",
+    "metadata": {
+      "language": "javascript|python|etc",
+      "priority": "high|medium|low"
+    }
+  }
+]
+```
 
 **Permissions:**
 - Create: Any authenticated user
-- Read: Document owner only
-- Update: Document owner only
-- Delete: Document owner only
-
-### 2. Analysis Results Collection
-Stores the LLM analysis results with chart data.
-
-**Collection ID:** `analysis_results`
-
-**Attributes:**
-- `document_id` (string, required) - Reference to the document
-- `summary` (string, required) - Summary text from LLM
-- `charts` (array of objects, required) - Chart data with the following structure:
-  ```json
-  [
-    {
-      "size": "small|medium|large",
-      "type": "mermaid",
-      "content": "MERMAID_CODE_HERE"
-    }
-  ]
-  ```
-- `raw_response` (string, optional) - Raw LLM response for debugging
-- `processing_time` (number, optional) - Time taken for analysis in seconds
-- `$createdAt` (datetime, auto) - Creation timestamp (Appwrite automatic field)
-
-**Permissions:**
-- Create: Server only (functions)
-- Read: Document owner only
-- Update: Server only
+- Read: Document owner only (or public if `public` = true)
+- Update: Document owner + Server functions
 - Delete: Document owner only
 
 ## Database Configuration
@@ -64,17 +58,18 @@ Stores the LLM analysis results with chart data.
 - `user_id_index` - For querying user's documents
 - `documents_created_at_index` - For sorting by creation date ($createdAt)
 - `documents_updated_at_index` - For sorting by update date ($updatedAt)
-
-### Analysis Results Collection Indexes:
-- `document_id_index` - For linking to documents
-- `analysis_results_created_at_index` - For sorting results ($createdAt)
+- `user_status_index` - For user's documents filtered by status
 
 ## Relationships
 
-- `analysis_results.document_id` → `documents.$id` (one-to-many)
+- **Consolidated Design**: No cross-table relationships required
+- **Single Record**: Each document contains all its data and analysis results
+- **Atomic Operations**: Document creation, scraping, and analysis all happen within one record
 
 ## Security Rules
 
-- All collections require authentication
-- Users can only access their own documents and analysis results
-- Functions have elevated permissions for creating/updating analysis results
+- Single collection requires authentication
+- Users can only access their own documents (`user_id` filter)
+- Functions have write permissions for automated processing
+- Public documents can be accessed by anyone when `public` = true
+- All analysis data is stored within the document record

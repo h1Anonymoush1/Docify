@@ -259,7 +259,7 @@ def generate_combined_content(content_by_type, max_length=75000):
 MAX_PAGES_TO_CRAWL=20          # Maximum pages to crawl
 DATABASE_ID=docify_db          # Appwrite database ID
 DOCUMENTS_COLLECTION_ID=documents_table
-ANALYSIS_COLLECTION_ID=analysis_results
+# Single consolidated collection - no separate analysis collection needed
 BROWSERLESS_API_KEY=           # Optional: for JS rendering
 ```
 

@@ -56,10 +56,9 @@
             "vars": {
                 "DATABASE_ID": "docify_db",
                 "DOCUMENTS_COLLECTION_ID": "documents_table",
-                "ANALYSIS_COLLECTION_ID": "analysis_results",
                 "GEMINI_API_KEY": "${GEMINI_API_KEY}"
             },
-            "events": ["databases.docify_db.collections.analysis_results.documents.create"],
+            "events": ["databases.docify_db.collections.documents_table.documents.update"],
             "schedule": "",
             "timeout": 900
         },
@@ -76,7 +75,6 @@
             "vars": {
                 "DATABASE_ID": "docify_db",
                 "DOCUMENTS_COLLECTION_ID": "documents_table",
-                "ANALYSIS_COLLECTION_ID": "analysis_results",
                 "MAX_PAGES_TO_CRAWL": "10"
             },
             "events": ["databases.docify_db.collections.documents_table.documents.create"],

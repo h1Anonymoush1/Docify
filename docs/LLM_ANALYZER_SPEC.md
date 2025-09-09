@@ -6,7 +6,8 @@ The LLM Analyzer is a critical component that processes scraped web content and 
 ## Core Functionality
 
 ### Input Processing
-**Input Source**: Database trigger from analysis_results collection creation
+**Input Source**: Database trigger from documents_table status update
+**Trigger Condition**: Document status changes to 'analyzing'
 **Input Data**:
 - Document title and description
 - Scraped content (full text)
@@ -15,8 +16,8 @@ The LLM Analyzer is a critical component that processes scraped web content and 
 
 ### Output Generation
 **Output Format**: JSON with structured analysis blocks
-**Output Destination**: analysis_results collection in database
-**Processing Trigger**: Automatic (database event)
+**Output Destination**: Same documents_table record (consolidated schema)
+**Processing Trigger**: Automatic (database event on status change)
 
 ## AI Model Configuration
 

@@ -38,8 +38,7 @@ Docify is a web-based document analysis platform that allows users to scrape web
 ### 3. Database (Appwrite Database)
 **Database ID**: `docify_db`
 **Collections**:
-- `documents_table`: User documents with URLs and prompts
-- `analysis_results`: LLM analysis results with blocks
+- `documents_table`: Consolidated documents with analysis results (single table design)
 
 ### 4. Authentication (Appwrite Auth)
 **Features**:
