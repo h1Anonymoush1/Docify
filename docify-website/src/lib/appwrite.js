@@ -96,3 +96,14 @@ export const updateUserEmail = async (email) => {
         throw error;
     }
 };
+
+export const updateUserPrefs = async (prefs) => {
+    try {
+        const user = await account.updatePrefs(prefs);
+        console.log('User preferences updated successfully');
+        return user;
+    } catch (error) {
+        console.error('Failed to update user preferences:', error);
+        throw error;
+    }
+};
