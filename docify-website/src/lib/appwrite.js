@@ -1,11 +1,27 @@
 import { Client, Account, Databases, Storage, ID } from 'appwrite';
 
+// Check for required environment variables
+const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
+const documentsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID;
+
+if (!endpoint || !projectId || !databaseId || !documentsCollectionId) {
+    console.warn('⚠️  Appwrite environment variables are not properly configured. Some features may not work correctly.');
+    console.warn('Missing variables:', {
+        NEXT_PUBLIC_APPWRITE_ENDPOINT: !endpoint,
+        NEXT_PUBLIC_APPWRITE_PROJECT_ID: !projectId,
+        NEXT_PUBLIC_APPWRITE_DATABASE_ID: !databaseId,
+        NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID: !documentsCollectionId
+    });
+}
+
 // Appwrite configuration
 const client = new Client();
 
 client
-    .setEndpoint(process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://nyc.cloud.appwrite.io/v1')
-    .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || 'your-project-id');
+    .setEndpoint(endpoint || 'https://nyc.cloud.appwrite.io/v1')
+    .setProject(projectId || 'your-project-id');
 
 // Initialize services
 export const account = new Account(client);
@@ -17,9 +33,9 @@ export { client, ID };
 
 // Appwrite service IDs (update these with your actual service IDs)
 export const APPWRITE_CONFIG = {
-    databaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || 'your-database-id',
+    databaseId: databaseId || 'your-database-id',
     userCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USER_COLLECTION_ID || 'users',
-    documentsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID || 'documents_table',
+    documentsCollectionId: documentsCollectionId || 'documents_table',
     storageBucketId: process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'documents',
 };
 
