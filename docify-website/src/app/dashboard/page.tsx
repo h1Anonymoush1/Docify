@@ -207,40 +207,23 @@ export default function Dashboard() {
       <Flex
         fillWidth
         fillHeight
-        paddingLeft="l"
-        paddingRight="l"
-        paddingTop="xs"
-        paddingBottom="xs"
-        horizontal="center"
-        vertical="center"
+        padding="l"
+        direction="row"
       >
         <Flex
-          fillWidth
           fillHeight
-          background="surface"
+          background="neutral-weak"
           border="neutral-medium"
-          radius="l"
-          padding="m"
-          gap="l"
-          horizontal="start"
+          leftRadius="l"
+          direction="column"
+          padding="l"
+          gap="m"
+          style={{
+            width: '320px',
+            minWidth: '280px',
+            maxWidth: '400px',
+          }}
         >
-          {/* Sidebar */}
-          <Flex
-            background="neutral-weak"
-            border="neutral-medium"
-            radius="m"
-            direction="column"
-            padding="l"
-            gap="m"
-            position="relative"
-            style={{
-              marginLeft: '-100px',
-              marginTop: '-10%',
-              marginBottom: '-10%',
-              width: '25%',
-              maxWidth: '280px',
-            }}
-          >
             {/* Sidebar content */}
             <Flex
               fillHeight
@@ -322,24 +305,16 @@ export default function Dashboard() {
                 )}
               </Flex>
 
-              {/* Edit button - absolutely positioned at bottom */}
+              {/* Create button - at bottom */}
               <Flex
-                style={{
-                  position: 'absolute',
-                  bottom: '0px',
-                  left: '0px',
-                  right: '0px'
-                }}
+                paddingTop="m"
+                style={{ marginTop: 'auto' }}
               >
                 <Button
                   fillWidth
                   variant="primary"
                   size="m"
                   style={{
-                    marginBottom: '-18%',
-                    marginLeft: '-18%',
-                    marginRight: '-18%',
-                    width: '150%',
                     borderRadius: 'var(--radius-m)',
                     boxShadow: 'var(--shadow-l), 0 0 20px var(--brand-alpha-medium)',
                     backgroundColor: 'var(--brand-medium)',
@@ -356,11 +331,13 @@ export default function Dashboard() {
 
           {/* Main Content */}
           <Flex
+            fillWidth
+            fillHeight
             direction="column"
-            paddingLeft="l"
-            paddingRight="l"
-            paddingTop="s"
-            paddingBottom="xs"
+            padding="l"
+            background="surface"
+            border="neutral-medium"
+            rightRadius="l"
             style={{ flex: 1, minHeight: 0 }}
           >
             {selectedDocument ? (
@@ -658,7 +635,6 @@ export default function Dashboard() {
             )}
           </Flex>
         </Flex>
-      </Flex>
     </AuthGuard>
   );
 }
