@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Flex, Button, Text } from '@/once-ui/components';
+import { Flex, Button, Text, Skeleton } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
@@ -225,6 +225,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -251,6 +254,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -277,6 +283,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -303,6 +312,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -329,6 +341,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -355,6 +370,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -381,6 +399,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -407,6 +428,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
 
@@ -433,6 +457,9 @@ export default function Dashboard() {
                   }}
                 >
                   <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Skeleton shape="line" width="xl" height="xs" delay="1" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="2" />
+                    <Skeleton shape="line" width="xl" height="xs" delay="3" />
                   </Flex>
                 </Flex>
               </Flex>
