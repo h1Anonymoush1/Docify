@@ -1,95 +1,240 @@
 "use client";
 
-import { useAuth } from '@/lib/auth-context';
-import { useRouter } from 'next/navigation';
-import { Heading, Text, Column, Button, Flex } from '@/once-ui/components';
+import { useEffect, useState } from 'react';
+import { Flex, Button, Text } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
+import { databases, APPWRITE_CONFIG } from '@/lib/appwrite';
+import { Query } from 'appwrite';
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const [analysisResults, setAnalysisResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+  useEffect(() => {
+    const fetchAnalysisResults = async () => {
+      try {
+        // Get current user
+        const currentUser = await databases.getDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.userCollectionId,
+          'current'
+        );
+        setUser(currentUser);
+
+        // First, get all documents for this user
+        const userDocuments = await databases.listDocuments(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.documentsCollectionId,
+          [
+            Query.equal('user_id', currentUser.$id),
+            Query.orderDesc('created_at')
+          ]
+        );
+
+        if (userDocuments.documents.length === 0) {
+          setLoading(false);
+          return;
+        }
+
+        // Get document IDs
+        const documentIds = userDocuments.documents.map(doc => doc.$id);
+
+        // Get analysis results for these documents
+        const analysisResponse = await databases.listDocuments(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.analysisCollectionId,
+          [
+            Query.equal('document_id', documentIds),
+            Query.equal('status', 'completed'),
+            Query.orderDesc('created_at')
+          ]
+        );
+
+        setAnalysisResults(analysisResponse.documents);
+      } catch (error) {
+        console.error('Error fetching analysis results:', error);
+
+        // Fallback for database setup issues
+        if (error.message?.includes('Collection') || error.message?.includes('permission')) {
+          const setupMessage = [
+            {
+              $id: 'setup-1',
+              summary: 'Database setup required: Please create the Appwrite collections (documents_table, analysis_results) and configure permissions.',
+              status: 'pending',
+              created_at: new Date().toISOString(),
+              charts: []
+            },
+            {
+              $id: 'setup-2',
+              summary: 'Check your Appwrite configuration and ensure the collection IDs match your database setup.',
+              status: 'pending',
+              created_at: new Date(Date.now() - 86400000).toISOString(),
+              charts: []
+            }
+          ];
+          setAnalysisResults(setupMessage);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalysisResults();
+  }, []);
 
   return (
     <AuthGuard requireAuth={true}>
-      <Column
+      <Flex
         fillWidth
         fillHeight
+        padding="l"
         horizontal="center"
         vertical="center"
-        gap="l"
-        padding="l"
       >
-        <Column horizontal="center" gap="m">
-          <Heading variant="display-strong-l">
-            Welcome to Docify, {user?.name}!
-          </Heading>
-
-        <Text
-          variant="body-default-l"
-          onBackground="neutral-weak"
-          style={{ textAlign: 'center', maxWidth: '600px' }}
+        <Flex
+          fillWidth
+          fillHeight
+          background="surface"
+          border="neutral-medium"
+          radius="l"
+          padding="xl"
+          gap="l"
+          horizontal="start"
         >
-          You're successfully authenticated! This is your dashboard where you can manage your documentation projects.
-        </Text>
+          {/* Sidebar */}
+          <Flex
+            background="neutral-weak"
+            border="neutral-medium"
+            radius="m"
+            direction="column"
+            padding="l"
+            gap="m"
+            position="relative"
+            style={{
+              marginLeft: '-100px',
+              marginTop: '-10%',
+              marginBottom: '-10%',
+              width: '25%',
+              maxWidth: '280px',
+            }}
+          >
+            {/* Sidebar content */}
+            <Flex
+              fillHeight
+              direction="column"
+              style={{ position: 'relative' }}
+            >
+              {/* Analysis Results List - Scrollable Container */}
+              <Flex
+                direction="column"
+                gap="m"
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  maxHeight: '630px', // Fixed smaller height for more square/compact appearance
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--neutral-weak) transparent'
+                }}
+              >
 
-        {user && (
-          <div style={{
-            backgroundColor: 'var(--surface-background)',
-            borderRadius: 'var(--radius-l)',
-            padding: 'var(--space-l)',
-            marginTop: 'var(--space-l)',
-            border: '1px solid var(--border-neutral-medium)',
-            maxWidth: '400px',
-            width: '100%'
-          }}>
-            <Heading variant="heading-strong-m" style={{ marginBottom: 'var(--space-m)' }}>
-              User Information
-            </Heading>
-            <Flex direction="column" gap="s">
-              <Text variant="body-default-s">
-                <strong>Name:</strong> {user.name}
-              </Text>
-              <Text variant="body-default-s">
-                <strong>Email:</strong> {user.email}
-              </Text>
-              <Text variant="body-default-s">
-                <strong>Email Verified:</strong> {user.emailVerification ? 'Yes' : 'No'}
-              </Text>
-              <Text variant="body-default-s">
-                <strong>User ID:</strong> {user.$id}
-              </Text>
+                {loading ? (
+                  <Text variant="body-default-s" onBackground="neutral-weak">
+                    Loading analysis results...
+                  </Text>
+                ) : analysisResults.length === 0 ? (
+                  <Text variant="body-default-s" onBackground="neutral-weak">
+                    No analysis results found
+                  </Text>
+                ) : (
+                  <Flex direction="column" gap="s">
+                    {analysisResults.map((result) => (
+                      <Flex
+                        key={result.$id}
+                        background="surface"
+                        border="neutral-weak"
+                        radius="m"
+                        padding="s"
+                        gap="xs"
+                        style={{
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          border: '1px solid var(--neutral-weak)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          backdropFilter: 'blur(4px)'
+                        }}
+                      >
+                        <Text
+                          variant="body-default-s"
+                          onBackground="neutral-strong"
+                          style={{
+                            flex: 1,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {result.summary?.substring(0, 35)}
+                        </Text>
+                        <Text
+                          variant="body-default-xs"
+                          onBackground="neutral-weak"
+                          style={{
+                            flexShrink: 0,
+                            fontSize: '11px'
+                          }}
+                        >
+                          {new Date(result.created_at).toLocaleDateString()}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </Flex>
+                )}
+              </Flex>
+
+              {/* Edit button - absolutely positioned at bottom */}
+              <Flex
+                style={{
+                  position: 'absolute',
+                  bottom: '0px',
+                  left: '0px',
+                  right: '0px'
+                }}
+              >
+                <Button
+                  fillWidth
+                  variant="primary"
+                  size="m"
+                  style={{
+                    marginBottom: '-18%',
+                    marginLeft: '-18%',
+                    marginRight: '-18%',
+                    width: '150%',
+                    borderRadius: 'var(--radius-m)',
+                    boxShadow: 'var(--shadow-l), 0 0 20px var(--brand-alpha-medium)',
+                    backgroundColor: 'var(--brand-medium)',
+                    color: 'var(--neutral-strong)',
+                    border: '1px solid var(--brand-medium)',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Edit
+                </Button>
+              </Flex>
             </Flex>
-          </div>
-        )}
+          </Flex>
 
-        <Flex gap="m" horizontal="center" mobileDirection="column">
-          <Button
-            onClick={handleLogout}
-            variant="secondary"
-            size="m"
+          {/* Main Content */}
+          <Flex
+            fillWidth
+            fillHeight
+            direction="column"
           >
-            Logout
-          </Button>
-
-          <Button
-            onClick={() => router.push('/')}
-            variant="primary"
-            size="m"
-          >
-            Go to Home
-          </Button>
+            {/* Main content goes here */}
+          </Flex>
         </Flex>
-      </Column>
-    </Column>
+      </Flex>
     </AuthGuard>
   );
 }
