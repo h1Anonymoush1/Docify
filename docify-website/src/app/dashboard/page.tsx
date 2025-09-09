@@ -162,7 +162,7 @@ export default function Dashboard() {
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  Edit
+                  Create
                 </Button>
               </Flex>
             </Flex>
