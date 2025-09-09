@@ -3,64 +3,38 @@
 import { useEffect, useState } from 'react';
 import { Flex, Button, Text } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
-import { databases, APPWRITE_CONFIG } from '@/lib/appwrite';
+import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 
 export default function Dashboard() {
-  const [analysisResults, setAnalysisResults] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const fetchAnalysisResults = async () => {
+    const fetchDocuments = async () => {
       try {
-        // Get current user
-        const currentUser = await databases.getDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.userCollectionId,
-          'current'
-        );
+        const currentUser = await account.get();
         setUser(currentUser);
 
-        // First, get all documents for this user
         const userDocuments = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.documentsCollectionId,
           [
             Query.equal('user_id', currentUser.$id),
-            Query.orderDesc('created_at')
+            Query.orderDesc('$createdAt')
           ]
         );
 
-        if (userDocuments.documents.length === 0) {
-          setLoading(false);
-          return;
-        }
-
-        // Get document IDs
-        const documentIds = userDocuments.documents.map(doc => doc.$id);
-
-        // Get analysis results for these documents
-        const analysisResponse = await databases.listDocuments(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.analysisCollectionId,
-          [
-            Query.equal('document_id', documentIds),
-            Query.equal('status', 'completed'),
-            Query.orderDesc('created_at')
-          ]
-        );
-
-        setAnalysisResults(analysisResponse.documents);
+        setDocuments(userDocuments.documents);
       } catch (error) {
-        console.error('Error fetching analysis results:', error);
-        // No placeholder messages - let it show empty state
+        console.error('Error fetching documents:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAnalysisResults();
+    fetchDocuments();
   }, []);
 
   return (
@@ -121,22 +95,21 @@ export default function Dashboard() {
 
                 {loading ? (
                   <Text variant="body-default-s" onBackground="neutral-weak">
-                    Loading analysis results...
+                    Loading documents...
                   </Text>
-                ) : analysisResults.length === 0 ? (
+                ) : documents.length === 0 ? (
                   <Text variant="body-default-s" onBackground="neutral-weak">
-                    No analysis results found
+                    No documents found
                   </Text>
                 ) : (
                   <Flex direction="column" gap="s">
-                    {analysisResults.map((result) => (
+                    {documents.map((document, index) => (
                       <Flex
-                        key={result.$id}
+                        key={document.$id}
                         background="surface"
                         border="neutral-weak"
                         radius="m"
                         padding="s"
-                        gap="xs"
                         style={{
                           cursor: 'pointer',
                           transition: 'all 0.2s ease',
@@ -155,17 +128,7 @@ export default function Dashboard() {
                             whiteSpace: 'nowrap'
                           }}
                         >
-                          {result.summary?.substring(0, 35)}
-                        </Text>
-                        <Text
-                          variant="body-default-xs"
-                          onBackground="neutral-weak"
-                          style={{
-                            flexShrink: 0,
-                            fontSize: '11px'
-                          }}
-                        >
-                          {new Date(result.created_at).toLocaleDateString()}
+                          {document.title || document.url?.substring(0, 35) || 'Untitled Document'}
                         </Text>
                       </Flex>
                     ))}
