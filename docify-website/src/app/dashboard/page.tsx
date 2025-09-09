@@ -346,30 +346,6 @@ export default function Dashboard() {
                 gap="m"
                 style={{ flex: 1, minHeight: 0 }}
               >
-                {/* Header with back button */}
-                <Flex
-                  fillWidth
-                  horizontal="space-between"
-                  vertical="center"
-                  paddingBottom="m"
-                >
-                  <Flex direction="column" gap="s">
-                    <Heading variant="heading-strong-l">
-                      {selectedDocument.title || 'Document Analysis'}
-                    </Heading>
-                    <Text variant="body-default-m" onBackground="neutral-weak">
-                      {selectedDocument.url}
-                    </Text>
-                  </Flex>
-                  <Button
-                    variant="secondary"
-                    size="m"
-                    onClick={handleBackToGrid}
-                  >
-                    Back to Dashboard
-                  </Button>
-                </Flex>
-
                 {/* Chart Content */}
                 <Flex
                   fillWidth
@@ -439,24 +415,84 @@ export default function Dashboard() {
                       {/* Summary */}
                       {documentAnalysis.summary && (
                         <Flex
-                          fillWidth
-                          direction="column"
-                          gap="m"
-                          background="neutral-weak"
-                          radius="m"
-                          padding="l"
+                          direction="row"
+                          gap="l"
+                          style={{ width: 'fit-content', maxWidth: '100%' }}
                         >
-                          <Heading variant="heading-strong-m">Summary</Heading>
-                          <Text variant="body-default-m" onBackground="neutral-strong">
-                            {documentAnalysis.summary}
-                          </Text>
+                          {/* Small Title/URL Card */}
+                          <Flex
+                            background="surface"
+                            border="neutral-weak"
+                            radius="m"
+                            padding="m"
+                            direction="column"
+                            gap="m"
+                            style={{
+                              gridColumn: 'span 1',
+                              boxShadow: 'var(--shadow-s)',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer',
+                              minHeight: '220px',
+                              minWidth: '200px',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                            }}
+                          >
+                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                              <Text variant="body-strong-s" onBackground="neutral-strong">
+                                {selectedDocument.title || 'Untitled Document'}
+                              </Text>
+                              <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-all' }}>
+                                {selectedDocument.url}
+                              </Text>
+                            </Flex>
+                          </Flex>
+
+                          {/* Medium Summary Card */}
+                          <Flex
+                            background="surface"
+                            border="neutral-weak"
+                            radius="m"
+                            padding="m"
+                            direction="column"
+                            gap="m"
+                            style={{
+                              gridColumn: 'span 2',
+                              boxShadow: 'var(--shadow-s)',
+                              transition: 'all 0.2s ease',
+                              cursor: 'pointer',
+                              minHeight: '220px',
+                              flex: 1
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-2px)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translateY(0)';
+                              e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+                            }}
+                          >
+                            <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                              <Heading variant="heading-strong-m">Summary</Heading>
+                              <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
+                                {documentAnalysis.summary}
+                              </Text>
+                            </Flex>
+                          </Flex>
                         </Flex>
                       )}
 
                       {/* Analysis Blocks - JSON-like Structure */}
                       {documentAnalysis.blocks && documentAnalysis.blocks.length > 0 && (
                         <Flex fillWidth direction="column" gap="l">
-                          <Heading variant="heading-strong-m">Analysis Structure</Heading>
                           <Flex
                             fillWidth
                             style={{
