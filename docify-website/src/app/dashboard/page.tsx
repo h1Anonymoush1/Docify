@@ -444,18 +444,122 @@ export default function Dashboard() {
                       )}
 
                       {/* Analysis Blocks - JSON-like Structure */}
-                      {documentAnalysis.blocks && documentAnalysis.blocks.length > 0 && (
-                        <Flex fillWidth direction="column" gap="l">
-                          <Flex
-                            fillWidth
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-                              gap: 'var(--space-l)',
-                              alignItems: 'start'
-                            }}
-                          >
-                            {documentAnalysis.blocks.map((block: any) => {
+                        {documentAnalysis.blocks && documentAnalysis.blocks.length > 0 && (
+                          <Flex fillWidth direction="column" gap="l">
+                            {/* Smart grid layout that fills rows efficiently */}
+                            {(() => {
+                              // Helper function to get column span for each block size
+                              const getColumnSpan = (size: string) => {
+                                switch (size) {
+                                  case 'large': return 3;
+                                  case 'medium': return 2;
+                                  case 'small': return 1;
+                                  default: return 2; // medium default
+                                }
+                              };
+
+                              // Smart packing algorithm to maximize space utilization
+                              const rows: any[][] = [];
+                              const remainingBlocks = [...documentAnalysis.blocks];
+
+                              while (remainingBlocks.length > 0) {
+                                let currentRow: any[] = [];
+                                let currentRowColumns = 0;
+                                let bestFitIndex = -1;
+                                let bestFitSize = 0;
+
+                                // First, try to find a perfect fit (exactly fills remaining space)
+                                for (let i = 0; i < remainingBlocks.length; i++) {
+                                  const span = getColumnSpan(remainingBlocks[i].size);
+                                  const remainingSpace = 3 - currentRowColumns;
+
+                                  if (span === remainingSpace) {
+                                    bestFitIndex = i;
+                                    bestFitSize = span;
+                                    break;
+                                  }
+                                }
+
+                                // If no perfect fit, find the largest item that fits
+                                if (bestFitIndex === -1) {
+                                  for (let i = 0; i < remainingBlocks.length; i++) {
+                                    const span = getColumnSpan(remainingBlocks[i].size);
+                                    if (currentRowColumns + span <= 3 && span > bestFitSize) {
+                                      bestFitIndex = i;
+                                      bestFitSize = span;
+                                    }
+                                  }
+                                }
+
+                                // If still no fit, take the first item (will start new row)
+                                if (bestFitIndex === -1) {
+                                  bestFitIndex = 0;
+                                  bestFitSize = getColumnSpan(remainingBlocks[0].size);
+                                }
+
+                                // Add the best fit to current row
+                                const bestBlock = remainingBlocks.splice(bestFitIndex, 1)[0];
+                                currentRow.push(bestBlock);
+                                currentRowColumns += bestFitSize;
+
+                                // Try to fill remaining space in this row
+                                let spaceLeft = 3 - currentRowColumns;
+                                while (spaceLeft > 0 && remainingBlocks.length > 0) {
+                                  let foundFit = false;
+
+                                  // Look for items that exactly fit the remaining space
+                                  for (let i = 0; i < remainingBlocks.length; i++) {
+                                    const span = getColumnSpan(remainingBlocks[i].size);
+                                    if (span === spaceLeft) {
+                                      currentRow.push(remainingBlocks.splice(i, 1)[0]);
+                                      currentRowColumns += span;
+                                      spaceLeft = 0;
+                                      foundFit = true;
+                                      break;
+                                    }
+                                  }
+
+                                  // If no exact fit, look for the largest item that fits
+                                  if (!foundFit) {
+                                    let largestFitIndex = -1;
+                                    let largestFitSize = 0;
+
+                                    for (let i = 0; i < remainingBlocks.length; i++) {
+                                      const span = getColumnSpan(remainingBlocks[i].size);
+                                      if (span <= spaceLeft && span > largestFitSize) {
+                                        largestFitIndex = i;
+                                        largestFitSize = span;
+                                      }
+                                    }
+
+                                    if (largestFitIndex !== -1) {
+                                      currentRow.push(remainingBlocks.splice(largestFitIndex, 1)[0]);
+                                      currentRowColumns += largestFitSize;
+                                      spaceLeft -= largestFitSize;
+                                    } else {
+                                      // No more items fit in this row
+                                      break;
+                                    }
+                                  }
+                                }
+
+                                // Add this row to our rows collection
+                                rows.push(currentRow);
+                              }
+
+                              // Render each row as a grid
+                              return rows.map((row: any[], rowIndex: number) => (
+                                <Flex
+                                  key={rowIndex}
+                                  fillWidth
+                                  style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 'var(--space-l)',
+                                    alignItems: 'start'
+                                  }}
+                                >
+                                  {row.map((block: any) => {
                               // Create JSON-like structure for different block types
                               const renderBlockContent = () => {
                                 switch (block.type) {
@@ -595,11 +699,13 @@ export default function Dashboard() {
                                     </Flex>
                                   </Flex>
                                 </CardComponent>
-                              );
-                            })}
+                                    );
+                                  })}
+                                </Flex>
+                              ));
+                            })()}
                           </Flex>
-                        </Flex>
-                      )}
+                        )}
                     </Flex>
                   ) : (
                     <Flex
