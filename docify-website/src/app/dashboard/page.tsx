@@ -420,32 +420,8 @@ export default function Dashboard() {
                           style={{ width: 'fit-content', maxWidth: '100%' }}
                         >
                           {/* Small Title/URL Card */}
-                          <Flex
-                            background="surface"
-                            border="neutral-weak"
-                            radius="m"
-                            padding="m"
-                            direction="column"
-                            gap="m"
-                            style={{
-                              gridColumn: 'span 1',
-                              boxShadow: 'var(--shadow-s)',
-                              transition: 'all 0.2s ease',
-                              cursor: 'pointer',
-                              minHeight: '220px',
-                              minWidth: '200px',
-                              flexShrink: 0
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-2px)';
-                              e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                            }}
-                          >
-                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                          <SmallDashboardCard>
+                            <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
                               <Text variant="body-strong-s" onBackground="neutral-strong">
                                 {selectedDocument.title || 'Untitled Document'}
                               </Text>
@@ -453,40 +429,17 @@ export default function Dashboard() {
                                 {selectedDocument.url}
                               </Text>
                             </Flex>
-                          </Flex>
+                          </SmallDashboardCard>
 
                           {/* Medium Summary Card */}
-                          <Flex
-                            background="surface"
-                            border="neutral-weak"
-                            radius="m"
-                            padding="m"
-                            direction="column"
-                            gap="m"
-                            style={{
-                              gridColumn: 'span 2',
-                              boxShadow: 'var(--shadow-s)',
-                              transition: 'all 0.2s ease',
-                              cursor: 'pointer',
-                              minHeight: '220px',
-                              flex: 1
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateY(-2px)';
-                              e.currentTarget.style.boxShadow = 'var(--shadow-m)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateY(0)';
-                              e.currentTarget.style.boxShadow = 'var(--shadow-s)';
-                            }}
-                          >
-                            <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                          <MediumDashboardCard>
+                            <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
                               <Heading variant="heading-strong-m">Summary</Heading>
                               <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
                                 {documentAnalysis.summary}
                               </Text>
                             </Flex>
-                          </Flex>
+                          </MediumDashboardCard>
                         </Flex>
                       )}
 
@@ -588,57 +541,61 @@ export default function Dashboard() {
                                 }
                               };
 
+                              // Dynamic card sizing based on block type
+                              const getCardComponent = () => {
+                                switch (block.type) {
+                                  case 'mermaid':
+                                    return LargeDashboardCard;
+                                  case 'key_points':
+                                    return SmallDashboardCard;
+                                  case 'code':
+                                    return MediumDashboardCard;
+                                  default:
+                                    return MediumDashboardCard;
+                                }
+                              };
+
+                              const CardComponent = getCardComponent();
+
                               return (
-                                <Flex
-                                  key={block.id}
-                                  fillWidth
-                                  direction="column"
-                                  gap="m"
-                                  background="surface"
-                                  border="neutral-weak"
-                                  radius="m"
-                                  padding="l"
-                                  style={{
-                                    minHeight: '250px',
-                                    position: 'relative',
-                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
-                                  }}
-                                >
-                                  {/* Block Type Indicator */}
-                                  <Flex fillWidth horizontal="space-between" vertical="center" paddingBottom="s">
-                                    <Heading variant="heading-strong-s">{block.title}</Heading>
-                                    <Flex
-                                      background="brand-weak"
-                                      radius="s"
-                                      paddingX="s"
-                                      paddingY="xs"
-                                    >
-                                      <Text variant="body-default-xs" onBackground="brand-strong">
-                                        {block.type.toUpperCase()}
+                                <CardComponent key={block.id}>
+                                  <Flex direction="column" gap="m" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start', padding: 'var(--space-m)' }}>
+                                    {/* Block Type Indicator */}
+                                    <Flex fillWidth horizontal="space-between" vertical="center" paddingBottom="s">
+                                      <Heading variant="heading-strong-s">{block.title}</Heading>
+                                      <Flex
+                                        background="brand-weak"
+                                        radius="s"
+                                        paddingX="s"
+                                        paddingY="xs"
+                                      >
+                                        <Text variant="body-default-xs" onBackground="brand-strong">
+                                          {block.type.toUpperCase()}
+                                        </Text>
+                                      </Flex>
+                                    </Flex>
+
+                                    {/* Block Metadata */}
+                                    <Flex fillWidth direction="column" gap="xs" paddingBottom="s">
+                                      <Text variant="body-default-xs" onBackground="neutral-weak">
+                                        Block ID: {block.id}
                                       </Text>
+                                      <Text variant="body-default-xs" onBackground="neutral-weak">
+                                        Size: {block.size}
+                                      </Text>
+                                      {block.metadata && Object.keys(block.metadata).length > 0 && (
+                                        <Text variant="body-default-xs" onBackground="neutral-weak">
+                                          Metadata: {JSON.stringify(block.metadata, null, 2)}
+                                        </Text>
+                                      )}
+                                    </Flex>
+
+                                    {/* Block Content */}
+                                    <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
+                                      {renderBlockContent()}
                                     </Flex>
                                   </Flex>
-
-                                  {/* Block Metadata */}
-                                  <Flex fillWidth direction="column" gap="xs" paddingBottom="s">
-                                    <Text variant="body-default-xs" onBackground="neutral-weak">
-                                      Block ID: {block.id}
-                                    </Text>
-                                    <Text variant="body-default-xs" onBackground="neutral-weak">
-                                      Size: {block.size}
-                                    </Text>
-                                    {block.metadata && Object.keys(block.metadata).length > 0 && (
-                                      <Text variant="body-default-xs" onBackground="neutral-weak">
-                                        Metadata: {JSON.stringify(block.metadata, null, 2)}
-                                      </Text>
-                                    )}
-                                  </Flex>
-
-                                  {/* Block Content */}
-                                  <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
-                                    {renderBlockContent()}
-                                  </Flex>
-                                </Flex>
+                                </CardComponent>
                               );
                             })}
                           </Flex>
@@ -688,19 +645,19 @@ export default function Dashboard() {
                 }}
               >
                 {/* Large Component: Top Row (spans 3 columns) */}
-                <LargeDashboardCard delay={1} />
+                <LargeDashboardCard type="content" title="Welcome to Docify" content="Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries." />
 
                 {/* Medium Component: Analytics */}
-                <MediumDashboardCard delay={1} />
+                <MediumDashboardCard type="content" title="Analytics" content="Track your document processing metrics and usage patterns." />
 
                 {/* Small Component: Recent Activity */}
-                <SmallDashboardCard delay={2} />
+                <SmallDashboardCard type="content" title="Recent Activity" content="View your latest document uploads and analyses." />
 
                 {/* Small Component: Templates */}
-                <SmallDashboardCard delay={3} />
+                <SmallDashboardCard type="content" title="Templates" content="Browse available analysis templates for different document types." />
 
                 {/* Small Component: Credit Balance */}
-                <MediumDashboardCard delay={2} />
+                <MediumDashboardCard type="content" title="Credits" content="Manage your analysis credits and subscription plans." />
 
               </Flex>
             </Flex>

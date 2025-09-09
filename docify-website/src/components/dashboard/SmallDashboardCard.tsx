@@ -1,13 +1,17 @@
 "use client";
 
-import { Flex, Skeleton } from '@/once-ui/components';
+import { Flex, Skeleton, Heading, Text } from '@/once-ui/components';
 
 interface SmallDashboardCardProps {
   delay?: number;
   className?: string;
+  title?: string;
+  content?: string | React.ReactNode;
+  type?: 'skeleton' | 'content';
+  children?: React.ReactNode;
 }
 
-export function SmallDashboardCard({ delay = 1, className }: SmallDashboardCardProps) {
+export function SmallDashboardCard({ delay = 1, className, title, content, type = 'skeleton', children }: SmallDashboardCardProps) {
   return (
     <Flex
       background="surface"
@@ -33,9 +37,22 @@ export function SmallDashboardCard({ delay = 1, className }: SmallDashboardCardP
         e.currentTarget.style.boxShadow = 'var(--shadow-s)';
       }}
     >
-      <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Skeleton shape="line" width="m" height="xs" delay={delay.toString() as "1" | "2" | "3" | "4" | "5" | "6"} />
-      </Flex>
+      {children ? (
+        children
+      ) : type === 'content' ? (
+        <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+          {title && <Heading variant="heading-strong-s">{title}</Heading>}
+          {content && typeof content === 'string' ? (
+            <Text variant="body-default-s" onBackground="neutral-strong">{content}</Text>
+          ) : (
+            content
+          )}
+        </Flex>
+      ) : (
+        <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Skeleton shape="line" width="m" height="xs" delay={delay.toString() as "1" | "2" | "3" | "4" | "5" | "6"} />
+        </Flex>
+      )}
     </Flex>
   );
 }
