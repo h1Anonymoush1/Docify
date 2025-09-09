@@ -26,8 +26,7 @@ export function LargeDashboardCard({ delay = 1, className, title, content, type 
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
-        minHeight: '220px',
-        maxHeight: '220px'
+        height: '300px'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-2px)';

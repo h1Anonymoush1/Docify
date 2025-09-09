@@ -65,10 +65,9 @@ const getGridSpan = (size: string) => {
   }
 };
 
-// Get min height based on size
-const getMinHeight = (size: string) => {
-  // All cards now have the same uniform height of 220px
-  return '220px';
+// Get fixed height based on size (standardized to 300px for all)
+const getFixedHeight = (size: string) => {
+  return '300px'; // All blocks now use the same 300px height
 };
 
 export function ContentBlockCard({
@@ -86,14 +85,14 @@ export function ContentBlockCard({
     switch (block.type) {
       case 'mermaid':
         return (
-          <Flex fillWidth style={{ flex: 1, minHeight: '300px' }}>
+          <Flex fillWidth style={{ flex: 1, minHeight: '200px', maxHeight: '350px' }}>
             <Suspense fallback={
               <div className="flex flex-col items-center justify-center w-full h-full space-y-2">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 <div className="text-gray-500 text-sm">Loading chart...</div>
               </div>
             }>
-              <div className="w-full h-full">
+              <div className="w-full h-full overflow-auto scrollbar-thin">
                 {/* We'll render the actual MermaidChart component here */}
                 <div className="w-full h-full flex items-center justify-center text-2xl opacity-50">
                   {styles.icon} Interactive Chart
@@ -123,7 +122,11 @@ export function ContentBlockCard({
                 fontFamily: 'monospace',
                 fontSize: '14px',
                 overflow: 'auto',
-                whiteSpace: 'pre-wrap'
+                whiteSpace: 'pre-wrap',
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--neutral-medium) transparent',
+                minHeight: '120px',
+                maxHeight: '200px'
               }}
             >
               <Text variant="body-default-s" onBackground="neutral-strong">
@@ -136,13 +139,13 @@ export function ContentBlockCard({
       case 'key_points':
         const points = block.content.split('\n').filter((point: string) => point.trim());
         return (
-          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1 }}>
+          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
             {points.map((point: string, index: number) => (
               <Flex key={index} fillWidth gap="xs" vertical="start">
-                <Text variant="body-default-s" onBackground="brand-strong" style={{ minWidth: '20px' }}>
+                <Text variant="body-default-s" onBackground="brand-strong" style={{ minWidth: '20px', flexShrink: 0 }}>
                   {index + 1}.
                 </Text>
-                <Text variant="body-default-s" onBackground="neutral-strong">
+                <Text variant="body-default-s" onBackground="neutral-strong" style={{ wordBreak: 'break-word' }}>
                   {point.replace(/^[-•*]\s*/, '')}
                 </Text>
               </Flex>
@@ -152,13 +155,14 @@ export function ContentBlockCard({
 
       default:
         return (
-          <Flex fillWidth style={{ flex: 1 }}>
+          <Flex fillWidth style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
             <Text
               variant="body-default-m"
               onBackground="neutral-strong"
               style={{
                 lineHeight: '1.6',
-                whiteSpace: 'pre-wrap'
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
               }}
             >
               {block.content}
@@ -230,12 +234,13 @@ export function ContentBlockCard({
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
         cursor: 'pointer',
-        minHeight: getMinHeight(block.size),
-        maxHeight: getMinHeight(block.size),
+        height: getFixedHeight(block.size),
         backgroundColor: styles.bgColor,
         border: `1px solid ${styles.borderColor}`,
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'auto',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'var(--neutral-weak) transparent'
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -261,7 +266,7 @@ export function ContentBlockCard({
       </Flex>
 
       {/* Block Content */}
-      <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
+      <Flex fillWidth style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
         {renderBlockContent()}
       </Flex>
 

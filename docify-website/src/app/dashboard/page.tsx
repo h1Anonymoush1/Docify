@@ -610,7 +610,7 @@ export default function Dashboard() {
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridTemplateRows: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gridTemplateRows: 'repeat(auto-fit, minmax(300px, 1fr))',
                   gap: 'var(--space-s)',
                   alignItems: 'start'
                 }}
