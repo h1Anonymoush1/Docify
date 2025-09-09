@@ -54,27 +54,7 @@ export default function Dashboard() {
         setAnalysisResults(analysisResponse.documents);
       } catch (error) {
         console.error('Error fetching analysis results:', error);
-
-        // Fallback for database setup issues
-        if (error.message?.includes('Collection') || error.message?.includes('permission')) {
-          const setupMessage = [
-            {
-              $id: 'setup-1',
-              summary: 'Database setup required: Please create the Appwrite collections (documents_table, analysis_results) and configure permissions.',
-              status: 'pending',
-              created_at: new Date().toISOString(),
-              charts: []
-            },
-            {
-              $id: 'setup-2',
-              summary: 'Check your Appwrite configuration and ensure the collection IDs match your database setup.',
-              status: 'pending',
-              created_at: new Date(Date.now() - 86400000).toISOString(),
-              charts: []
-            }
-          ];
-          setAnalysisResults(setupMessage);
-        }
+        // No placeholder messages - let it show empty state
       } finally {
         setLoading(false);
       }
