@@ -411,7 +411,7 @@ export default function Dashboard() {
                     <Flex
                       fillWidth
                       direction="column"
-                      gap="xl"
+                      gap="s"
                       style={{ overflowY: 'auto' }}
                     >
                       {/* Summary */}
