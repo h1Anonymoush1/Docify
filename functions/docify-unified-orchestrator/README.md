@@ -1,14 +1,19 @@
-# Docify Unified Orchestrator
+# Docify Unified Orchestrator v2.5
 
-A revolutionary document analysis function that leverages Google's Gemini AI as the central orchestrator, utilizing built-in tools for comprehensive web scraping, research, and content analysis.
+A revolutionary document analysis function that leverages **all available Gemini API tools** for comprehensive web scraping, research, and content analysis. This is the unified replacement for the old `llm-analyzer-python` and `document-scraper-python` functions.
 
 ## 🎯 **Core Innovation**
 
-Unlike traditional document processors, this function uses **Gemini as the central AI orchestrator** that:
+This function uses **Gemini as the central AI orchestrator** with access to available built-in tools:
+- **Google Search**: Research related topics and find additional context
+- **URL Context**: Enhanced content analysis with web context
+
+The orchestrator:
 - **Analyzes requests** and decides what tools to use
-- **Orchestrates workflows** by calling appropriate tools
-- **Synthesizes results** from multiple tools into coherent analysis
+- **Orchestrates multi-round workflows** using all available Gemini tools
+- **Synthesizes results** from multiple tools into comprehensive analysis
 - **Learns from user interests** to provide personalized research
+- **Processes multiple content types** with advanced scraping capabilities
 
 ## 🏗️ **Architecture**
 
@@ -30,38 +35,45 @@ docify-unified-orchestrator/
 ### **Tool Ecosystem**
 
 #### **Built-in Gemini Tools (Always Available)**
-- 🔍 **Google Search**: Research related topics and find additional context
-- 💻 **Code Execution**: Test and validate code examples found in documents
-- 🌐 **URL Context**: Enhanced content analysis with web context
+- 🔍 **Google Search**: Research related topics, verify information, find additional context
+- 🌐 **URL Context**: Enhanced content analysis with web context and related content
 
-#### **Custom Tools (Gemini Orchestrates)**
-- 📄 **Document Scraper**: Extract content from various file types (PDF, Word, Excel, etc.)
-- 🔬 **Content Analyzer**: Analyze content structure and suggest visualizations
-- 🎯 **Interest Researcher**: Research topics based on user interests
-- 💾 **Code Extractor**: Extract and categorize code examples
+#### **Advanced Processing Capabilities**
+- 📄 **Multi-Format Content Extraction**: HTML, PDF, JSON, XML, and plain text
+- 🔬 **Comprehensive Content Analysis**: Metadata extraction, structured data parsing
+- 🎯 **Research Enrichment**: Multi-round research with user interests integration
+- 💾 **Code Analysis**: Language detection, code validation, example extraction
+- 🔗 **Link Analysis**: Contextual link extraction with relationship mapping
+- 🖼️ **Media Processing**: Image and video content detection and analysis
 
 ## 🚀 **Key Features**
 
-### **Intelligent Orchestration**
+### **Intelligent Multi-Round Orchestration**
 - **Smart Tool Selection**: Gemini analyzes content and user interests to choose optimal tools
-- **Workflow Optimization**: Tools are called in the most efficient sequence
+- **Multi-Round Analysis**: 4-round analysis process using different tool combinations
 - **Context Awareness**: Each tool call includes relevant context from previous operations
+- **Dynamic Workflow**: Tools are orchestrated in the most efficient sequence
 
 ### **Comprehensive Content Support**
 - **📄 Documents**: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), CSV, TXT, Markdown
-- **🌐 Web Content**: HTML, XML, RSS/Atom feeds, JSON APIs
-- **📊 Structured Data**: JSON, XML, CSV spreadsheets
+- **🌐 Web Content**: HTML, XML, RSS/Atom feeds, JSON APIs with advanced parsing
+- **📊 Structured Data**: JSON, XML, CSV spreadsheets with schema detection
 - **📝 Text Files**: Plain text, Markdown, configuration files
+- **🔗 Rich Metadata**: Open Graph, Twitter Cards, JSON-LD structured data
+- **💾 Code Content**: Multi-language code detection and validation
 
-### **User Interest Integration**
+### **Advanced Research & Enrichment**
 - **Personalized Research**: Automatically researches topics based on user interests
-- **Context Enhancement**: Research results are integrated into final analysis
-- **Relevance Scoring**: Content is scored based on user interest alignment
+- **Google Search Integration**: Real-time web research for current information
+- **URL Context Analysis**: Enhanced content analysis with web relationships
+- **Multi-Source Synthesis**: Combines information from multiple sources
 
 ### **Advanced Analysis Capabilities**
-- **Multi-Block Generation**: Creates 3-6 analysis blocks with different visualization types
+- **Multi-Block Generation**: Creates up to 6 analysis blocks with different visualization types
 - **Smart Prioritization**: Prioritizes blocks based on content analysis and user instructions
 - **Grid Optimization**: Automatically sizes blocks for optimal 3x3 grid layout
+- **Content Chunking**: Intelligent content processing for large documents
+- **Fallback Mechanisms**: Graceful degradation when tools are unavailable
 
 ## 🔧 **Setup & Installation**
 
@@ -100,53 +112,93 @@ appwrite functions create \
 appwrite functions deploy --functionId docify-unified-orchestrator
 ```
 
-## 🎭 **How Gemini Orchestration Works**
+## 🎭 **How Advanced Gemini Orchestration Works**
 
-### **Phase 1: Analysis Planning**
+### **4-Round Multi-Tool Analysis Process**
+
+#### **Round 1: Comprehensive Content Extraction**
 ```python
-# Gemini analyzes the request and creates a plan
-analysis_plan = {
-    "strategy": "comprehensive_analysis",
-    "tool_sequence": ["url_context", "scrape_document", "research_interests"],
-    "research_topics": ["react best practices", "api design patterns"],
-    "analysis_focus": ["summary", "code_examples", "architecture"],
-    "visualization_types": ["summary", "code", "mermaid"]
+# Advanced content processor extracts from URL
+comprehensive_result = {
+    "url": "https://example.com/api-docs",
+    "content_type": "html",
+    "title": "API Documentation",
+    "main_content": "Extracted and cleaned content...",
+    "metadata": {
+        "author": "API Team",
+        "keywords": ["api", "documentation", "rest"],
+        "structured_data": {...}
+    },
+    "code_blocks": [...],
+    "links": [...],
+    "media": [...]
 }
 ```
 
-### **Phase 2: Tool Execution**
-Gemini calls tools in optimal sequence:
-1. **URL Context** → Understand document context
-2. **Scrape Document** → Extract content from various formats
-3. **Research Interests** → Research related topics
-4. **Code Execution** → Test code examples
-5. **Content Analysis** → Structure analysis and visualization planning
-
-### **Phase 3: Synthesis**
+#### **Round 2: Enhanced Analysis with User Instructions**
 ```python
-# Gemini synthesizes all tool results
+# Gemini analyzes with user context and tools
+enhanced_analysis = {
+    "user_alignment": "High relevance to API development",
+    "key_insights": ["Authentication patterns", "Error handling"],
+    "tool_calls": [
+        {"tool": "google_search", "query": "latest API best practices"},
+        {"tool": "url_context", "purpose": "enhance context analysis"}
+    ]
+}
+```
+
+#### **Round 3: Research Enrichment**
+```python
+# Multi-source research integration
+research_results = [
+    {
+        "query": "REST API authentication patterns 2024",
+        "insights": "Latest OAuth2, JWT, API key patterns...",
+        "source": "google_search"
+    },
+    {
+        "query": "API documentation best practices",
+        "insights": "Interactive docs, examples, versioning...",
+        "source": "google_search"
+    }
+]
+```
+
+#### **Round 4: Final Synthesis**
+```python
+# Synthesize all findings into comprehensive result
 final_analysis = {
-    "summary": "Comprehensive document overview...",
+    "summary": "Complete API documentation analysis with current best practices...",
     "blocks": [
         {
-            "id": "summary-1",
+            "id": "comprehensive-summary",
             "type": "summary",
             "size": "large",
-            "title": "Document Overview",
-            "content": "..."
+            "title": "Complete API Analysis",
+            "content": "Integrated analysis with research and validation..."
         },
         {
-            "id": "code-1",
+            "id": "code-validation",
             "type": "code",
             "size": "medium",
-            "title": "Implementation Examples",
-            "content": "```javascript\n// Code example\n```"
+            "title": "Validated Code Examples",
+            "content": "```javascript\n// Tested and working examples\n```"
+        },
+        {
+            "id": "research-insights",
+            "type": "research",
+            "size": "medium",
+            "title": "Current Best Practices",
+            "content": "Latest API design patterns and trends..."
         }
     ],
     "metadata": {
-        "tools_used": ["google_search", "code_execution", "scrape_document"],
-        "processing_time": 12.34,
-        "research_sources": 3
+        "tools_used": ["google_search", "code_execution", "url_context"],
+        "processing_time": 15.67,
+        "research_queries": 3,
+        "rounds_completed": 4,
+        "content_quality_score": 0.92
     }
 }
 ```
