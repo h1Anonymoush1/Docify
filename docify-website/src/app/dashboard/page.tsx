@@ -828,11 +828,6 @@ export default function Dashboard() {
                   {/* Small Component: Recent Activity */}
                   <SmallDashboardCard type="content" title="Recent Activity" content="View your latest document uploads and analyses." />
 
-                  {/* Small Component: Templates */}
-                  <SmallDashboardCard type="content" title="Templates" content="Browse available analysis templates for different document types." />
-
-                  {/* Small Component: Credit Balance */}
-                  <MediumDashboardCard type="content" title="Credits" content="Manage your analysis credits and subscription plans." />
 
                 </Flex>
               )}
