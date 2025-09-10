@@ -1,59 +1,46 @@
-import { Flex, IconButton, SmartLink, Text } from "@/once-ui/components";
-import { person, social } from "@/app/resources/content";
-import styles from "./Footer.module.scss";
+import { Flex, Text, SmartLink, IconButton } from "@/once-ui/components";
 
 export const Footer = () => {
-  const currentYear = new Date().getFullYear();
-
   return (
     <Flex
       as="footer"
       position="relative"
       fillWidth
-      padding="8"
-      horizontal="center"
-      mobileDirection="column"
+      paddingY="16"
+      paddingX="24"
+      background="neutral-weak"
+      horizontal="space-between"
+      vertical="center"
     >
-      <Flex
-        className={styles.mobile}
-        maxWidth="m"
-        paddingY="8"
-        paddingX="16"
-        gap="16"
-        horizontal="space-between"
-        vertical="center"
-      >
+      {/* Left side - About Docify */}
+      <Flex gap="8" vertical="center">
+        <SmartLink href="https://github.com/h1Anonymoush1/Docify">
+          <IconButton
+            icon="github"
+            size="s"
+            variant="ghost"
+            tooltip="View Docify repository on GitHub"
+          />
+        </SmartLink>
         <Text variant="body-default-s" onBackground="neutral-strong">
-          <Text onBackground="neutral-weak">© {currentYear} /</Text>
-          <Text paddingX="4">{person.name}</Text>
-          <Text onBackground="neutral-weak">
-            {/* Usage of this template requires attribution. Please don't remove the link to Once UI. */}
-            / Build your portfolio with{" "}
-            <SmartLink
-              style={{ marginLeft: "-0.125rem" }}
-              href="https://once-ui.com/templates/magic-portfolio"
-            >
-              Once UI
-            </SmartLink>
-          </Text>
+          Docify for Appwrite Hackathon using Once UI
         </Text>
-        <Flex gap="16">
-          {social.map(
-            (item) =>
-              item.link && (
-                <IconButton
-                  key={item.name}
-                  href={item.link}
-                  icon={item.icon}
-                  tooltip={item.name}
-                  size="s"
-                  variant="ghost"
-                />
-              ),
-          )}
-        </Flex>
       </Flex>
-      <Flex height="80" show="s"></Flex>
+
+      {/* Right side - Template link */}
+      <Flex gap="4" vertical="center">
+        <Text variant="body-default-s" onBackground="neutral-weak">
+          Built on top of
+        </Text>
+        <SmartLink href="https://github.com/appwrite/templates-for-sites/tree/main/nextjs/magic-portfolio">
+          <IconButton
+            icon="github"
+            size="s"
+            variant="ghost"
+            tooltip="View original template on GitHub"
+          />
+        </SmartLink>
+      </Flex>
     </Flex>
   );
 };
