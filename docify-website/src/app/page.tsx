@@ -124,7 +124,7 @@ export default function Home() {
               <Text variant="body-default-m" onBackground="neutral-weak">
                 Paste any URL and get AI-powered analysis with interactive charts, summaries, and code examples.
               </Text>
-              <a href="/documents" style={{ textDecoration: 'none' }}>
+              <a href="/dashboard" style={{ textDecoration: 'none' }}>
                 <Button
                   variant="primary"
                   size="l"
@@ -140,7 +140,7 @@ export default function Home() {
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  Create New Document
+                  Go to Dashboard
                 </Button>
               </a>
             </Column>

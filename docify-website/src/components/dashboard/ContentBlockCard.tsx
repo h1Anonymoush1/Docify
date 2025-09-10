@@ -170,8 +170,8 @@ export function ContentBlockCard({
   };
 
   // Get action buttons based on block type
-  const getActionButtons = () => {
-    const buttons = [];
+  const getActionButtons = (): JSX.Element[] => {
+    const buttons: JSX.Element[] = [];
 
     // Copy button for all types
     buttons.push(

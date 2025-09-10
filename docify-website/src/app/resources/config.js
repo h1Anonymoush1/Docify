@@ -8,7 +8,6 @@ const routes = {
   "/auth/signup": true,
   "/auth/error": true,
   "/dashboard": true,
-  "/documents": true,
   "/account": true,
 };
 

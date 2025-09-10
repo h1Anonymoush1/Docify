@@ -6,6 +6,8 @@ import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
 import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard, ContentBlockCard } from '@/components/dashboard';
+import DocumentForm from '@/components/DocumentForm';
+import DocumentViewer from '@/components/DocumentViewer';
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 
@@ -33,53 +35,55 @@ export default function Dashboard() {
   const [updatingPublic, setUpdatingPublic] = useState(false);
   const [wordCount, setWordCount] = useState<number>(0);
   const [documentStatus, setDocumentStatus] = useState<string>('unknown');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createdDocumentId, setCreatedDocumentId] = useState<string | null>(null);
+
+  const fetchDocuments = async () => {
+    try {
+      console.log('🔍 Fetching current user...');
+      const currentUser = await account.get();
+      console.log('✅ User authenticated:', currentUser.$id);
+      setUser(currentUser);
+
+      console.log('📄 Fetching user documents...');
+      console.log('Database ID:', APPWRITE_CONFIG.databaseId);
+      console.log('Collection ID:', APPWRITE_CONFIG.documentsCollectionId);
+
+      const userDocuments = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.documentsCollectionId,
+        [
+          Query.equal('user_id', currentUser.$id),
+          Query.orderDesc('$createdAt')
+        ]
+      );
+
+      console.log('✅ Documents fetched:', userDocuments.documents.length);
+      setDocuments(userDocuments.documents);
+    } catch (error: any) {
+      console.error('❌ Error fetching documents:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        code: error?.code,
+        type: error?.type,
+        response: error?.response
+      });
+
+      // If it's an authentication error, show a more specific message
+      if (error?.message?.includes('unauthorized') || error?.code === 401) {
+        console.error('🔐 Authentication issue detected');
+      }
+
+      // If it's a permission error, show a more specific message
+      if (error?.message?.includes('permission') || error?.code === 403) {
+        console.error('🚫 Permission issue detected');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        console.log('🔍 Fetching current user...');
-        const currentUser = await account.get();
-        console.log('✅ User authenticated:', currentUser.$id);
-        setUser(currentUser);
-
-        console.log('📄 Fetching user documents...');
-        console.log('Database ID:', APPWRITE_CONFIG.databaseId);
-        console.log('Collection ID:', APPWRITE_CONFIG.documentsCollectionId);
-
-        const userDocuments = await databases.listDocuments(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.documentsCollectionId,
-          [
-            Query.equal('user_id', currentUser.$id),
-            Query.orderDesc('$createdAt')
-          ]
-        );
-
-        console.log('✅ Documents fetched:', userDocuments.documents.length);
-        setDocuments(userDocuments.documents);
-      } catch (error: any) {
-        console.error('❌ Error fetching documents:', error);
-        console.error('Error details:', {
-          message: error?.message,
-          code: error?.code,
-          type: error?.type,
-          response: error?.response
-        });
-
-        // If it's an authentication error, show a more specific message
-        if (error?.message?.includes('unauthorized') || error?.code === 401) {
-          console.error('🔐 Authentication issue detected');
-        }
-
-        // If it's a permission error, show a more specific message
-        if (error?.message?.includes('permission') || error?.code === 403) {
-          console.error('🚫 Permission issue detected');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDocuments();
   }, []);
 
@@ -188,6 +192,40 @@ export default function Dashboard() {
     }
   };
 
+  const handleCreateClick = () => {
+    setShowCreateForm(true);
+    setSelectedDocument(null);
+    setDocumentAnalysis(null);
+    setAnalysisError(null);
+    setCreatedDocumentId(null);
+  };
+
+  const handleDocumentCreated = async (documentId: string) => {
+    try {
+      // Fetch the newly created document data
+      const docData = await databases.getDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.documentsCollectionId,
+        documentId
+      );
+
+      // Refresh the documents list to include the new document
+      await fetchDocuments();
+
+      // Navigate to the document like clicking it from the sidebar
+      await handleDocumentSelect(docData);
+
+      // Hide the create form
+      setShowCreateForm(false);
+      setCreatedDocumentId(null);
+
+    } catch (error) {
+      console.error('Error handling document creation:', error);
+      // Fallback: just refresh the list
+      await fetchDocuments();
+    }
+  };
+
   const handleBackToGrid = () => {
     setSelectedDocument(null);
     setDocumentAnalysis(null);
@@ -197,7 +235,10 @@ export default function Dashboard() {
     setIsPublic(false); // Reset public state
     setWordCount(0); // Reset word count
     setDocumentStatus('unknown'); // Reset document status
+    setShowCreateForm(false); // Reset create form
+    setCreatedDocumentId(null); // Reset created document
   };
+
 
   // Action handlers for content blocks
   const handleCopyContent = async (content: string) => {
@@ -363,6 +404,7 @@ export default function Dashboard() {
                   fillWidth
                   variant="primary"
                   size="m"
+                  onClick={handleCreateClick}
                   style={{
                     borderRadius: 'var(--radius-m)',
                     boxShadow: 'var(--shadow-l), 0 0 20px var(--brand-alpha-medium)',
@@ -389,7 +431,30 @@ export default function Dashboard() {
             rightRadius="l"
             style={{ flex: 1, minHeight: 0 }}
           >
-            {selectedDocument ? (
+            {showCreateForm ? (
+              /* Create Document View */
+              <Flex
+                fillWidth
+                direction="column"
+                gap="s"
+                style={{ flex: 1, minHeight: 0 }}
+              >
+                {/* Header */}
+                <Flex fillWidth horizontal="center" vertical="center" paddingBottom="l">
+                  {/* Header removed - navigation handled by document selection */}
+                </Flex>
+
+                {/* Main Content */}
+                <Flex fillWidth direction="column" gap="xl">
+                  <DocumentForm
+                    onSuccess={handleDocumentCreated}
+                    onError={(error) => {
+                      console.error('Document creation error:', error);
+                    }}
+                  />
+                </Flex>
+              </Flex>
+            ) : selectedDocument ? (
               /* Document Chart View */
               <Flex
                 fillWidth
@@ -695,33 +760,82 @@ export default function Dashboard() {
               gap="s"
               style={{ flex: 1, minHeight: 0 }}
             >
-              {/* 3x3 Grid with Spanning Components */}
-              <Flex
-                fillWidth
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gridTemplateRows: 'repeat(auto-fit, minmax(300px, 1fr))',
-                  gap: 'var(--space-s)',
-                  alignItems: 'start'
-                }}
-              >
-                {/* Large Component: Top Row (spans 3 columns) */}
-                <LargeDashboardCard type="content" title="Welcome to Docify" content="Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries." />
+              {/* Centered Create Button */}
+              {documents.length === 0 ? (
+                <Flex
+                  fillWidth
+                  fillHeight
+                  horizontal="center"
+                  vertical="center"
+                  direction="column"
+                  gap="l"
+                >
+                  <Flex
+                    background="surface"
+                    border="neutral-weak"
+                    radius="l"
+                    padding="xl"
+                    direction="column"
+                    gap="l"
+                    horizontal="center"
+                    style={{ maxWidth: '400px' }}
+                  >
+                    <Heading variant="heading-strong-l" align="center">
+                      Welcome to Docify
+                    </Heading>
+                    <Text variant="body-default-m" onBackground="neutral-weak" align="center">
+                      Start by creating your first document
+                    </Text>
+                    <Button
+                      variant="primary"
+                      size="l"
+                      onClick={handleCreateClick}
+                      style={{
+                        minWidth: '200px',
+                        backgroundColor: 'var(--brand-background-strong)',
+                        color: 'var(--brand-on-background-strong)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-m)',
+                        padding: 'var(--space-m) var(--space-xl)',
+                        fontSize: 'var(--font-size-m)',
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        boxShadow: 'var(--shadow-l), 0 0 20px var(--brand-alpha-medium)'
+                      }}
+                    >
+                      Create New Document
+                    </Button>
+                  </Flex>
+                </Flex>
+              ) : (
+                /* 3x3 Grid with Spanning Components */
+                <Flex
+                  fillWidth
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateRows: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: 'var(--space-s)',
+                    alignItems: 'start'
+                  }}
+                >
+                  {/* Large Component: Top Row (spans 3 columns) */}
+                  <LargeDashboardCard type="content" title="Welcome to Docify" content="Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries." />
 
-                {/* Medium Component: Analytics */}
-                <MediumDashboardCard type="content" title="Analytics" content="Track your document processing metrics and usage patterns." />
+                  {/* Medium Component: Analytics */}
+                  <MediumDashboardCard type="content" title="Analytics" content="Track your document processing metrics and usage patterns." />
 
-                {/* Small Component: Recent Activity */}
-                <SmallDashboardCard type="content" title="Recent Activity" content="View your latest document uploads and analyses." />
+                  {/* Small Component: Recent Activity */}
+                  <SmallDashboardCard type="content" title="Recent Activity" content="View your latest document uploads and analyses." />
 
-                {/* Small Component: Templates */}
-                <SmallDashboardCard type="content" title="Templates" content="Browse available analysis templates for different document types." />
+                  {/* Small Component: Templates */}
+                  <SmallDashboardCard type="content" title="Templates" content="Browse available analysis templates for different document types." />
 
-                {/* Small Component: Credit Balance */}
-                <MediumDashboardCard type="content" title="Credits" content="Manage your analysis credits and subscription plans." />
+                  {/* Small Component: Credit Balance */}
+                  <MediumDashboardCard type="content" title="Credits" content="Manage your analysis credits and subscription plans." />
 
-              </Flex>
+                </Flex>
+              )}
             </Flex>
             )}
           </Flex>

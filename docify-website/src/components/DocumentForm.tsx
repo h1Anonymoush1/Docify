@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { databases, account, ID } from '../lib/appwrite';
 import { APPWRITE_CONFIG } from '../lib/appwrite';
+import { Flex, Heading, Button, Input, Textarea, Text } from '@/once-ui/components';
 
 interface DocumentFormProps {
   onSuccess?: (documentId: string) => void;
@@ -81,10 +82,6 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
       // No need to manually call the API - this is handled by Appwrite's event system
       console.log('Scraping will be automatically triggered by document creation event');
 
-      // Reset form
-      setUrl('');
-      setInstructions('');
-
       // Call success callback
       if (onSuccess) {
         onSuccess(document.$id);
@@ -103,88 +100,78 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Document</h2>
+    <Flex
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      padding="xl"
+      direction="column"
+      gap="l"
+      style={{ maxWidth: '900px', margin: '0 auto' }}
+    >
+      <Flex fillWidth horizontal="center">
+        <Heading variant="heading-strong-l">Create New Document</Heading>
+      </Flex>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit}>
         {/* URL Input */}
-        <div>
-          <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-            Document URL
-          </label>
-          <input
-            type="url"
+        <Flex direction="column" gap="s">
+          <Input
             id="url"
+            label="Document URL"
+            type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com/documentation"
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.url ? 'border-red-300' : 'border-gray-300'
-            }`}
+            error={!!errors.url}
+            errorMessage={errors.url}
             disabled={isSubmitting}
           />
-          {errors.url && (
-            <p className="mt-1 text-sm text-red-600">{errors.url}</p>
-          )}
-        </div>
+        </Flex>
+
+        {/* Spacer */}
+        <div style={{ height: 'var(--space-l)' }} />
 
         {/* Instructions Textarea */}
-        <div>
-          <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
-            Analysis Instructions
-          </label>
-          <textarea
+        <Flex direction="column" gap="s">
+          <Textarea
             id="instructions"
+            label="Analysis Instructions"
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Describe how you want this document to be analyzed. For example: 'Create a visual overview of the API endpoints and their relationships'"
-            rows={6}
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.instructions ? 'border-red-300' : 'border-gray-300'
-            }`}
+            lines={6}
+            error={!!errors.instructions}
+            errorMessage={errors.instructions}
             disabled={isSubmitting}
           />
-          {errors.instructions && (
-            <p className="mt-1 text-sm text-red-600">{errors.instructions}</p>
-          )}
-          <p className="mt-2 text-sm text-gray-500">
+          <Text variant="body-default-xs" onBackground="neutral-weak">
             Provide clear instructions for how the AI should analyze and present this document.
-          </p>
-        </div>
+          </Text>
+        </Flex>
 
         {/* Submit Button */}
-        <div className="flex justify-end">
-          <button
+        <Flex fillWidth horizontal="center" paddingTop="m">
+          <Button
             type="submit"
+            variant="primary"
+            size="l"
             disabled={isSubmitting}
-            className={`px-6 py-2 rounded-md text-white font-medium ${
-              isSubmitting
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-            }`}
+            style={{
+              minWidth: '200px',
+              backgroundColor: isSubmitting ? 'var(--neutral-medium)' : 'var(--brand-background-strong)',
+              color: 'var(--brand-on-background-strong)',
+              border: 'none',
+              borderRadius: 'var(--radius-m)',
+              padding: 'var(--space-m) var(--space-xl)',
+              fontSize: 'var(--font-size-m)',
+              fontWeight: '600',
+              transition: 'all 0.2s ease'
+            }}
           >
-            {isSubmitting ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Creating Document...
-              </div>
-            ) : (
-              'Create Document'
-            )}
-          </button>
-        </div>
+            {isSubmitting ? 'Creating Document...' : 'Create Document'}
+          </Button>
+        </Flex>
       </form>
 
-      {/* Help Text */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-md">
-        <h3 className="text-sm font-medium text-blue-800 mb-2">What happens next?</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• The document will be scraped from the provided URL</li>
-          <li>• AI will analyze the content based on your instructions</li>
-          <li>• Interactive charts and summaries will be generated</li>
-          <li>• You'll receive a notification when analysis is complete</li>
-        </ul>
-      </div>
-    </div>
+    </Flex>
   );
 }
