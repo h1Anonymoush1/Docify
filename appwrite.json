@@ -42,6 +42,24 @@
             }
         }
     },
+    "databases": [
+        {
+            "$id": "docify_db",
+            "name": "Docify Database",
+            "enabled": true
+        }
+    ],
+    "collections": [
+        {
+            "$id": "documents_table",
+            "$permissions": {
+                "read": ["users", "role:all"],
+                "write": ["user:$userId", "role:apps"],
+                "delete": ["user:$userId"]
+            },
+            "documentSecurity": true
+        }
+    ],
     "functions": [
         {
             "$id": "llm-analyzer-python",

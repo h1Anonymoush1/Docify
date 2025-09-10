@@ -163,6 +163,24 @@ export const Header = () => {
                 <ToggleButton prefixIcon="home" href="/" selected={pathname === "/"} />
               )}
               <Line vert maxHeight="24" />
+              {routes["/explore"] && (
+                <>
+                  <ToggleButton
+                    className="s-flex-hide"
+                    prefixIcon="globe"
+                    href="/explore"
+                    label="Explore"
+                    selected={pathname === "/explore"}
+                  />
+                  <ToggleButton
+                    className="s-flex-show"
+                    prefixIcon="globe"
+                    href="/explore"
+                    selected={pathname === "/explore"}
+                  />
+                  <Line vert maxHeight="24" />
+                </>
+              )}
               {isAuthenticated ? (
                 <>
                   <ToggleButton

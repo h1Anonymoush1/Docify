@@ -305,6 +305,7 @@ export default function Dashboard() {
     }
   };
 
+
   return (
     <AuthGuard requireAuth={true}>
       <Flex
@@ -588,7 +589,7 @@ export default function Dashboard() {
                                   </Text>
                                 </Flex>
 
-                                {/* Public Toggle */}
+                                    {/* Public Toggle */}
                                 <Flex horizontal="space-between" vertical="center" gap="s" style={{ marginTop: 'auto', paddingTop: 'var(--space-s)' }}>
                                   <Text variant="body-default-xs" onBackground="neutral-weak">
                                     Make Public
@@ -605,6 +606,7 @@ export default function Dashboard() {
                                     </Text>
                                   </Flex>
                                 </Flex>
+
                               </Flex>
                             </SmallDashboardCard>
                           </div>
