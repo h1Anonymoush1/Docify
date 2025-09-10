@@ -1,0 +1,16 @@
+{
+  "name": "docify-unified-orchestrator",
+  "version": "1.0.0",
+  "description": "Unified Docify function using Gemini orchestration with built-in tools",
+  "main": "src/main.py",
+  "scripts": {
+    "test": "python -m pytest tests/ -v",
+    "start": "python src/main.py",
+    "lint": "python -m flake8 src/",
+    "format": "python -m black src/"
+  },
+  "dependencies": {},
+  "keywords": ["appwrite", "gemini", "orchestrator", "ai", "document-analysis"],
+  "author": "Docify",
+  "license": "MIT"
+}
