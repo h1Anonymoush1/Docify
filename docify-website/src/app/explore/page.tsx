@@ -2,17 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 
-import { Heading, Flex, Text, RevealFx, Column, Card, Grid, SmartImage, Button } from "@/once-ui/components";
+import { Heading, Flex, Text, RevealFx, Column, Card, Grid, SmartImage, Button, Dialog, DialogProvider } from "@/once-ui/components";
 import { baseURL } from "@/app/resources";
-import { databases, APPWRITE_CONFIG } from "@/lib/appwrite";
+import { databases, APPWRITE_CONFIG, account, ID } from "@/lib/appwrite";
 import { Query } from "appwrite";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 function ExploreContent() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importing, setImporting] = useState(false);
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     fetchExploreDocuments();
@@ -62,9 +67,64 @@ function ExploreContent() {
   };
 
   const handleDocumentClick = (document: any) => {
-    // For now, we'll use the public view or redirect to a public document viewer
-    // Since we don't have a public document viewer yet, we'll show an alert
-    alert(`Document: ${document.title || document.url}\n\nPublic document viewing will be available soon!`);
+    setSelectedDocument(document);
+    setShowImportDialog(true);
+  };
+
+  const handleImportDocument = async () => {
+    if (!selectedDocument || !isAuthenticated || !user) {
+      alert('You must be signed in to import documents.');
+      router.push('/auth/login');
+      return;
+    }
+
+    try {
+      setImporting(true);
+
+      // Create a copy of the document for the current user
+      // Include analysis blocks, summary, and scraped content
+      const documentCopy = {
+        url: selectedDocument.url,
+        instructions: selectedDocument.instructions,
+        title: selectedDocument.title ? `${selectedDocument.title} (Imported)` : `Imported Document`,
+        status: 'completed', // Keep as completed since we have the analysis
+        user_id: user.$id,
+        public: false, // New copy is private by default
+        imported: true, // Mark as imported document
+        scraped_content: selectedDocument.scraped_content, // Copy the scraped content
+        word_count: selectedDocument.word_count, // Copy word count
+        analysis_summary: selectedDocument.analysis_summary, // Copy analysis summary
+        analysis_blocks: selectedDocument.analysis_blocks, // Copy analysis blocks
+        error_message: selectedDocument.error_message // Copy any error messages
+      };
+
+      const newDocument = await databases.createDocument(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.documentsCollectionId,
+        ID.unique(), // Let Appwrite generate the ID
+        documentCopy
+      );
+
+      console.log('✅ Document imported successfully:', newDocument.$id);
+
+      // Close dialog and reset state
+      setShowImportDialog(false);
+      setSelectedDocument(null);
+
+      // Show success message
+      alert('Document imported successfully with all analysis blocks! Check your dashboard to view it.');
+
+    } catch (error: any) {
+      console.error('❌ Error importing document:', error);
+      alert('Failed to import document. Please try again.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setShowImportDialog(false);
+    setSelectedDocument(null);
   };
 
   return (
@@ -305,10 +365,98 @@ function ExploreContent() {
           </Column>
         </RevealFx>
       )}
+
+      {/* Import Document Dialog */}
+      <Dialog
+        isOpen={showImportDialog}
+        onClose={handleCancelImport}
+        title="Import Document"
+        description="Import this document with all its analysis and content to your collection"
+      >
+        {selectedDocument && (
+          <Flex direction="column" gap="l">
+            <Flex direction="column" gap="s">
+              <Text variant="body-default-s" onBackground="neutral-weak">
+                Document Details:
+              </Text>
+              <Card background="surface" border="neutral-weak" radius="m" padding="m">
+                <Flex direction="column" gap="s">
+                  <Text variant="body-strong-m" onBackground="neutral-strong">
+                    {selectedDocument.title || 'Untitled Document'}
+                  </Text>
+                  <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-word' }}>
+                    {selectedDocument.url}
+                  </Text>
+                  {selectedDocument.word_count && (
+                    <Text variant="body-default-xs" onBackground="neutral-weak">
+                      {selectedDocument.word_count.toLocaleString()} words
+                    </Text>
+                  )}
+                </Flex>
+              </Card>
+            </Flex>
+
+            {!isAuthenticated ? (
+              <Flex direction="column" gap="m">
+                <Text variant="body-default-m" onBackground="neutral-weak">
+                  You need to be signed in to import documents.
+                </Text>
+                <Flex gap="s">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowImportDialog(false);
+                      router.push('/auth/login');
+                    }}
+                    fillWidth
+                  >
+                    Sign In
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleCancelImport}
+                    fillWidth
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
+              </Flex>
+            ) : (
+              <Flex direction="column" gap="m">
+                <Text variant="body-default-m" onBackground="neutral-weak">
+                  This will create a complete copy of this document in your collection, including all analysis blocks, charts, summaries, and scraped content. The imported document will be private by default.
+                </Text>
+                <Flex gap="s">
+                  <Button
+                    variant="primary"
+                    onClick={handleImportDocument}
+                    disabled={importing}
+                    fillWidth
+                  >
+                    {importing ? 'Importing...' : 'Import Document'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleCancelImport}
+                    disabled={importing}
+                    fillWidth
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
+              </Flex>
+            )}
+          </Flex>
+        )}
+      </Dialog>
     </Column>
   );
 }
 
 export default function Explore() {
-  return <ExploreContent />;
+  return (
+    <DialogProvider>
+      <ExploreContent />
+    </DialogProvider>
+  );
 }

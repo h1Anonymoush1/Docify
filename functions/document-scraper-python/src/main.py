@@ -1407,6 +1407,24 @@ def main(context):
 
         print(f'Final data - Document ID: {document_id}, URL: {url}')
 
+        # Check if document is imported - skip processing if true
+        print('Checking if document is imported...')
+        document = databases.get_document(
+            DATABASE_ID,
+            DOCUMENTS_COLLECTION_ID,
+            document_id
+        )
+
+        if document.get('imported') == True:
+            print(f'Document {document_id} is imported - skipping scraping')
+            return context.res.json({
+                'success': True,
+                'message': 'Skipped: Document is imported',
+                'documentId': document_id
+            }, 200)
+
+        print('Document is not imported - proceeding with scraping')
+
         # Validate URL format and check if domain exists
         print(f'Validating URL: {url}')
         try:

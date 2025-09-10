@@ -743,6 +743,22 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
             log(f"  - URL: {scraped_data.get('url', 'N/A')}")
             log(f"  - Analysis ID: {analysis_id}")
             log(f"  - Original content length: {len(scraped_data.get('content', ''))} characters")
+
+            # Check if document is imported - skip analysis if true
+            log("Checking if document is imported...")
+            if document.get('imported') == True:
+                log(f"Document {document_id} is imported - skipping analysis")
+                return {
+                    'success': True,
+                    'message': 'Skipped: Document is imported',
+                    'data': {
+                        'documentId': document_id,
+                        'analysisId': analysis_id
+                    },
+                    'statusCode': 200
+                }
+            log("Document is not imported - proceeding with analysis")
+
         except Exception as db_error:
             log(f"❌ FAIL: Database query error: {db_error}")
             raise ValueError(f"Failed to retrieve document data: {db_error}")
