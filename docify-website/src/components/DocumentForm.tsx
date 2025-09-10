@@ -46,6 +46,7 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🟢 DocumentForm: Form submission started');
 
     if (!validateForm()) {
       return;
@@ -83,9 +84,16 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
       console.log('Scraping will be automatically triggered by document creation event');
 
       // Call success callback
+      console.log('🟢 DocumentForm: Calling onSuccess with document ID:', document.$id);
       if (onSuccess) {
         onSuccess(document.$id);
+      } else {
+        console.log('🟡 DocumentForm: onSuccess callback is not provided');
       }
+
+      // Reset form
+      setUrl('');
+      setInstructions('');
 
     } catch (error) {
       console.error('Error creating document:', error);

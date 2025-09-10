@@ -88,7 +88,14 @@ export default function Dashboard() {
   }, []);
 
   const handleDocumentSelect = async (document: any) => {
-    console.log('📄 Selecting document:', document.$id);
+    console.log('🟢 Dashboard: handleDocumentSelect called with document:', document.$id);
+    console.log('📄 Document data:', {
+      id: document.$id,
+      title: document.title,
+      url: document.url,
+      user_id: document.user_id,
+      status: document.status
+    });
     setSelectedDocument(document);
     setAnalysisLoading(true);
     setAnalysisError(null);
@@ -201,6 +208,7 @@ export default function Dashboard() {
   };
 
   const handleDocumentCreated = async (documentId: string) => {
+    console.log('🟢 Dashboard: handleDocumentCreated called with ID:', documentId);
     try {
       // Fetch the newly created document data
       const docData = await databases.getDocument(
@@ -216,11 +224,16 @@ export default function Dashboard() {
       await handleDocumentSelect(docData);
 
       // Hide the create form
+      console.log('🟢 Dashboard: Hiding create form and resetting state');
       setShowCreateForm(false);
       setCreatedDocumentId(null);
+      setAnalysisLoading(false); // Ensure loading state is reset
+      console.log('🟢 Dashboard: Document creation flow completed successfully');
 
     } catch (error) {
-      console.error('Error handling document creation:', error);
+      console.error('🔴 Dashboard: Error handling document creation:', error);
+      // Ensure loading state is reset even on error
+      setAnalysisLoading(false);
       // Fallback: just refresh the list
       await fetchDocuments();
     }
@@ -368,9 +381,17 @@ export default function Dashboard() {
                         border="neutral-weak"
                         radius="m"
                         padding="s"
-                        onClick={() => handleDocumentSelect(document)}
+                        onClick={() => {
+                          if (analysisLoading) {
+                            console.log('⏳ Sidebar: Ignoring click while loading');
+                            return;
+                          }
+                          console.log('🖱️ Sidebar: Document clicked:', document.$id);
+                          handleDocumentSelect(document);
+                        }}
                         style={{
-                          cursor: 'pointer',
+                          cursor: analysisLoading ? 'not-allowed' : 'pointer',
+                          opacity: analysisLoading ? 0.6 : 1,
                           transition: 'all 0.2s ease',
                           border: selectedDocument?.$id === document.$id ? '2px solid var(--brand-medium)' : '1px solid var(--neutral-weak)',
                           backgroundColor: selectedDocument?.$id === document.$id ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.1)',
