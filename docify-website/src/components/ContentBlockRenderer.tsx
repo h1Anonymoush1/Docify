@@ -367,10 +367,8 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
       case 'troubleshooting':
       case 'guide':
       case 'architecture':
-        return <KeyPointsBlock block={block} />;
-
       case 'api_reference':
-        return <ApiReferenceBlock block={block} />;
+        return <KeyPointsBlock block={block} />;
 
       case 'comparison':
         return <ComparisonBlock block={block} />;

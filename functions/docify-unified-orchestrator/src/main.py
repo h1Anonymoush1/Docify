@@ -431,7 +431,7 @@ CONTENT BLOCK TYPES:
 - architecture: System/component structure (format: **Title** ***Architecture content***)
 - mermaid: Visual diagrams using mermaid syntax
 - code: Code examples with language specification
-- api_reference: API documentation
+- api_reference: API documentation (format: **Title** ***API reference content***)
 - guide: Step-by-step instructions (format: **Title** ***Guide content***)
 - comparison: Compare different approaches
 - best_practices: Best practices and recommendations (format: **Title** ***Best practice content***)
@@ -460,7 +460,7 @@ BLOCK PLACEMENT RULES:
 IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
-- For key_points, best_practices, troubleshooting, guide, and architecture blocks: Each item title should start and end with **, each item content should start and end with ***
+- For key_points, best_practices, troubleshooting, guide, architecture, and api_reference blocks: Each item title should start and end with **, each item content should start and end with ***
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -712,6 +712,29 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
 
             if not valid_format:
                 print(f"   ⚠️ Architecture block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Architecture content*** format")
+                return False
+
+        elif block_type == 'api_reference':
+            # Validate api_reference formatting: **Title** ***API reference content***
+            lines = content.split('\n')
+            valid_format = True
+
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Check if line contains both **title** and ***content***
+                    if not ('**' in line and '***' in line):
+                        valid_format = False
+                        break
+
+                    # More specific validation: should have **title** followed by ***content***
+                    title_match = '**' in line[:line.find('***')] if '***' in line else False
+                    if not title_match:
+                        valid_format = False
+                        break
+
+            if not valid_format:
+                print(f"   ⚠️ API reference block '{block.get('title', '')}' has invalid formatting - should use **Title** ***API reference content*** format")
                 return False
 
         # Check for basic content validity
