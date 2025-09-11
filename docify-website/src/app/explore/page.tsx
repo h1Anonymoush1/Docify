@@ -297,7 +297,7 @@ function ExploreContent() {
               </Text>
             </Flex>
 
-            <Grid columns="1" tabletcolumns="2" desktopcolumns="3" gap="l" fillWidth>
+            <Grid columns="3" tabletColumns="2" mobileColumns="1" gap="l" fillWidth>
               {documents.map((document) => (
                 <Card
                   key={document.$id}
