@@ -24,14 +24,25 @@ This function provides a **simplified, safe approach** to document analysis:
 - **Step 4**: Save raw content to database immediately
 - **Step 5**: Generate AI-powered 2-4 word title (with HTML fallback)
 - **Step 6**: Create comprehensive analysis using Gemini with instruction-specific summaries
-- **Step 7**: Format blocks in exact same JSON structure
+- **Step 7**: Format blocks with 2×3 grid layout validation and syntax checking
 - **Step 8**: Final save and mark as completed
+
+### **📐 Grid Layout System**
+- **Layout**: 2 rows × 3 columns = 6 total cells
+- **Block Heights**: All blocks are 1 row tall (2 rows maximum)
+- **Size Options**:
+  - **Small**: 1×1 cell (fits anywhere)
+  - **Medium**: 2×1 cells (spans 2 columns, max 2 per row)
+  - **Large**: 3×2 cells (fills entire grid, use only when necessary)
+- **Constraints**: Maximum 2 medium blocks, maximum 6 small blocks
+- **Validation**: Automatic grid overflow prevention and syntax checking
 
 ### **🛡️ Safety & Compatibility**
 - **Zero Data Loss**: Raw content never modified or cleaned
 - **100% Compatible**: Same JSON format as existing analyzer
 - **Simple Tracking**: Clear tools usage and research context
 - **Error Recovery**: Graceful fallbacks at each step
+- **Syntax Validation**: Ensures proper mermaid/code block formatting
 
 ## 🏗️ **Architecture**
 

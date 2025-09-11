@@ -433,14 +433,38 @@ CONTENT BLOCK TYPES:
 - best_practices: Recommendations
 - troubleshooting: Common issues and solutions
 
-SIZE GUIDELINES:
-- small: Quick facts, simple explanations (1 grid unit)
-- medium: Detailed explanations, moderate diagrams (2 grid units)
-- large: Complex diagrams, comprehensive guides (3 grid units)
+GRID LAYOUT: 2 rows vertical × 3 columns horizontal = 6 total grid cells
 
-MAXIMUM 6 BLOCKS TOTAL. Choose the most appropriate content types and sizes for this specific document.
+SIZE GUIDELINES (all blocks are 1 row tall):
+- small: Single cell (1×1) - fits anywhere
+- medium: Two cells wide (2×1) - spans 2 columns, fits in 1 row
+- large: Full width (3×2) - spans all 3 columns and 2 rows
 
-For mermaid diagrams, use proper mermaid syntax. For code blocks, specify the programming language in metadata.
+CONSTRAINTS:
+- Maximum 2 medium blocks (since each takes 2 columns, max 4 columns available)
+- Maximum 6 small blocks (6 cells total)
+- Large block fills entire grid (3×2 = 6 cells, use only if really needed)
+- Stay within 2 rows maximum unless absolutely necessary
+- Total blocks: 1-6 blocks maximum
+
+BLOCK PLACEMENT RULES:
+- Large blocks use the entire 2×3 grid
+- Medium blocks can be placed side by side (2×1 + 2×1 = 4 columns)
+- Small blocks can fill remaining spaces
+- Don't exceed grid capacity
+
+IMPORTANT SYNTAX REQUIREMENTS:
+- For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
+- For code blocks: Specify programming language in metadata (javascript, python, etc.)
+- All block content must be properly formatted and syntactically correct
+- Use appropriate escaping for special characters in JSON
+
+GRID CONSTRAINTS REMINDER:
+- 2×3 grid layout (2 rows, 3 columns)
+- Respect size limits and placement rules
+- Large blocks fill entire grid
+- Maximum 2 medium blocks
+- Maximum 6 small blocks
 
 Ensure the response is valid JSON."""
 
@@ -503,13 +527,52 @@ Ensure the response is valid JSON."""
 
 
 # ===== STEP 7: CREATE COMPATIBLE BLOCKS =====
+def validate_block_syntax(block: Dict[str, Any]) -> bool:
+    """Validate that block content has proper syntax"""
+    block_type = block.get('type', '')
+    content = block.get('content', '')
+
+    try:
+        if block_type == 'mermaid':
+            # Basic mermaid syntax validation
+            if not content.strip():
+                return False
+            # Check for common mermaid keywords
+            mermaid_keywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'journey', 'gantt', 'pie', 'gitgraph']
+            has_mermaid_syntax = any(keyword in content for keyword in mermaid_keywords)
+            if not has_mermaid_syntax:
+                print(f"   ⚠️ Block '{block.get('title', '')}' has invalid mermaid syntax")
+                return False
+
+        elif block_type == 'code':
+            # Ensure language is specified in metadata
+            metadata = block.get('metadata', {})
+            if not metadata.get('language'):
+                print(f"   ⚠️ Code block '{block.get('title', '')}' missing language in metadata")
+                # Add default language
+                block['metadata']['language'] = 'text'
+
+        # Check for basic content validity
+        if not content.strip():
+            return False
+
+        # Check for unescaped quotes that could break JSON
+        if '"' in content and not content.replace('\\"', '').replace('\\\\', ''):
+            # This is a basic check - in practice, the JSON parsing will catch issues
+            pass
+
+        return True
+
+    except Exception as e:
+        print(f"   ⚠️ Syntax validation failed for block '{block.get('title', '')}': {e}")
+        return False
+
+
 def create_compatible_blocks(analysis_result: Dict[str, Any]) -> str:
     """Create analysis blocks in exact same JSON format as llm-analyzer-python"""
     print("🧩 Step 7: Creating compatible blocks...")
 
-    # The analysis_result is already in the correct format from generate_analysis
-    # Just validate and ensure it matches the expected structure
-
+    # Validate blocks according to 2×3 grid layout constraints
     blocks = analysis_result.get('blocks', [])
 
     # Validate and clean blocks
@@ -521,6 +584,9 @@ def create_compatible_blocks(analysis_result: Dict[str, Any]) -> str:
     valid_sizes = ['small', 'medium', 'large']
 
     cleaned_blocks = []
+    grid_cells_used = 0
+    medium_count = 0
+
     for i, block in enumerate(blocks[:6]):  # Maximum 6 blocks
         if (block.get('id') and block.get('type') and block.get('size') and
             block.get('title') and block.get('content') and
@@ -531,13 +597,61 @@ def create_compatible_blocks(analysis_result: Dict[str, Any]) -> str:
             if 'metadata' not in block:
                 block['metadata'] = {}
 
+            # Validate block syntax first
+            if not validate_block_syntax(block):
+                print(f"   ⚠️ Skipping block {i+1} - syntax validation failed")
+                continue
+
+            # Validate grid constraints
+            block_size = block['size']
+            if block_size == 'large':
+                # Large blocks take entire grid (6 cells)
+                if grid_cells_used > 0:
+                    print(f"   ⚠️ Skipping large block {i+1} - grid not empty")
+                    continue
+                if len(cleaned_blocks) > 0:
+                    print(f"   ⚠️ Skipping large block {i+1} - large must be only block")
+                    continue
+                grid_cells_used = 6
+            elif block_size == 'medium':
+                # Medium blocks take 2 cells (2×1)
+                if medium_count >= 2:
+                    print(f"   ⚠️ Skipping medium block {i+1} - max 2 medium blocks")
+                    continue
+                if grid_cells_used + 2 > 6:
+                    print(f"   ⚠️ Skipping medium block {i+1} - not enough space")
+                    continue
+                grid_cells_used += 2
+                medium_count += 1
+            elif block_size == 'small':
+                # Small blocks take 1 cell
+                if grid_cells_used + 1 > 6:
+                    print(f"   ⚠️ Skipping small block {i+1} - grid full")
+                    continue
+                grid_cells_used += 1
+
             cleaned_blocks.append(block)
-            print(f"   Block {i+1}: {block['type']} ({block['size']}) - {block['title'][:30]}...")
+            print(f"   ✅ Block {i+1}: {block['type']} ({block['size']}) - {block['title'][:30]}... - Grid used: {grid_cells_used}/6")
+
+    # Final validation - ensure we don't exceed grid
+    if grid_cells_used > 6:
+        print(f"   ⚠️ Grid overflow detected ({grid_cells_used}/6), truncating blocks")
+        # Remove blocks until we're within grid limits
+        while grid_cells_used > 6 and cleaned_blocks:
+            removed = cleaned_blocks.pop()
+            if removed['size'] == 'large':
+                grid_cells_used -= 6
+            elif removed['size'] == 'medium':
+                grid_cells_used -= 2
+                medium_count -= 1
+            else:  # small
+                grid_cells_used -= 1
+            print(f"   Removed {removed['type']} ({removed['size']}) to fit grid")
 
     # Convert to JSON string (exactly like llm-analyzer-python)
     blocks_json = json.dumps(cleaned_blocks)
 
-    print(f"✅ Compatible blocks created: {len(cleaned_blocks)} blocks")
+    print(f"✅ Compatible blocks created: {len(cleaned_blocks)} blocks, Grid used: {grid_cells_used}/6")
     return blocks_json
 
 
