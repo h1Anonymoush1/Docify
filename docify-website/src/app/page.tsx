@@ -27,7 +27,7 @@ function ProcessSteps({ activeStep, setActiveStep }: { activeStep: number; setAc
         <Card
           key={step.id}
           padding="20"
-          background={activeStep === step.id ? "brand-background-weak" : "surface"}
+          background={activeStep === step.id ? "brand-weak" : "surface"}
           border={activeStep === step.id ? "brand-strong" : "neutral-medium"}
           radius="m"
           style={{
@@ -51,7 +51,7 @@ function ProcessSteps({ activeStep, setActiveStep }: { activeStep: number; setAc
               <Icon
                 name={step.icon}
                 size="s"
-                onBackground={activeStep === step.id ? "brand-background-weak" : "neutral-strong"}
+                onBackground={activeStep === step.id ? "brand-weak" : "neutral-strong"}
               />
             </div>
             <div>
@@ -190,7 +190,7 @@ export default function Home() {
       </Background>
 
       {/* Interactive Flow Section */}
-      <Column fillWidth paddingY="xl" gap="xl" horizontal="center" background="neutral-background-weak">
+      <Column fillWidth paddingY="xl" gap="xl" horizontal="center" background="neutral-weak">
         <Column maxWidth="l" gap="xl">
           {/* Section Header */}
           <RevealFx translateY="8" horizontal="center">
@@ -279,7 +279,7 @@ export default function Home() {
       </Column>
 
       {/* Call to Action */}
-      <Column fillWidth paddingY="xl" gap="xl" horizontal="center" background="brand-background-weak">
+      <Column fillWidth paddingY="xl" gap="xl" horizontal="center" background="brand-weak">
         <RevealFx translateY="8" horizontal="center">
           <Column horizontal="center" gap="l" maxWidth="m">
             <Heading as="h2" variant="heading-strong-xl" style={{ textAlign: "center", color: "var(--brand-on-background-strong)" }}>

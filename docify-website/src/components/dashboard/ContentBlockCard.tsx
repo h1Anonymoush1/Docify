@@ -271,7 +271,7 @@ export function ContentBlockCard({
                   fillWidth
                   direction="column"
                   flex={1}
-                  minWidth="180px"
+                  minWidth={180}
                   padding="s"
                   background="neutral-weak"
                   radius="s"

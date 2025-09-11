@@ -377,7 +377,7 @@ function ComparisonBlock({ block }: { block: ContentBlock }) {
             fillWidth
             direction="column"
             flex={1}
-            minWidth="250px"
+            minWidth={250}
             padding="m"
             background="neutral-weak"
             radius="m"
