@@ -210,6 +210,102 @@ export function ContentBlockCard({
           </Flex>
         );
 
+      case 'comparison':
+        // Parse comparison format: ****Side Heading** ***Point*** ****
+        const parseComparisonContent = (content: string) => {
+          const sides: Array<{ heading: string; points: string[] }> = [];
+          const parts = content.split('****').filter(part => part.trim());
+
+          for (let i = 0; i < parts.length; i++) {
+            const sideContent = parts[i].trim();
+            const sideLines = sideContent.split('\n').filter(line => line.trim());
+
+            if (sideLines.length > 0) {
+              // First line should be the heading with **
+              const headingMatch = sideLines[0].match(/\*\*([^*]+)\*\*/);
+              const heading = headingMatch ? headingMatch[1].trim() : sideLines[0].replace(/\*\*/g, '').trim();
+
+              // Remaining lines are points with ***
+              const points = sideLines.slice(1).map(line => {
+                const pointMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+                return pointMatch ? pointMatch[1].trim() : line.replace(/\*\*\*/g, '').trim();
+              }).filter(point => point);
+
+              sides.push({ heading, points });
+            }
+          }
+
+          return sides;
+        };
+
+        const comparisonSides = parseComparisonContent(block.content);
+
+        return (
+          <Flex fillWidth direction="column" gap="s" style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
+            <Flex fillWidth gap="s" style={{ flexWrap: 'wrap', alignItems: 'stretch' }}>
+              {comparisonSides.map((side, sideIndex) => (
+                <Flex
+                  key={sideIndex}
+                  fillWidth
+                  direction="column"
+                  flex={1}
+                  minWidth="180px"
+                  padding="s"
+                  background="neutral-weak"
+                  radius="s"
+                  gap="xs"
+                >
+                  {/* Side Heading */}
+                  <Text
+                    variant="body-default-xs"
+                    onBackground="brand-strong"
+                    weight="strong"
+                    align="center"
+                    style={{
+                      padding: '3px 6px',
+                      backgroundColor: 'var(--brand-alpha-weak)',
+                      borderRadius: '3px',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {side.heading}
+                  </Text>
+
+                  {/* Side Points */}
+                  <Flex fillWidth direction="column" gap="xs">
+                    {side.points.map((point, pointIndex) => (
+                      <Flex
+                        key={pointIndex}
+                        fillWidth
+                        padding="xs"
+                        background="surface"
+                        radius="xs"
+                        gap="xs"
+                        vertical="center"
+                      >
+                        <Text
+                          variant="body-default-xs"
+                          onBackground="brand-strong"
+                          style={{ fontSize: '10px', opacity: 0.7 }}
+                        >
+                          {pointIndex + 1}.
+                        </Text>
+                        <Text
+                          variant="body-default-xs"
+                          onBackground="neutral-strong"
+                          style={{ flex: 1, lineHeight: '1.3' }}
+                        >
+                          {point}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </Flex>
+              ))}
+            </Flex>
+          </Flex>
+        );
+
       default:
         return (
           <Flex fillWidth style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>

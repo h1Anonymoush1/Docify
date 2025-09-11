@@ -433,7 +433,7 @@ CONTENT BLOCK TYPES:
 - code: Code examples with language specification
 - api_reference: API documentation (format: **Title** ***API reference content***)
 - guide: Step-by-step instructions (format: **Title** ***Guide content***)
-- comparison: Compare different approaches
+- comparison: Compare different approaches (format: ****Side 1 Heading** ***Point 1*** ***Point 2*** **** ****Side 2 Heading** ***Point 1*** ***Point 2*** ****)
 - best_practices: Best practices and recommendations (format: **Title** ***Best practice content***)
 - troubleshooting: Common issues and solutions (format: **Title** ***Troubleshooting content***)
 
@@ -461,6 +461,7 @@ IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
 - For key_points, best_practices, troubleshooting, guide, architecture, and api_reference blocks: Each item title should start and end with **, each item content should start and end with ***
+- For comparison blocks: Use side-by-side format with **** for each side, ** for side headings, and *** for points
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -735,6 +736,45 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
 
             if not valid_format:
                 print(f"   ⚠️ API reference block '{block.get('title', '')}' has invalid formatting - should use **Title** ***API reference content*** format")
+                return False
+
+        elif block_type == 'comparison':
+            # Validate comparison formatting: ****Side Heading** ***Point*** ****
+            content = block.get('content', '')
+            lines = content.split('\n')
+            valid_format = True
+
+            # Check for proper side structure with **** delimiters
+            sides = content.split('****')
+            if len(sides) < 3:  # Should have at least 2 sides + empty strings
+                valid_format = False
+                print(f"   ⚠️ Comparison block '{block.get('title', '')}' missing proper side delimiters (****)")
+            else:
+                # Validate each side has proper structure
+                for i, side in enumerate(sides):
+                    if i % 2 == 1:  # Odd indices should be side content
+                        side_lines = side.strip().split('\n')
+                        if not side_lines[0].strip():  # First line should have heading
+                            valid_format = False
+                            print(f"   ⚠️ Comparison block '{block.get('title', '')}' side {int((i+1)/2)} missing heading")
+                            break
+
+                        # Check if first line starts with ** (heading)
+                        if not side_lines[0].strip().startswith('**'):
+                            valid_format = False
+                            print(f"   ⚠️ Comparison block '{block.get('title', '')}' side {int((i+1)/2)} heading should start with **")
+                            break
+
+                        # Check other lines for proper point formatting
+                        for j, line in enumerate(side_lines[1:], 1):
+                            line = line.strip()
+                            if line and not (line.startswith('***') and line.endswith('***')):
+                                valid_format = False
+                                print(f"   ⚠️ Comparison block '{block.get('title', '')}' side {int((i+1)/2)} point {j} should use ***format***")
+                                break
+
+            if not valid_format:
+                print(f"   ⚠️ Comparison block '{block.get('title', '')}' has invalid formatting - should use ****Side Heading** ***Point 1*** ***Point 2*** **** format")
                 return False
 
         # Check for basic content validity

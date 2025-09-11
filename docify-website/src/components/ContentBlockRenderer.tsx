@@ -299,8 +299,34 @@ function ApiReferenceBlock({ block }: { block: ContentBlock }) {
 }
 
 function ComparisonBlock({ block }: { block: ContentBlock }) {
-  // Try to parse as table format
-  const lines = block.content.split('\n').filter(line => line.trim());
+  // Parse comparison format: ****Side Heading** ***Point*** ****
+  const parseComparisonContent = (content: string) => {
+    const sides: Array<{ heading: string; points: string[] }> = [];
+    const parts = content.split('****').filter(part => part.trim());
+
+    for (let i = 0; i < parts.length; i++) {
+      const sideContent = parts[i].trim();
+      const lines = sideContent.split('\n').filter(line => line.trim());
+
+      if (lines.length > 0) {
+        // First line should be the heading with **
+        const headingMatch = lines[0].match(/\*\*([^*]+)\*\*/);
+        const heading = headingMatch ? headingMatch[1].trim() : lines[0].replace(/\*\*/g, '').trim();
+
+        // Remaining lines are points with ***
+        const points = lines.slice(1).map(line => {
+          const pointMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+          return pointMatch ? pointMatch[1].trim() : line.replace(/\*\*\*/g, '').trim();
+        }).filter(point => point);
+
+        sides.push({ heading, points });
+      }
+    }
+
+    return sides;
+  };
+
+  const sides = parseComparisonContent(block.content);
 
   return (
     <Flex
@@ -316,31 +342,75 @@ function ComparisonBlock({ block }: { block: ContentBlock }) {
         {block.title}
       </Heading>
 
-      <Flex fillWidth direction="column" gap="xs" style={{ overflow: 'auto' }}>
-        {lines.map((line, index) => {
-          const [label, value] = line.split(':').map(s => s.trim());
-          return (
+      <Flex
+        fillWidth
+        gap="l"
+        style={{
+          flexWrap: 'wrap',
+          alignItems: 'stretch'
+        }}
+      >
+        {sides.map((side, sideIndex) => (
+          <Flex
+            key={sideIndex}
+            fillWidth
+            direction="column"
+            flex={1}
+            minWidth="250px"
+            padding="m"
+            background="neutral-weak"
+            radius="m"
+            gap="s"
+            style={{ minHeight: '200px' }}
+          >
+            {/* Side Heading */}
             <Flex
-              key={index}
               fillWidth
               padding="s"
-              background={index % 2 === 0 ? "neutral-weak" : "surface"}
+              background="brand-alpha-weak"
               radius="s"
-              gap="m"
+              horizontal="center"
             >
-              <Flex flex={1}>
-                <Text variant="body-default-s" onBackground="neutral-strong" weight="strong">
-                  {label}
-                </Text>
-              </Flex>
-              <Flex flex={2}>
-                <Text variant="body-default-s" onBackground="neutral-strong">
-                  {value || line}
-                </Text>
-              </Flex>
+              <Text
+                variant="heading-strong-s"
+                onBackground="brand-strong"
+                align="center"
+              >
+                {side.heading}
+              </Text>
             </Flex>
-          );
-        })}
+
+            {/* Side Points */}
+            <Flex fillWidth direction="column" gap="xs">
+              {side.points.map((point, pointIndex) => (
+                <Flex
+                  key={pointIndex}
+                  fillWidth
+                  padding="s"
+                  background="surface"
+                  radius="s"
+                  gap="s"
+                  vertical="center"
+                >
+                  <Text
+                    variant="body-default-xs"
+                    onBackground="brand-strong"
+                    style={{ fontSize: '12px', opacity: 0.7 }}
+                  >
+                    {pointIndex + 1}.
+                  </Text>
+                  <Text
+                    variant="body-default-s"
+                    onBackground="neutral-strong"
+                    style={{ flex: 1, lineHeight: '1.4' }}
+                  >
+                    {point}
+                  </Text>
+                </Flex>
+              ))}
+            </Flex>
+          </Flex>
+        ))}
       </Flex>
     </Flex>
   );
