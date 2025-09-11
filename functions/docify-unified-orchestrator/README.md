@@ -12,7 +12,8 @@ This function provides a **simplified, safe approach** to document analysis:
 - **Reliable Storage**: Raw HTML preserved in `scraped_content` field
 
 ### **🤖 AI-Powered Intelligence**
-- **Smart Titles**: Generates 2-4 word titles using Gemini 2.5 Flash AI
+- **Smart Titles**: Generates 2-4 word titles using Gemini 2.5 Flash AI with HTML fallback
+- **HTML Title Extraction**: Automatically extracts titles from scraped content when AI fails
 - **Readable Summaries**: Human-friendly summaries up to 200 characters
 - **Compatible Blocks**: Exact same JSON format as your existing `llm-analyzer-python`
 
@@ -21,7 +22,7 @@ This function provides a **simplified, safe approach** to document analysis:
 - **Step 2**: Validate environment and API keys
 - **Step 3**: Raw browserless content scraping (no modification)
 - **Step 4**: Save raw content to database immediately
-- **Step 5**: Generate AI-powered 2-4 word title
+- **Step 5**: Generate AI-powered 2-4 word title (with HTML fallback)
 - **Step 6**: Create analysis using Gemini (same prompt as llm-analyzer-python)
 - **Step 7**: Format blocks in exact same JSON structure
 - **Step 8**: Final save and mark as completed

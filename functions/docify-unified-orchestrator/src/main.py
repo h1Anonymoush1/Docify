@@ -10,6 +10,7 @@ import time
 import requests
 import chardet
 import re
+from bs4 import BeautifulSoup
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 from appwrite.client import Client
@@ -199,7 +200,7 @@ def save_raw_content(document_id: str, raw_content: str) -> None:
 
 # ===== STEP 5: GENERATE AI TITLE =====
 def generate_ai_title(url: str, raw_content: str, instructions: str) -> str:
-    """Generate a 2-4 word AI title using Gemini with retry logic"""
+    """Generate a 2-4 word AI title using Gemini with retry logic and HTML title fallback"""
     print("🏷️ Step 5: Generating AI title...")
 
     # Extract some context from the raw content for better title generation
@@ -250,8 +251,8 @@ Generate a title with exactly 2-4 words that captures the essence of this conten
                 print(f"✅ AI-generated title: '{title}'")
                 return title
             else:
-                print(f"⚠️ No title generated (attempt {attempt + 1}/{max_retries}), using fallback")
-                return "Document Overview"
+                print(f"⚠️ No title generated (attempt {attempt + 1}/{max_retries}), using HTML fallback")
+                return extract_title_from_html(raw_content, url)
 
         except Exception as e:
             error_msg = str(e)
@@ -262,11 +263,126 @@ Generate a title with exactly 2-4 words that captures the essence of this conten
                     time.sleep(wait_time)
                     continue
                 else:
-                    print(f"❌ Gemini still overloaded after {max_retries} attempts, using fallback")
-                    return "Document Overview"
+                    print(f"❌ Gemini still overloaded after {max_retries} attempts, using HTML fallback")
+                    return extract_title_from_html(raw_content, url)
             else:
-                print(f"⚠️ Title generation failed: {e}, using fallback")
-                return "Document Overview"
+                print(f"⚠️ Title generation failed: {e}, using HTML fallback")
+                return extract_title_from_html(raw_content, url)
+
+
+def extract_title_from_html(raw_content: str, url: str) -> str:
+    """Extract title from HTML content as fallback, similar to document-scraper-python"""
+    print("🔍 Extracting title from HTML content...")
+
+    try:
+        if not raw_content:
+            return extract_title_from_url_fallback(url)
+
+        # Parse HTML with BeautifulSoup
+        soup = BeautifulSoup(raw_content, 'lxml')
+
+        # Try various title selectors (similar to document-scraper-python)
+        title_selectors = [
+            'title',
+            'h1',
+            'h1 a',
+            '[property="og:title"]',
+            'meta[name="title"]',
+            '[property="twitter:title"]',
+            'h2',
+            '.page-title',
+            '.entry-title',
+            '.post-title'
+        ]
+
+        for selector in title_selectors:
+            try:
+                if selector == 'title':
+                    element = soup.title
+                    if element and element.string:
+                        title = element.string.strip()
+                        if title and len(title) > 3:  # Minimum length check
+                            print(f"✅ HTML title extracted: '{title[:50]}...'")
+                            return clean_title(title)
+                elif selector.startswith('h1') or selector.startswith('h2'):
+                    element = soup.select_one(selector)
+                    if element:
+                        title = element.get_text().strip()
+                        if title and len(title) > 3:
+                            print(f"✅ Heading title extracted: '{title[:50]}...'")
+                            return clean_title(title)
+                else:
+                    element = soup.select_one(selector)
+                    if element:
+                        if 'property' in selector or 'name' in selector:
+                            title = element.get('content', '').strip()
+                        else:
+                            title = element.get_text().strip()
+
+                        if title and len(title) > 3:
+                            print(f"✅ Meta title extracted: '{title[:50]}...'")
+                            return clean_title(title)
+            except:
+                continue
+
+        # Try to extract from URL structure
+        return extract_title_from_url_fallback(url)
+
+    except Exception as e:
+        print(f"⚠️ HTML title extraction failed: {e}")
+        return extract_title_from_url_fallback(url)
+
+
+def extract_title_from_url_fallback(url: str) -> str:
+    """Extract title from URL path as final fallback"""
+    try:
+        path = urlparse(url).path
+        filename = path.split('/')[-1]
+
+        if '.' in filename:
+            filename = filename.split('.')[0]
+
+        # Clean up the filename
+        title = filename.replace('-', ' ').replace('_', ' ').strip()
+
+        if title:
+            # Capitalize properly
+            title = ' '.join(word.capitalize() for word in title.split() if word)
+            if len(title.split()) <= 4:  # Ensure reasonable length
+                print(f"✅ URL-based title: '{title}'")
+                return title
+    except:
+        pass
+
+    return "Document Overview"
+
+
+def clean_title(title: str) -> str:
+    """Clean and format the extracted title"""
+    if not title:
+        return "Document Overview"
+
+    # Remove extra whitespace
+    title = re.sub(r'\s+', ' ', title).strip()
+
+    # Remove common prefixes/suffixes
+    title = re.sub(r'^(Page|Document|Article|Post|Blog):\s*', '', title, flags=re.IGNORECASE)
+    title = re.sub(r'\s*-\s*(Apple|Google|Microsoft|Amazon|Facebook|Twitter|GitHub|Stack Overflow|MDN)$', '', title, flags=re.IGNORECASE)
+
+    # Limit length
+    if len(title) > 80:
+        title = title[:77] + "..."
+
+    # Ensure it's not empty after cleaning
+    if not title or len(title) < 3:
+        return "Document Overview"
+
+    # Capitalize properly
+    words = title.split()
+    if len(words) <= 6:  # Only capitalize if reasonable length
+        title = ' '.join(word.capitalize() for word in words)
+
+    return title
 
 
 # ===== STEP 6: GENERATE ANALYSIS =====
