@@ -31,7 +31,7 @@ client.set_key(os.environ.get('APPWRITE_API_KEY'))
 databases = Databases(client)
 
 # Gemini configuration
-GEMINI_MODEL = "gemini-2.5-pro"
+GEMINI_MODEL = "gemini-2.5-flash"  # Using Flash for better availability and speed
 
 
 # ===== STEP 1: EXTRACT DOCUMENT DATA =====
@@ -199,7 +199,7 @@ def save_raw_content(document_id: str, raw_content: str) -> None:
 
 # ===== STEP 5: GENERATE AI TITLE =====
 def generate_ai_title(url: str, raw_content: str, instructions: str) -> str:
-    """Generate a 2-4 word AI title using Gemini"""
+    """Generate a 2-4 word AI title using Gemini with retry logic"""
     print("🏷️ Step 5: Generating AI title...")
 
     # Extract some context from the raw content for better title generation
@@ -214,50 +214,64 @@ Content Preview: {content_preview[:1000]}...
 
 Generate a title with exactly 2-4 words that captures the essence of this content."""
 
-    try:
-        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    # Retry logic for Gemini API overload
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=title_prompt,
-            config=genai.types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=50,
-                candidate_count=1
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=title_prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=50,
+                    candidate_count=1
+                )
             )
-        )
 
-        if response.candidates and response.candidates[0].content:
-            title = response.candidates[0].content.parts[0].text.strip()
+            if response.candidates and response.candidates[0].content:
+                title = response.candidates[0].content.parts[0].text.strip()
 
-            # Clean up the title (remove quotes, extra spaces, etc.)
-            title = re.sub(r'^["\']|["\']$', '', title)  # Remove surrounding quotes
-            title = re.sub(r'\s+', ' ', title).strip()  # Normalize spaces
+                # Clean up the title (remove quotes, extra spaces, etc.)
+                title = re.sub(r'^["\']|["\']$', '', title)  # Remove surrounding quotes
+                title = re.sub(r'\s+', ' ', title).strip()  # Normalize spaces
 
-            # Ensure it's 2-4 words
-            words = title.split()
-            if len(words) < 2:
-                title = f"{words[0]} Overview" if words else "Document Overview"
-            elif len(words) > 4:
-                title = ' '.join(words[:4])
+                # Ensure it's 2-4 words
+                words = title.split()
+                if len(words) < 2:
+                    title = f"{words[0]} Overview" if words else "Document Overview"
+                elif len(words) > 4:
+                    title = ' '.join(words[:4])
 
-            # Capitalize properly
-            title = ' '.join(word.capitalize() for word in title.split())
+                # Capitalize properly
+                title = ' '.join(word.capitalize() for word in title.split())
 
-            print(f"✅ AI-generated title: '{title}'")
-            return title
-        else:
-            print("⚠️ No title generated, using fallback")
-            return "Document Overview"
+                print(f"✅ AI-generated title: '{title}'")
+                return title
+            else:
+                print(f"⚠️ No title generated (attempt {attempt + 1}/{max_retries}), using fallback")
+                return "Document Overview"
 
-    except Exception as e:
-        print(f"⚠️ Title generation failed: {e}, using fallback")
-        return "Document Overview"
+        except Exception as e:
+            error_msg = str(e)
+            if "503" in error_msg or "UNAVAILABLE" in error_msg or "overloaded" in error_msg.lower():
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 5  # Exponential backoff: 5s, 10s, 15s
+                    print(f"⚠️ Gemini overloaded (attempt {attempt + 1}/{max_retries}), waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"❌ Gemini still overloaded after {max_retries} attempts, using fallback")
+                    return "Document Overview"
+            else:
+                print(f"⚠️ Title generation failed: {e}, using fallback")
+                return "Document Overview"
 
 
 # ===== STEP 6: GENERATE ANALYSIS =====
 def generate_analysis(url: str, raw_content: str, instructions: str, ai_title: str) -> Dict[str, Any]:
-    """Generate analysis using Gemini with exact same format as llm-analyzer-python"""
+    """Generate analysis using Gemini with exact same format as llm-analyzer-python and retry logic"""
     print("📈 Step 6: Generating analysis with Gemini...")
 
     # Use exact same prompt format as llm-analyzer-python
@@ -312,48 +326,62 @@ For mermaid diagrams, use proper mermaid syntax. For code blocks, specify the pr
 
 Ensure the response is valid JSON."""
 
-    try:
-        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    # Retry logic for Gemini API overload
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=analysis_prompt,
-            config=genai.types.GenerateContentConfig(
-                temperature=0.7,
-                max_output_tokens=4000,
-                candidate_count=1
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=analysis_prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.7,
+                    max_output_tokens=4000,
+                    candidate_count=1
+                )
             )
-        )
 
-        if response.candidates and response.candidates[0].content:
-            generated_text = response.candidates[0].content.parts[0].text
+            if response.candidates and response.candidates[0].content:
+                generated_text = response.candidates[0].content.parts[0].text
 
-            # Extract JSON from response
-            json_match = re.search(r'\{[\s\S]*\}', generated_text)
-            if json_match:
-                json_string = json_match.group(0)
-                parsed_response = json.loads(json_string)
+                # Extract JSON from response
+                json_match = re.search(r'\{[\s\S]*\}', generated_text)
+                if json_match:
+                    json_string = json_match.group(0)
+                    parsed_response = json.loads(json_string)
 
-                # Validate the response structure
-                if not parsed_response.get('summary'):
-                    raise ValueError('Invalid response: missing summary')
+                    # Validate the response structure
+                    if not parsed_response.get('summary'):
+                        raise ValueError('Invalid response: missing summary')
 
-                if not isinstance(parsed_response.get('blocks'), list):
-                    raise ValueError('Invalid response: blocks must be an array')
+                    if not isinstance(parsed_response.get('blocks'), list):
+                        raise ValueError('Invalid response: blocks must be an array')
 
-                print("✅ Analysis generated successfully")
-                print(f"   Summary: {len(parsed_response['summary'])} chars")
-                print(f"   Blocks: {len(parsed_response['blocks'])}")
+                    print("✅ Analysis generated successfully")
+                    print(f"   Summary: {len(parsed_response['summary'])} chars")
+                    print(f"   Blocks: {len(parsed_response['blocks'])}")
 
-                return parsed_response
+                    return parsed_response
+                else:
+                    raise ValueError('No JSON found in response')
             else:
-                raise ValueError('No JSON found in response')
-        else:
-            raise ValueError('No response from Gemini')
+                raise ValueError('No response from Gemini')
 
-    except Exception as e:
-        print(f"❌ Analysis generation failed: {e}")
-        raise
+        except Exception as e:
+            error_msg = str(e)
+            if "503" in error_msg or "UNAVAILABLE" in error_msg or "overloaded" in error_msg.lower():
+                if attempt < max_retries - 1:
+                    wait_time = (attempt + 1) * 10  # Exponential backoff: 10s, 20s, 30s (longer for analysis)
+                    print(f"⚠️ Gemini overloaded (attempt {attempt + 1}/{max_retries}), waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"❌ Gemini still overloaded after {max_retries} attempts")
+                    raise ValueError(f"Gemini API unavailable after {max_retries} attempts: {e}")
+            else:
+                print(f"❌ Analysis generation failed: {e}")
+                raise
 
 
 # ===== STEP 7: CREATE COMPATIBLE BLOCKS =====
