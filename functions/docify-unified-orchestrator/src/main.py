@@ -402,6 +402,11 @@ SCRAPED CONTENT:
 
 TASK: Create a structured analysis with summary and visual elements to explain this documentation. Focus specifically on the user's instructions and provide a detailed, comprehensive summary that directly addresses their request.
 
+For key_points blocks, use this exact format:
+**Key Point Title** ***Detailed explanation of the key point***
+
+Each key point should have a clear title in **bold** and the explanation in ***italics***.
+
 Return a JSON response with the following structure:
 
 {{
@@ -423,7 +428,7 @@ Return a JSON response with the following structure:
 
 CONTENT BLOCK TYPES:
 - summary: Overview explanation
-- key_points: Important highlights
+- key_points: Important highlights (format: **Title** ***Key point content***)
 - architecture: System/component structure
 - mermaid: Visual diagrams using mermaid syntax
 - code: Code examples with language specification
@@ -456,6 +461,7 @@ BLOCK PLACEMENT RULES:
 IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
+- For key_points blocks: Each key point title should start and end with **, each key point should start and end with ***
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -551,6 +557,30 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
                 print(f"   ⚠️ Code block '{block.get('title', '')}' missing language in metadata")
                 # Add default language
                 block['metadata']['language'] = 'text'
+
+        elif block_type == 'key_points':
+            # Validate key_points formatting: **Title** ***Key point content***
+            lines = content.split('\n')
+            valid_format = True
+
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Check if line contains both **title** and ***content***
+                    if not ('**' in line and '***' in line):
+                        valid_format = False
+                        break
+
+                    # More specific validation: should have **title** followed by ***content***
+                    # Look for pattern: **something** ***something***
+                    title_match = '**' in line[:line.find('***')] if '***' in line else False
+                    if not title_match:
+                        valid_format = False
+                        break
+
+            if not valid_format:
+                print(f"   ⚠️ Key points block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Key point content*** format")
+                return False
 
         # Check for basic content validity
         if not content.strip():

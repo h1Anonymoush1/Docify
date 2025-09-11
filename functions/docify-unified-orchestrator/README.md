@@ -42,7 +42,8 @@ This function provides a **simplified, safe approach** to document analysis:
 - **100% Compatible**: Same JSON format as existing analyzer
 - **Simple Tracking**: Clear tools usage and research context
 - **Error Recovery**: Graceful fallbacks at each step
-- **Syntax Validation**: Ensures proper mermaid/code block formatting
+- **Syntax Validation**: Ensures proper mermaid/code/key_points block formatting
+- **Content Standards**: Enforces formatting requirements for all block types
 
 ## 🏗️ **Architecture**
 
@@ -205,18 +206,30 @@ final_save_and_complete(document_id, ai_title, analysis, blocks_json)
 
 ## 📊 **Analysis Block Types**
 
-| Type | Description | Use Case |
-|------|-------------|----------|
-| **summary** | Comprehensive overview | Main document summary |
-| **key_points** | Important highlights | Critical information |
-| **architecture** | System structure | Technical architecture |
-| **mermaid** | Visual diagrams | Flowcharts, system diagrams |
-| **code** | Code examples | Implementation examples |
-| **api_reference** | API documentation | API specifications |
-| **guide** | Step-by-step instructions | Tutorials, guides |
-| **comparison** | Feature comparisons | Alternative approaches |
-| **best_practices** | Recommendations | Guidelines, tips |
-| **troubleshooting** | Common issues | Problem solutions |
+| Type | Description | Use Case | Format Requirements |
+|------|-------------|----------|-------------------|
+| **summary** | Comprehensive overview | Main document summary | Plain text |
+| **key_points** | Important highlights | Critical information | **Title** ***Content*** |
+| **architecture** | System structure | Technical architecture | Plain text |
+| **mermaid** | Visual diagrams | Flowcharts, system diagrams | Valid Mermaid.js syntax |
+| **code** | Code examples | Implementation examples | Language in metadata |
+| **api_reference** | API documentation | API specifications | Plain text |
+| **guide** | Step-by-step instructions | Tutorials, guides | Plain text |
+| **comparison** | Feature comparisons | Alternative approaches | Plain text |
+| **best_practices** | Recommendations | Guidelines, tips | Plain text |
+| **troubleshooting** | Common issues | Problem solutions | Plain text |
+
+### **📝 Key Points Format**
+Key points blocks must follow this exact format:
+```
+**Key Point Title** ***Detailed explanation of the key point***
+```
+
+**Example:**
+```
+**API Authentication** ***The system uses OAuth 2.0 for secure API access with JWT tokens***
+**Rate Limiting** ***Requests are limited to 1000 per hour to prevent abuse***
+```
 
 ## ✅ **Database Schema Compatibility**
 
