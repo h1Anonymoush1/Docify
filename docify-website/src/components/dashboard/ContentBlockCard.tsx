@@ -137,6 +137,7 @@ export function ContentBlockCard({
       case 'best_practices':
       case 'troubleshooting':
       case 'guide':
+      case 'architecture':
         const lines = block.content.split('\n').filter((line: string) => line.trim());
 
         const parseKeyPoint = (line: string) => {

@@ -366,6 +366,7 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
       case 'best_practices':
       case 'troubleshooting':
       case 'guide':
+      case 'architecture':
         return <KeyPointsBlock block={block} />;
 
       case 'api_reference':
