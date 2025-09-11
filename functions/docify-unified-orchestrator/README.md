@@ -14,7 +14,7 @@ This function provides a **simplified, safe approach** to document analysis:
 ### **🤖 AI-Powered Intelligence**
 - **Smart Titles**: Generates 2-4 word titles using Gemini 2.5 Flash AI with HTML fallback
 - **HTML Title Extraction**: Automatically extracts titles from scraped content when AI fails
-- **Readable Summaries**: Human-friendly summaries up to 200 characters
+- **Comprehensive Summaries**: Detailed, instruction-specific summaries up to 5000 characters
 - **Compatible Blocks**: Exact same JSON format as your existing `llm-analyzer-python`
 
 ### **🎯 8-Step Linear Process**
@@ -23,7 +23,7 @@ This function provides a **simplified, safe approach** to document analysis:
 - **Step 3**: Raw browserless content scraping (no modification)
 - **Step 4**: Save raw content to database immediately
 - **Step 5**: Generate AI-powered 2-4 word title (with HTML fallback)
-- **Step 6**: Create analysis using Gemini (same prompt as llm-analyzer-python)
+- **Step 6**: Create comprehensive analysis using Gemini with instruction-specific summaries
 - **Step 7**: Format blocks in exact same JSON structure
 - **Step 8**: Final save and mark as completed
 
@@ -101,7 +101,7 @@ Your function works with your existing database schema:
 |-------|-----------|-----------|
 | `scraped_content` | Raw browserless HTML | 99999 |
 | `title` | AI-generated 2-4 words | 255 |
-| `analysis_summary` | Readable text (≤200 chars) | 2000 |
+| `analysis_summary` | Comprehensive text (≤5000 chars) | 5000 |
 | `analysis_blocks` | JSON blocks array | 99999 |
 | `gemini_tools_used` | Simple tools list | 1000 |
 | `research_context` | Research findings | 5000 |
@@ -215,7 +215,7 @@ Your function works perfectly with your current database:
 - ✅ `scraped_content` (99999 chars) ← Raw browserless HTML
 - ✅ `title` (255 chars) ← AI-generated 2-4 word title
 - ✅ `status` ← Processing status tracking
-- ✅ `analysis_summary` (2000 chars) ← Readable summary (≤200 chars)
+- ✅ `analysis_summary` (5000 chars) ← Comprehensive summary (≤5000 chars)
 - ✅ `analysis_blocks` (99999 chars) ← JSON blocks (llm-analyzer-python format)
 - ✅ `gemini_tools_used` (1000 chars) ← Simple tools list
 - ✅ `research_context` (5000 chars) ← Research findings

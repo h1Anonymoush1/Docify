@@ -400,10 +400,12 @@ USER INSTRUCTIONS: {instructions}
 SCRAPED CONTENT:
 {raw_content[:50000]}  # Limit content to avoid token limits
 
-TASK: Create a structured analysis with summary and visual elements to explain this documentation. Return a JSON response with the following structure:
+TASK: Create a structured analysis with summary and visual elements to explain this documentation. Focus specifically on the user's instructions and provide a detailed, comprehensive summary that directly addresses their request.
+
+Return a JSON response with the following structure:
 
 {{
-  "summary": "A comprehensive summary of the document content",
+  "summary": "A comprehensive, detailed summary (300-2000 words) that directly addresses the user's instructions and explains the key aspects of this documentation. Include specific details, examples, and insights relevant to the user's request.",
   "blocks": [
     {{
       "id": "unique-id-1",
@@ -453,7 +455,7 @@ Ensure the response is valid JSON."""
                 contents=analysis_prompt,
                 config=genai.types.GenerateContentConfig(
                     temperature=0.7,
-                    max_output_tokens=4000,
+                    max_output_tokens=8000,  # Increased for more comprehensive summaries
                     candidate_count=1
                 )
             )
@@ -544,11 +546,33 @@ def final_save_and_complete(document_id: str, ai_title: str, analysis_result: Di
     """Save all final results and mark as completed"""
     print("✅ Step 8: Final save and complete...")
 
-    # Create readable summary (up to 200 chars)
+    # Create comprehensive readable summary (up to 5000 chars)
     full_summary = analysis_result.get('summary', '')
-    readable_summary = full_summary[:200]  # Truncate to 200 chars
-    if len(full_summary) > 200:
-        readable_summary = readable_summary.rstrip() + '...'
+
+    # Use up to 5000 characters for a comprehensive summary
+    max_summary_length = 5000
+    if len(full_summary) <= max_summary_length:
+        readable_summary = full_summary
+    else:
+        # Try to cut at a sentence or paragraph boundary if possible
+        truncated = full_summary[:max_summary_length]
+
+        # Look for sentence endings near the end
+        last_period = truncated.rfind('.')
+        last_exclamation = truncated.rfind('!')
+        last_question = truncated.rfind('?')
+
+        # Find the best cutoff point
+        best_cutoff = max(last_period, last_exclamation, last_question)
+
+        if best_cutoff > max_summary_length * 0.8:  # If we can keep 80% of the content
+            readable_summary = full_summary[:best_cutoff + 1]
+        else:
+            readable_summary = truncated.rstrip() + '...'
+
+    # Ensure the summary is not empty
+    if not readable_summary.strip():
+        readable_summary = f"Analysis of {ai_title or 'document'} completed successfully."
 
     # Simple tools tracking
     tools_used = json.dumps(["gemini_analysis"])
