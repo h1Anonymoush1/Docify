@@ -459,8 +459,23 @@ BLOCK PLACEMENT RULES:
 - Don't exceed grid capacity
 
 IMPORTANT SYNTAX REQUIREMENTS:
-- For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
-- For code blocks: Always specify programming language in metadata (javascript, python, typescript, java, csharp, php, ruby, go, rust, swift, kotlin, scala, html, css, sql, bash, yaml, json, xml, etc.). Include optional line highlighting in metadata as "highlight": "1,3-5" for lines 1 and 3-5.
+
+MERMAID DIAGRAM REQUIREMENTS:
+- Use valid Mermaid.js syntax with proper diagram declarations
+- Flowcharts: Start with "graph TD" or "flowchart TD", use [Node Name] for nodes, --> for links
+- Sequence Diagrams: Start with "sequenceDiagram", define participants, use ->> for messages
+- Examples:
+  * Flowchart: graph TD\\n    A[Start] --> B[Process]\\n    B --> C[End]
+  * Sequence: sequenceDiagram\\n    Alice->>Bob: Hello\\n    Bob-->>Alice: Hi
+  * Class: classDiagram\\n    class Animal\\n    Animal : +makeSound()
+- Avoid complex styling or unsupported features
+- Keep diagrams simple and readable
+
+CODE BLOCK REQUIREMENTS:
+- Always specify programming language in metadata (javascript, python, typescript, java, csharp, php, ruby, go, rust, swift, kotlin, scala, html, css, sql, bash, yaml, json, xml, etc.)
+- Include optional line highlighting in metadata as "highlight": "1,3-5" for lines 1 and 3-5
+
+STRUCTURED CONTENT REQUIREMENTS:
 - For key_points, best_practices, troubleshooting, guide, architecture, and api_reference blocks: Each item title should start and end with **, each item content should start and end with ***
 - For comparison blocks: Use side-by-side format with **** for each side, ** for side headings, and *** for points
 - All block content must be properly formatted and syntactically correct
@@ -582,15 +597,69 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
 
     try:
         if block_type == 'mermaid':
-            # Basic mermaid syntax validation
+            # Enhanced mermaid syntax validation
             if not content.strip():
                 return False
-            # Check for common mermaid keywords
-            mermaid_keywords = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'journey', 'gantt', 'pie', 'gitgraph']
-            has_mermaid_syntax = any(keyword in content for keyword in mermaid_keywords)
-            if not has_mermaid_syntax:
-                print(f"   ⚠️ Block '{block.get('title', '')}' has invalid mermaid syntax")
+
+            content_lines = content.strip().split('\n')
+            if not content_lines[0].strip():
                 return False
+
+            # Check for proper diagram declarations
+            first_line = content_lines[0].strip().lower()
+            valid_starts = [
+                'graph ', 'flowchart ', 'sequencediagram',
+                'classdiagram', 'statediagram', 'erdiagram',
+                'journey', 'gantt', 'pie ', 'gitgraph'
+            ]
+
+            # Check if first line starts with valid diagram type
+            if not any(first_line.startswith(start) for start in valid_starts):
+                print(f"   ⚠️ Invalid Mermaid diagram start: {first_line}")
+                print(f"   📝 Valid starts: {', '.join(valid_starts)}")
+                return False
+
+            # Additional validation for common syntax issues
+            if 'graph' in first_line or 'flowchart' in first_line:
+                # Check for basic node/link structure
+                has_nodes = False
+                has_links = False
+                for line in content_lines[1:]:  # Skip first line
+                    line = line.strip()
+                    if line and not line.startswith('%%'):  # Skip comments
+                        if '[' in line and ']' in line:  # Node definition
+                            has_nodes = True
+                        if '-->' in line or '->' in line or '-' in line:  # Link definition
+                            has_links = True
+
+                if not has_nodes:
+                    print(f"   ⚠️ Flowchart missing node definitions (use [Node Name] format)")
+                    return False
+                if not has_links:
+                    print(f"   ⚠️ Flowchart missing link definitions (use --> or ->)")
+                    return False
+
+            elif 'sequencediagram' in first_line:
+                # Check for sequence diagram structure
+                has_participants = False
+                has_messages = False
+                for line in content_lines[1:]:
+                    line = line.strip()
+                    if line and not line.startswith('%%'):
+                        if 'participant' in line.lower():
+                            has_participants = True
+                        if '->>' in line or '-x' in line or '->' in line:
+                            has_messages = True
+
+                if not has_participants:
+                    print(f"   ⚠️ Sequence diagram missing participants")
+                    return False
+                if not has_messages:
+                    print(f"   ⚠️ Sequence diagram missing messages")
+                    return False
+
+            print(f"   ✅ Valid Mermaid diagram: {first_line}")
+            return True
 
         elif block_type == 'code':
             # Ensure language is specified in metadata (required for syntax highlighting)

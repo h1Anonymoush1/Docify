@@ -145,9 +145,10 @@ function MermaidBlock({ block }: { block: ContentBlock }) {
 
       <Flex
         fillWidth
-        padding="m"
         background="neutral-weak"
+        border="neutral-medium"
         radius="m"
+        padding="s"
       >
         <Mermaid chart={block.content} />
       </Flex>

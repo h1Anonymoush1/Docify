@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { Flex, Text, Heading, Spinner } from '@/once-ui/components';
 
 interface MermaidChartProps {
   chart: string;
@@ -30,7 +31,20 @@ export default function MermaidChart({ chart, className = '' }: MermaidChartProp
             startOnLoad: false,
             theme: 'default',
             securityLevel: 'loose',
-            fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+            fontFamily: 'var(--font-family)',
+            themeVariables: {
+              primaryColor: 'var(--brand-medium)',
+              primaryTextColor: 'var(--neutral-strong)',
+              primaryBorderColor: 'var(--neutral-medium)',
+              lineColor: 'var(--neutral-medium)',
+              secondaryColor: 'var(--neutral-weak)',
+              tertiaryColor: 'var(--surface)',
+              background: 'var(--surface)',
+              mainBkg: 'var(--surface)',
+              secondBkg: 'var(--neutral-weak)',
+              border1: 'var(--neutral-medium)',
+              border2: 'var(--neutral-weak)'
+            }
           });
           setMermaidLoaded(true);
         }
@@ -76,42 +90,131 @@ export default function MermaidChart({ chart, className = '' }: MermaidChartProp
 
   if (error) {
     return (
-      <div className={`mermaid-chart ${className}`}>
-        <div className="text-red-600 text-sm mb-2 p-2 bg-red-50 rounded border border-red-200">
-          <strong>Chart Error:</strong> {error}
-        </div>
-        <div className="text-center p-4 bg-gray-50 rounded border">
-          <div className="text-gray-500 text-sm mb-2">Chart could not be rendered</div>
-          <div className="text-xs text-gray-400 bg-white p-2 rounded border overflow-auto max-w-full whitespace-pre-wrap">
-            {chart}
-          </div>
-          <div className="text-xs text-gray-500 mt-2">
-            Raw chart content shown above
-          </div>
-        </div>
-      </div>
+      <Flex
+        fillWidth
+        direction="column"
+        gap="m"
+        className={className}
+      >
+        {/* Error State with Once UI */}
+        <Flex
+          fillWidth
+          padding="m"
+          background="danger-weak"
+          border="danger-medium"
+          radius="m"
+          direction="column"
+          gap="s"
+        >
+          <Heading variant="heading-strong-s" onBackground="danger-strong">
+            Diagram Error
+          </Heading>
+          <Text variant="body-default-s" onBackground="danger-strong">
+            {error}
+          </Text>
+        </Flex>
+
+        {/* Raw Content Display */}
+        <Flex
+          fillWidth
+          direction="column"
+          gap="s"
+          padding="m"
+          background="neutral-weak"
+          border="neutral-medium"
+          radius="m"
+        >
+          <Text variant="body-default-xs" onBackground="neutral-weak">
+            Raw diagram content:
+          </Text>
+          <Flex
+            fillWidth
+            padding="s"
+            background="surface"
+            border="neutral-weak"
+            radius="s"
+            overflow="auto"
+            maxHeight={200}
+          >
+            <Text
+              variant="body-default-xs"
+              onBackground="neutral-strong"
+              style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
+            >
+              {chart}
+            </Text>
+          </Flex>
+        </Flex>
+      </Flex>
     );
   }
 
   return (
-    <div className={`mermaid-chart ${className}`}>
-      <div className="mermaid-container min-h-[200px] flex items-center justify-center">
-        {isLoading && (
-          <div className="flex flex-col items-center space-y-2">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <div className="text-gray-500 text-sm">Rendering chart...</div>
-          </div>
-        )}
-        {!isLoading && svgContent && (
+    <Flex
+      fillWidth
+      direction="column"
+      className={className}
+      minHeight={200}
+    >
+      {/* Loading State with Once UI */}
+      {isLoading && (
+        <Flex
+          fillWidth
+          fillHeight
+          horizontal="center"
+          vertical="center"
+          gap="m"
+        >
+          <Spinner size="m" ariaLabel="Rendering diagram" />
+          <Text variant="body-default-s" onBackground="neutral-weak">
+            Rendering diagram...
+          </Text>
+        </Flex>
+      )}
+
+      {/* Success State */}
+      {!isLoading && svgContent && (
+        <Flex
+          fillWidth
+          background="surface"
+          border="neutral-weak"
+          radius="m"
+          padding="s"
+          overflow="auto"
+          style={{
+            maxHeight: '500px',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'var(--neutral-medium) transparent'
+          }}
+        >
           <div
             className="mermaid-svg-container"
+            style={{
+              width: '100%',
+              height: 'auto',
+              minHeight: '200px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
             dangerouslySetInnerHTML={{ __html: svgContent }}
           />
-        )}
-        {!isLoading && !svgContent && !error && (
-          <div className="text-gray-500 text-sm">Preparing chart...</div>
-        )}
-      </div>
-    </div>
+        </Flex>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && !svgContent && !error && (
+        <Flex
+          fillWidth
+          fillHeight
+          horizontal="center"
+          vertical="center"
+        >
+          <Text variant="body-default-s" onBackground="neutral-weak">
+            Preparing diagram...
+          </Text>
+        </Flex>
+      )}
+    </Flex>
   );
 }

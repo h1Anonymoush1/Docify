@@ -2,7 +2,7 @@
 
 import React, { useState, Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { Flex, Heading, Text, Button, IconButton } from '@/once-ui/components';
+import { Flex, Heading, Text, Button, IconButton, Spinner } from '@/once-ui/components';
 import MermaidChart from '@/components/MermaidChart';
 
 // Dynamically import the advanced CodeBlock to avoid SSR issues
@@ -106,16 +106,32 @@ export function ContentBlockCard({
     switch (block.type) {
       case 'mermaid':
         return (
-          <Flex fillWidth style={{ flex: 1 }}>
+          <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
             <Suspense fallback={
-              <div className="flex flex-col items-center justify-center w-full h-full space-y-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                <div className="text-gray-500 text-sm">Loading chart...</div>
-              </div>
+              <Flex
+                fillWidth
+                fillHeight
+                horizontal="center"
+                vertical="center"
+                gap="s"
+              >
+                <Spinner size="s" ariaLabel="Loading chart" />
+                <Text variant="body-default-xs" onBackground="neutral-weak">
+                  Loading diagram...
+                </Text>
+              </Flex>
             }>
-              <div className="w-full h-full overflow-auto scrollbar-thin">
+              <Flex
+                fillWidth
+                fillHeight
+                overflow="auto"
+                style={{
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--neutral-medium) transparent'
+                }}
+              >
                 <MermaidChart chart={block.content} />
-              </div>
+              </Flex>
             </Suspense>
           </Flex>
         );
