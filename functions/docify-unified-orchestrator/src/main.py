@@ -427,7 +427,6 @@ Return a JSON response with the following structure:
 }}
 
 CONTENT BLOCK TYPES:
-- summary: Overview explanation
 - key_points: Important highlights (format: **Title** ***Key point content***)
 - architecture: System/component structure
 - mermaid: Visual diagrams using mermaid syntax
@@ -436,7 +435,7 @@ CONTENT BLOCK TYPES:
 - guide: Step-by-step instructions
 - comparison: Compare different approaches
 - best_practices: Best practices and recommendations (format: **Title** ***Best practice content***)
-- troubleshooting: Common issues and solutions
+- troubleshooting: Common issues and solutions (format: **Title** ***Troubleshooting content***)
 
 GRID LAYOUT: 2 rows vertical × 3 columns horizontal = 6 total grid cells
 
@@ -461,8 +460,7 @@ BLOCK PLACEMENT RULES:
 IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
-- For key_points blocks: Each key point title should start and end with **, each key point should start and end with ***
-- For best_practices blocks: Each best practice title should start and end with **, each best practice content should start and end with ***
+- For key_points, best_practices, and troubleshooting blocks: Each item title should start and end with **, each item content should start and end with ***
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -624,6 +622,52 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
                 print(f"   ⚠️ Key points block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Key point content*** format")
                 return False
 
+        elif block_type == 'best_practices':
+            # Validate best_practices formatting: **Title** ***Best practice content***
+            lines = content.split('\n')
+            valid_format = True
+
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Check if line contains both **title** and ***content***
+                    if not ('**' in line and '***' in line):
+                        valid_format = False
+                        break
+
+                    # More specific validation: should have **title** followed by ***content***
+                    title_match = '**' in line[:line.find('***')] if '***' in line else False
+                    if not title_match:
+                        valid_format = False
+                        break
+
+            if not valid_format:
+                print(f"   ⚠️ Best practices block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Best practice content*** format")
+                return False
+
+        elif block_type == 'troubleshooting':
+            # Validate troubleshooting formatting: **Title** ***Troubleshooting content***
+            lines = content.split('\n')
+            valid_format = True
+
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Check if line contains both **title** and ***content***
+                    if not ('**' in line and '***' in line):
+                        valid_format = False
+                        break
+
+                    # More specific validation: should have **title** followed by ***content***
+                    title_match = '**' in line[:line.find('***')] if '***' in line else False
+                    if not title_match:
+                        valid_format = False
+                        break
+
+            if not valid_format:
+                print(f"   ⚠️ Troubleshooting block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Troubleshooting content*** format")
+                return False
+
         # Check for basic content validity
         if not content.strip():
             return False
@@ -649,7 +693,7 @@ def create_compatible_blocks(analysis_result: Dict[str, Any]) -> str:
 
     # Validate and clean blocks
     valid_block_types = [
-        'summary', 'key_points', 'architecture', 'mermaid', 'code',
+        'key_points', 'architecture', 'mermaid', 'code',
         'api_reference', 'guide', 'comparison', 'best_practices', 'troubleshooting'
     ]
 
