@@ -1,0 +1,16 @@
+{
+  "name": "user-signup-credits",
+  "version": "1.0.0",
+  "description": "Appwrite function that adds 10 credits to user account preferences on signup",
+  "main": "src/main.py",
+  "scripts": {
+    "test": "python -m pytest tests/ -v",
+    "start": "python src/main.py",
+    "lint": "python -m flake8 src/",
+    "format": "python -m black src/"
+  },
+  "dependencies": {},
+  "keywords": ["appwrite", "user-signup", "credits", "preferences"],
+  "author": "Docify",
+  "license": "MIT"
+}
