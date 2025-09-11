@@ -2113,7 +2113,8 @@ class DocifyUnifiedOrchestrator:
             update_data = {
                 'status': 'analyzing',  # Status indicating content scraped and analysis starting
                 'scraped_content': scraped_content.get('content', ''),
-                'word_count': scraped_content.get('word_count', 0)
+                'word_count': scraped_content.get('word_count', 0),
+                'analysis_summary': scraped_content.get('title', 'Document')  # Save title as initial summary
             }
 
             self.databases.update_document(
@@ -2231,9 +2232,30 @@ class DocifyUnifiedOrchestrator:
                         sanitized_block['metadata'] = block['metadata']
                     sanitized_blocks.append(sanitized_block)
 
+            # Get current document to preserve title
+            try:
+                current_doc = self.databases.get_document(
+                    DATABASE_ID,
+                    DOCUMENTS_COLLECTION_ID,
+                    document_id
+                )
+                current_title = current_doc.get('analysis_summary', '')
+                if current_title and current_title != summary_text:
+                    # Combine title with analysis summary
+                    combined_summary = f"{current_title}\n\n{summary_text}"
+                    # Truncate if too long (analysis_summary has 2000 char limit)
+                    if len(combined_summary) > 2000:
+                        combined_summary = combined_summary[:1997] + "..."
+                    final_summary = combined_summary
+                else:
+                    final_summary = summary_text
+            except Exception:
+                # Fallback to just the summary if we can't get current document
+                final_summary = summary_text
+
             update_data = {
                 'status': 'completed',
-                'analysis_summary': summary_text,
+                'analysis_summary': final_summary,
                 'analysis_blocks': json.dumps(sanitized_blocks)
             }
 
