@@ -134,19 +134,75 @@ export function ContentBlockCard({
         );
 
       case 'key_points':
-        const points = block.content.split('\n').filter((point: string) => point.trim());
+      case 'best_practices':
+        const lines = block.content.split('\n').filter((line: string) => line.trim());
+
+        const parseKeyPoint = (line: string) => {
+          // Look for the pattern: **Title** ***Content***
+          const titleMatch = line.match(/\*\*([^*]+)\*\*/);
+          const contentMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+
+          if (titleMatch && contentMatch) {
+            return {
+              title: titleMatch[1].trim(),
+              content: contentMatch[1].trim()
+            };
+          }
+
+          // Fallback for lines that don't match the pattern
+          return {
+            title: null,
+            content: line.replace(/^[-•*]\s*/, '').trim()
+          };
+        };
+
         return (
-          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
-            {points.map((point: string, index: number) => (
-              <Flex key={index} fillWidth gap="xs" vertical="start">
-                <Text variant="body-default-s" onBackground="brand-strong" style={{ minWidth: '20px', flexShrink: 0 }}>
-                  {index + 1}.
-                </Text>
-                <Text variant="body-default-s" onBackground="neutral-strong" style={{ wordBreak: 'break-word' }}>
-                  {point.replace(/^[-•*]\s*/, '')}
-                </Text>
-              </Flex>
-            ))}
+          <Flex fillWidth direction="column" gap="s" style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
+            {lines.map((line: string, index: number) => {
+              const point = parseKeyPoint(line);
+
+              if (point.title) {
+                // Formatted with title and content
+                return (
+                  <Flex
+                    key={index}
+                    fillWidth
+                    direction="column"
+                    padding="s"
+                    background="brand-alpha-weak"
+                    radius="s"
+                    border="brand-weak"
+                    borderStyle="solid"
+                    borderWidth={1}
+                    gap="xs"
+                    style={{ borderLeftWidth: '3px' }}
+                  >
+                    <Text variant="body-default-s" onBackground="brand-strong" weight="strong">
+                      {point.title}
+                    </Text>
+                    <Text
+                      variant="body-default-s"
+                      onBackground="brand-strong"
+                      style={{ fontStyle: 'italic' }}
+                    >
+                      {point.content}
+                    </Text>
+                  </Flex>
+                );
+              } else {
+                // Fallback for unformatted content
+                return (
+                  <Flex key={index} fillWidth gap="xs" vertical="start">
+                    <Text variant="body-default-s" onBackground="brand-strong">
+                      •
+                    </Text>
+                    <Text variant="body-default-s" onBackground="neutral-strong">
+                      {point.content}
+                    </Text>
+                  </Flex>
+                );
+              }
+            })}
           </Flex>
         );
 

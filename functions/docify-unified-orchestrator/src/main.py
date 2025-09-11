@@ -435,7 +435,7 @@ CONTENT BLOCK TYPES:
 - api_reference: API documentation
 - guide: Step-by-step instructions
 - comparison: Compare different approaches
-- best_practices: Recommendations
+- best_practices: Best practices and recommendations (format: **Title** ***Best practice content***)
 - troubleshooting: Common issues and solutions
 
 GRID LAYOUT: 2 rows vertical × 3 columns horizontal = 6 total grid cells
@@ -462,6 +462,7 @@ IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
 - For key_points blocks: Each key point title should start and end with **, each key point should start and end with ***
+- For best_practices blocks: Each best practice title should start and end with **, each best practice content should start and end with ***
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -497,7 +498,48 @@ Ensure the response is valid JSON."""
                 json_match = re.search(r'\{[\s\S]*\}', generated_text)
                 if json_match:
                     json_string = json_match.group(0)
-                    parsed_response = json.loads(json_string)
+
+                    # Debug: Log JSON string length and a sample if parsing fails
+                    print(f"   📄 Extracted JSON length: {len(json_string)} chars")
+
+                    try:
+                        parsed_response = json.loads(json_string)
+                    except json.JSONDecodeError as json_error:
+                        print(f"   ❌ JSON parsing error details:")
+                        print(f"   Error: {json_error}")
+                        print(f"   Position: {json_error.pos}")
+                        print(f"   Line: {json_error.lineno}, Column: {json_error.colno}")
+
+                        # Show context around the error
+                        start = max(0, json_error.pos - 50)
+                        end = min(len(json_string), json_error.pos + 50)
+                        context = json_string[start:end]
+                        print(f"   Context around error: ...{context}...")
+
+                        # Try to fix common issues
+                        if "Expecting ',' delimiter" in str(json_error):
+                            print("   🔧 Attempting to fix trailing comma issues...")
+                            # Remove trailing commas before closing braces/brackets
+                            fixed_json = re.sub(r',(\s*[}\]])', r'\1', json_string)
+                            try:
+                                parsed_response = json.loads(fixed_json)
+                                print("   ✅ Fixed trailing comma issue")
+                            except:
+                                raise json_error
+                        elif "Expecting ',' delimiter" in str(json_error) or "Expecting ':' delimiter" in str(json_error):
+                            print("   🔧 Attempting to fix other delimiter issues...")
+                            # Try to clean up the JSON by removing problematic characters
+                            # Remove any trailing commas and fix common issues
+                            cleaned_json = re.sub(r',\s*}', '}', json_string)  # Remove trailing commas before }
+                            cleaned_json = re.sub(r',\s*]', ']', cleaned_json)  # Remove trailing commas before ]
+                            cleaned_json = re.sub(r'([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', cleaned_json)  # Quote unquoted keys
+                            try:
+                                parsed_response = json.loads(cleaned_json)
+                                print("   ✅ Fixed delimiter issues")
+                            except:
+                                raise json_error
+                        else:
+                            raise json_error
 
                     # Validate the response structure
                     if not parsed_response.get('summary'):

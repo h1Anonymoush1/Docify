@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { Flex, Heading, Text, Icon } from '@/once-ui/components';
 
 // Dynamically import Mermaid to avoid SSR issues
 const Mermaid = dynamic(() => import('./MermaidChart'), { ssr: false });
@@ -38,12 +39,24 @@ function getSizeClasses(size: string): string {
 
 function TextBlock({ block }: { block: ContentBlock }) {
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <div className="prose prose-sm max-w-none">
-        <div className="whitespace-pre-wrap text-gray-700">{block.content}</div>
-      </div>
-    </div>
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+      <Flex fillWidth direction="column" gap="s">
+        <Text variant="body-default-m" onBackground="neutral-strong" style={{ whiteSpace: 'pre-wrap' }}>
+          {block.content}
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -51,46 +64,160 @@ function CodeBlock({ block }: { block: ContentBlock }) {
   const language = block.metadata?.language || 'text';
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">{block.title}</h3>
-        <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-          {language}
-        </span>
-      </div>
-      <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm">
-        <code className={`language-${language}`}>{block.content}</code>
-      </pre>
-    </div>
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Flex fillWidth horizontal="space-between" vertical="center">
+        <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+          {block.title}
+        </Heading>
+        <Flex
+          padding="xs"
+          background="neutral-weak"
+          radius="s"
+        >
+          <Text variant="body-default-xs" onBackground="neutral-strong">
+            {language}
+          </Text>
+        </Flex>
+      </Flex>
+
+      <Flex
+        fillWidth
+        padding="m"
+        background="neutral-strong"
+        radius="m"
+        style={{ overflow: 'auto', fontFamily: 'monospace', fontSize: '14px' }}
+      >
+        <Text
+          variant="body-default-s"
+          onBackground="neutral-weak"
+          style={{ whiteSpace: 'pre', wordBreak: 'break-all' }}
+        >
+          {block.content}
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
 function MermaidBlock({ block }: { block: ContentBlock }) {
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <div className="bg-gray-50 p-4 rounded-md">
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+
+      <Flex
+        fillWidth
+        padding="m"
+        background="neutral-weak"
+        radius="m"
+      >
         <Mermaid chart={block.content} />
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
 
 function KeyPointsBlock({ block }: { block: ContentBlock }) {
-  const points = block.content.split('\n').filter(point => point.trim());
+  const lines = block.content.split('\n').filter(line => line.trim());
+
+  const parseKeyPoint = (line: string) => {
+    // Look for the pattern: **Title** ***Content***
+    const titleMatch = line.match(/\*\*([^*]+)\*\*/);
+    const contentMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+
+    if (titleMatch && contentMatch) {
+      return {
+        title: titleMatch[1].trim(),
+        content: contentMatch[1].trim()
+      };
+    }
+
+    // Fallback for lines that don't match the pattern
+    return {
+      title: null,
+      content: line.replace(/^[-•*]\s*/, '').trim()
+    };
+  };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <ul className="space-y-2">
-        {points.map((point, index) => (
-          <li key={index} className="flex items-start">
-            <span className="text-blue-500 mr-2 mt-1">•</span>
-            <span className="text-gray-700">{point.replace(/^[-•*]\s*/, '')}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+
+      <Flex direction="column" gap="s">
+        {lines.map((line, index) => {
+          const point = parseKeyPoint(line);
+
+          if (point.title) {
+            // Formatted with title and content
+            return (
+              <Flex
+                key={index}
+                fillWidth
+                direction="column"
+                padding="m"
+                background="brand-alpha-weak"
+                radius="m"
+                border="brand-weak"
+                borderStyle="solid"
+                borderWidth={1}
+                gap="xs"
+                style={{ borderLeftWidth: '4px' }}
+              >
+                <Text variant="body-default-s" onBackground="brand-strong" weight="strong">
+                  {point.title}
+                </Text>
+                <Text
+                  variant="body-default-s"
+                  onBackground="brand-strong"
+                  style={{ fontStyle: 'italic' }}
+                >
+                  {point.content}
+                </Text>
+              </Flex>
+            );
+          } else {
+            // Fallback for unformatted content
+            return (
+              <Flex key={index} fillWidth gap="s" vertical="start">
+                <Text variant="body-default-s" onBackground="brand-strong">
+                  •
+                </Text>
+                <Text variant="body-default-s" onBackground="neutral-strong">
+                  {point.content}
+                </Text>
+              </Flex>
+            );
+          }
+        })}
+      </Flex>
+    </Flex>
   );
 }
 
@@ -98,30 +225,76 @@ function GuideBlock({ block }: { block: ContentBlock }) {
   const steps = block.content.split('\n').filter(step => step.trim());
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <ol className="space-y-3">
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+
+      <Flex direction="column" gap="s">
         {steps.map((step, index) => (
-          <li key={index} className="flex items-start">
-            <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white text-sm rounded-full flex items-center justify-center mr-3 mt-0.5">
-              {index + 1}
-            </span>
-            <span className="text-gray-700">{step.replace(/^\d+\.\s*/, '')}</span>
-          </li>
+          <Flex key={index} fillWidth gap="s" vertical="start">
+            <Flex
+              width="24"
+              height="24"
+              background="brand-strong"
+              radius="full"
+              horizontal="center"
+              vertical="center"
+              style={{ flexShrink: 0, marginTop: '2px' }}
+            >
+              <Text variant="body-default-xs" onBackground="brand-weak" weight="strong">
+                {index + 1}
+              </Text>
+            </Flex>
+            <Text variant="body-default-m" onBackground="neutral-strong">
+              {step.replace(/^\d+\.\s*/, '')}
+            </Text>
+          </Flex>
         ))}
-      </ol>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
 
 function ApiReferenceBlock({ block }: { block: ContentBlock }) {
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <div className="bg-gray-50 p-4 rounded-md font-mono text-sm">
-        <pre className="whitespace-pre-wrap text-gray-800">{block.content}</pre>
-      </div>
-    </div>
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+
+      <Flex
+        fillWidth
+        padding="m"
+        background="neutral-weak"
+        radius="m"
+        style={{ fontFamily: 'monospace', fontSize: '14px', overflow: 'auto' }}
+      >
+        <Text
+          variant="body-default-s"
+          onBackground="neutral-strong"
+          style={{ whiteSpace: 'pre-wrap' }}
+        >
+          {block.content}
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -130,28 +303,46 @@ function ComparisonBlock({ block }: { block: ContentBlock }) {
   const lines = block.content.split('\n').filter(line => line.trim());
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{block.title}</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <tbody className="bg-white divide-y divide-gray-200">
-            {lines.map((line, index) => {
-              const [label, value] = line.split(':').map(s => s.trim());
-              return (
-                <tr key={index}>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {label}
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                    {value}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Flex
+      fillWidth
+      direction="column"
+      padding="l"
+      background="surface"
+      border="neutral-weak"
+      radius="l"
+      gap="m"
+    >
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
+
+      <Flex fillWidth direction="column" gap="xs" style={{ overflow: 'auto' }}>
+        {lines.map((line, index) => {
+          const [label, value] = line.split(':').map(s => s.trim());
+          return (
+            <Flex
+              key={index}
+              fillWidth
+              padding="s"
+              background={index % 2 === 0 ? "neutral-weak" : "surface"}
+              radius="s"
+              gap="m"
+            >
+              <Flex flex={1}>
+                <Text variant="body-default-s" onBackground="neutral-strong" weight="strong">
+                  {label}
+                </Text>
+              </Flex>
+              <Flex flex={2}>
+                <Text variant="body-default-s" onBackground="neutral-strong">
+                  {value || line}
+                </Text>
+              </Flex>
+            </Flex>
+          );
+        })}
+      </Flex>
+    </Flex>
   );
 }
 
@@ -162,7 +353,6 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
     switch (block.type) {
       case 'summary':
       case 'architecture':
-      case 'best_practices':
       case 'troubleshooting':
         return <TextBlock block={block} />;
 
@@ -173,6 +363,7 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
         return <MermaidBlock block={block} />;
 
       case 'key_points':
+      case 'best_practices':
         return <KeyPointsBlock block={block} />;
 
       case 'guide':
