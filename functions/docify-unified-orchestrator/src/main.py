@@ -419,7 +419,8 @@ Return a JSON response with the following structure:
       "title": "Block title",
       "content": "Block content (mermaid syntax for mermaid type)",
       "metadata": {{
-        "language": "javascript|python|etc (for code blocks)",
+        "language": "javascript|python|etc (for code blocks - REQUIRED)",
+        "highlight": "1,3-5 (optional line highlighting for code blocks)",
         "priority": "high|medium|low"
       }}
     }}
@@ -459,7 +460,7 @@ BLOCK PLACEMENT RULES:
 
 IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
-- For code blocks: Specify programming language in metadata (javascript, python, etc.)
+- For code blocks: Always specify programming language in metadata (javascript, python, typescript, java, csharp, php, ruby, go, rust, swift, kotlin, scala, html, css, sql, bash, yaml, json, xml, etc.). Include optional line highlighting in metadata as "highlight": "1,3-5" for lines 1 and 3-5.
 - For key_points, best_practices, troubleshooting, guide, architecture, and api_reference blocks: Each item title should start and end with **, each item content should start and end with ***
 - For comparison blocks: Use side-by-side format with **** for each side, ** for side headings, and *** for points
 - All block content must be properly formatted and syntactically correct
@@ -592,12 +593,36 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
                 return False
 
         elif block_type == 'code':
-            # Ensure language is specified in metadata
+            # Ensure language is specified in metadata (required for syntax highlighting)
             metadata = block.get('metadata', {})
             if not metadata.get('language'):
-                print(f"   ⚠️ Code block '{block.get('title', '')}' missing language in metadata")
-                # Add default language
-                block['metadata']['language'] = 'text'
+                print(f"   ⚠️ Code block '{block.get('title', '')}' missing language in metadata - REQUIRED for syntax highlighting")
+                # Try to auto-detect language from content or set to 'text'
+                content = block.get('content', '').strip()
+                if 'function' in content or 'console.log' in content or 'const ' in content or 'let ' in content:
+                    block['metadata']['language'] = 'javascript'
+                    print(f"   ✅ Auto-detected JavaScript for code block")
+                elif 'def ' in content or 'import ' in content or 'print(' in content:
+                    block['metadata']['language'] = 'python'
+                    print(f"   ✅ Auto-detected Python for code block")
+                elif 'public class' in content or 'System.out' in content:
+                    block['metadata']['language'] = 'java'
+                    print(f"   ✅ Auto-detected Java for code block")
+                elif '<?php' in content or 'echo ' in content:
+                    block['metadata']['language'] = 'php'
+                    print(f"   ✅ Auto-detected PHP for code block")
+                elif '<html>' in content or '<div>' in content:
+                    block['metadata']['language'] = 'html'
+                    print(f"   ✅ Auto-detected HTML for code block")
+                elif 'SELECT' in content.upper() or 'FROM' in content.upper():
+                    block['metadata']['language'] = 'sql'
+                    print(f"   ✅ Auto-detected SQL for code block")
+                elif '#!/bin/bash' in content or 'echo ' in content:
+                    block['metadata']['language'] = 'bash'
+                    print(f"   ✅ Auto-detected Bash for code block")
+                else:
+                    block['metadata']['language'] = 'text'
+                    print(f"   ⚠️ Could not auto-detect language, defaulting to 'text'")
 
         elif block_type == 'key_points':
             # Validate key_points formatting: **Title** ***Key point content***

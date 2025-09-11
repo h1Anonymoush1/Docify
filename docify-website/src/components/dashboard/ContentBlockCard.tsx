@@ -1,8 +1,29 @@
 "use client";
 
 import React, { useState, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Flex, Heading, Text, Button, IconButton } from '@/once-ui/components';
 import MermaidChart from '@/components/MermaidChart';
+
+// Dynamically import the advanced CodeBlock to avoid SSR issues
+const AdvancedCodeBlock = dynamic(() => import('@/once-ui/modules').then(mod => ({ default: mod.CodeBlock })), {
+  ssr: false,
+  loading: () => (
+    <Flex
+      fillWidth
+      fillHeight
+      horizontal="center"
+      vertical="center"
+      style={{
+        minHeight: '150px',
+        borderRadius: 'var(--radius-s)',
+        backgroundColor: 'var(--neutral-weak)'
+      }}
+    >
+      <Text variant="body-default-xs" onBackground="neutral-strong">Loading code...</Text>
+    </Flex>
+  )
+});
 
 interface ContentBlock {
   id: string;
@@ -100,35 +121,36 @@ export function ContentBlockCard({
         );
 
       case 'code':
+        // Convert our simple format to advanced format
+        const codeInstances = [{
+          code: block.content,
+          language: block.metadata?.language || 'text',
+          label: block.title || 'Code Example'
+        }];
+
         return (
-          <Flex fillWidth direction="column" gap="xs" style={{ flex: 1 }}>
-            <Flex fillWidth horizontal="space-between" vertical="center">
-              <Text variant="body-default-s" onBackground="neutral-weak">
-                Language:
-              </Text>
-              <Text variant="body-default-s" onBackground="brand-strong">
-                {block.metadata?.language || 'text'}
-              </Text>
-            </Flex>
+          <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
             <Flex
               fillWidth
               style={{
-                backgroundColor: 'var(--neutral-weak)',
+                overflow: 'hidden',
                 borderRadius: 'var(--radius-s)',
-                padding: 'var(--space-m)',
-                fontFamily: 'monospace',
-                fontSize: '14px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'var(--neutral-medium) transparent',
-                minHeight: '120px',
-                maxHeight: '200px'
+                maxHeight: '180px'
               }}
             >
-              <Text variant="body-default-s" onBackground="neutral-strong">
-                {block.content}
-              </Text>
+              <AdvancedCodeBlock
+                codeInstances={codeInstances}
+                copyButton={true}
+                highlight={block.metadata?.highlight}
+                compact={true}
+                fillWidth
+                codeHeight={150}
+                style={{
+                  overflowY: 'auto',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--neutral-medium) transparent'
+                }}
+              />
             </Flex>
           </Flex>
         );

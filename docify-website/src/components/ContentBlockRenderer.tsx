@@ -4,6 +4,26 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Flex, Heading, Text, Icon } from '@/once-ui/components';
 
+// Dynamically import the advanced CodeBlock to avoid SSR issues
+const AdvancedCodeBlock = dynamic(() => import('@/once-ui/modules').then(mod => ({ default: mod.CodeBlock })), {
+  ssr: false,
+  loading: () => (
+    <Flex
+      fillWidth
+      fillHeight
+      horizontal="center"
+      vertical="center"
+      style={{
+        minHeight: '300px',
+        borderRadius: 'var(--radius-m)',
+        backgroundColor: 'var(--neutral-weak)'
+      }}
+    >
+      <Text variant="body-default-s" onBackground="neutral-strong">Loading code editor...</Text>
+    </Flex>
+  )
+});
+
 // Dynamically import Mermaid to avoid SSR issues
 const Mermaid = dynamic(() => import('./MermaidChart'), { ssr: false });
 
@@ -61,7 +81,12 @@ function TextBlock({ block }: { block: ContentBlock }) {
 }
 
 function CodeBlock({ block }: { block: ContentBlock }) {
-  const language = block.metadata?.language || 'text';
+  // Convert our simple format to advanced format
+  const codeInstances = [{
+    code: block.content,
+    language: block.metadata?.language || 'text',
+    label: block.title || 'Code Example'
+  }];
 
   return (
     <Flex
@@ -73,35 +98,31 @@ function CodeBlock({ block }: { block: ContentBlock }) {
       radius="l"
       gap="m"
     >
-      <Flex fillWidth horizontal="space-between" vertical="center">
-        <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
-          {block.title}
-        </Heading>
-        <Flex
-          padding="xs"
-          background="neutral-weak"
-          radius="s"
-        >
-          <Text variant="body-default-xs" onBackground="neutral-strong">
-            {language}
-          </Text>
-        </Flex>
-      </Flex>
+      <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
+        {block.title}
+      </Heading>
 
       <Flex
         fillWidth
-        padding="m"
-        background="neutral-strong"
-        radius="m"
-        style={{ overflow: 'auto', fontFamily: 'monospace', fontSize: '14px' }}
+        style={{
+          overflow: 'hidden',
+          borderRadius: 'var(--radius-m)',
+          maxHeight: '400px'
+        }}
       >
-        <Text
-          variant="body-default-s"
-          onBackground="neutral-weak"
-          style={{ whiteSpace: 'pre', wordBreak: 'break-all' }}
-        >
-          {block.content}
-        </Text>
+        <AdvancedCodeBlock
+          codeInstances={codeInstances}
+          copyButton={true}
+          highlight={block.metadata?.highlight}
+          compact={true}
+          fillWidth
+          codeHeight={300}
+          style={{
+            overflowY: 'auto',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'var(--neutral-medium) transparent'
+          }}
+        />
       </Flex>
     </Flex>
   );
