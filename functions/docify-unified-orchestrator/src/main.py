@@ -20,11 +20,19 @@ from appwrite.services.databases import Databases
 from appwrite.id import ID
 from google import genai
 from google.genai import types
+import PyPDF2
+import docx
+import pandas as pd
+import feedparser
+from collections import defaultdict
+import mimetypes
+import base64
 
 # Environment variables
 DATABASE_ID = os.environ.get('DATABASE_ID', 'docify_db')
 DOCUMENTS_COLLECTION_ID = os.environ.get('DOCUMENTS_COLLECTION_ID', 'documents_table')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+BROWSERLESS_API_KEY = os.environ.get('BROWSERLESS_API_KEY', '')
 
 # Initialize clients
 client = Client()
@@ -79,6 +87,972 @@ CONTENT ANALYSIS STRATEGY:
 5. Optimize for visual learning with appropriate diagram types and code examples
 
 Remember: You are not just analyzing content - you are creating personalized learning experiences guided by user instructions."""
+
+# ===== COMPREHENSIVE SCRAPING FUNCTIONS =====
+
+def smart_fetch_html(url, timeout=15):
+    """Fetch HTML content using multiple strategies like url-to-markdown approach."""
+    html_content = None
+    fetch_method = 'basic'
+
+    # Fetch strategies (adapted from url-to-markdown)
+    fetch_strategies = [
+        {
+            'name': 'modern-browser',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Cache-Control': 'max-age=0'
+            }
+        },
+        {
+            'name': 'mobile',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br'
+            }
+        },
+        {
+            'name': 'bot-friendly',
+            'headers': {
+                'User-Agent': 'Mozilla/5.0 (compatible; DocifyBot/1.0; +https://docify.app)',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9'
+            }
+        }
+    ]
+
+    # Try each strategy
+    for strategy in fetch_strategies:
+        try:
+            print(f"Trying fetch strategy: {strategy['name']}")
+            response = requests.get(url, headers=strategy['headers'], timeout=timeout)
+
+            if response.status_code == 200:
+                html_content = response.text
+                fetch_method = strategy['name']
+                print(f"Successfully fetched {len(html_content)} characters using {strategy['name']} strategy")
+
+                # Check if content seems too small (likely JS-dependent)
+                if len(html_content) < 10000:
+                    print(f"Content seems small ({len(html_content)} chars), might be JS-dependent. Will try rendering services.")
+                    continue
+                break
+            else:
+                print(f"{strategy['name']} failed with status: {response.status_code}")
+        except Exception as strategy_error:
+            print(f"{strategy['name']} failed: {strategy_error}")
+
+    # Try JS rendering services if content is small or all strategies failed
+    tried_rendering = False
+    if not html_content or len(html_content or '') < 10000:
+        tried_rendering = True
+        print('Content seems small or no content fetched, trying JS rendering services...')
+
+        # Try Browserless.io first (if API key is available)
+        if BROWSERLESS_API_KEY:
+            try:
+                print('Trying Browserless.io...')
+                browserless_url = f"https://production-sfo.browserless.io/content?token={BROWSERLESS_API_KEY}"
+                response = requests.post(browserless_url, json={
+                    'url': url,
+                    'gotoOptions': {
+                        'waitUntil': 'networkidle2',
+                        'timeout': 30000
+                    }
+                }, timeout=30)
+
+                if response.status_code == 200:
+                    rendered_html = response.text
+                    if len(rendered_html) > len(html_content or ''):
+                        html_content = rendered_html
+                        fetch_method = 'browserless-io'
+                        print(f"Successfully rendered {len(html_content)} characters using Browserless.io")
+                    else:
+                        print(f"Browserless.io returned same or smaller content ({len(rendered_html)} chars)")
+                else:
+                    print(f"Browserless.io failed with status: {response} - {response.text}")
+            except Exception as browserless_error:
+                print(f"Browserless.io error: {browserless_error}")
+        else:
+            print("BROWSERLESS_API_KEY not provided, skipping Browserless.io")
+
+        # Fallback to free services if Browserless.io didn't help
+        if not html_content or len(html_content) < 10000:
+            free_services = [
+                {
+                    'name': 'rendertron-free',
+                    'url': f"https://render-tron.appspot.com/render/{url}",
+                    'type': 'direct'
+                }
+            ]
+
+            for service in free_services:
+                try:
+                    print(f"Trying fallback {service['name']}...")
+                    response = requests.get(service['url'], headers={
+                        'User-Agent': 'Mozilla/5.0 (compatible; DocifyBot/1.0)'
+                    }, timeout=20)
+
+                    if response.status_code == 200:
+                        rendered_html = response.text
+                        if len(rendered_html) > len(html_content or ''):
+                            html_content = rendered_html
+                            fetch_method = service['name']
+                            print(f"Successfully rendered {len(html_content)} characters using {service['name']}")
+                            break
+                        else:
+                            print(f"{service['name']} returned same or smaller content ({len(rendered_html)} chars)")
+                except Exception as service_error:
+                    print(f"{service['name']} failed: {service_error}")
+
+    return html_content, fetch_method, tried_rendering
+
+
+def detect_content_type_from_response(response, url):
+    """Detect the content type of a response."""
+    # Check Content-Type header
+    content_type_header = response.headers.get('Content-Type', '').lower()
+
+    # Check URL extension
+    url_path = urlparse(url).path.lower()
+
+    # Determine content type
+    if 'application/pdf' in content_type_header or url_path.endswith('.pdf'):
+        return 'pdf'
+    elif 'application/msword' in content_type_header or url_path.endswith(('.doc', '.docx')):
+        return 'doc'
+    elif 'application/vnd.ms-excel' in content_type_header or url_path.endswith(('.xls', '.xlsx')):
+        return 'excel'
+    elif 'text/csv' in content_type_header or url_path.endswith('.csv'):
+        return 'csv'
+    elif 'application/json' in content_type_header or url_path.endswith('.json'):
+        return 'json'
+    elif 'application/xml' in content_type_header or url_path.endswith(('.xml', '.rss', '.atom')):
+        return 'xml'
+    elif 'text/plain' in content_type_header or url_path.endswith(('.txt', '.md')):
+        return 'text'
+    else:
+        # Default to HTML for web pages
+        return 'html'
+
+
+def extract_content_by_type(response, content_type, url):
+    """Extract content based on the detected content type."""
+    try:
+        if content_type == 'pdf':
+            return extract_pdf_content(response, url)
+        elif content_type == 'doc':
+            return extract_doc_content(response, url)
+        elif content_type == 'excel':
+            return extract_excel_content(response, url)
+        elif content_type == 'csv':
+            return extract_csv_content(response, url)
+        elif content_type == 'json':
+            return extract_json_content(response, url)
+        elif content_type == 'xml':
+            return extract_xml_content(response, url)
+        elif content_type == 'text':
+            return extract_text_content(response, url)
+        else:  # Default to HTML
+            return extract_html_content(response, url)
+    except Exception as e:
+        print(f"Error extracting {content_type} content from {url}: {e}")
+        return None
+
+
+def extract_pdf_content(response, url):
+    """Extract content from PDF files."""
+    try:
+        pdf_file = BytesIO(response.content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+
+        content = []
+        for page in pdf_reader.pages[:10]:  # Limit to first 10 pages
+            text = page.extract_text()
+            if text.strip():
+                content.append(text)
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'PDF Document - {len(pdf_reader.pages)} pages',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'pdf',
+            'metadata': {
+                'pages': len(pdf_reader.pages),
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting PDF content: {e}")
+        return None
+
+
+def extract_doc_content(response, url):
+    """Extract content from Word documents."""
+    try:
+        doc_file = BytesIO(response.content)
+        doc = docx.Document(doc_file)
+
+        content = []
+        for paragraph in doc.paragraphs:
+            if paragraph.text.strip():
+                content.append(paragraph.text)
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Word Document - {len(doc.paragraphs)} paragraphs',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'doc',
+            'metadata': {
+                'paragraphs': len(doc.paragraphs),
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting DOC content: {e}")
+        return None
+
+
+def extract_excel_content(response, url):
+    """Extract content from Excel files."""
+    try:
+        excel_file = BytesIO(response.content)
+        df = pd.read_excel(excel_file)
+
+        # Convert DataFrame to readable text
+        content = []
+        content.append(f"Sheet: {df.columns.tolist()}")
+        content.append("Data Preview:")
+        content.append(str(df.head(20)))  # First 20 rows
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Excel Spreadsheet - {len(df)} rows, {len(df.columns)} columns',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'excel',
+            'metadata': {
+                'rows': len(df),
+                'columns': len(df.columns),
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting Excel content: {e}")
+        return None
+
+
+def extract_csv_content(response, url):
+    """Extract content from CSV files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        csv_text = response.content.decode(encoding, errors='ignore')
+        lines = csv_text.split('\n')[:50]  # First 50 lines
+
+        content = []
+        content.append("CSV Data Preview:")
+        content.extend(lines[:20])  # First 20 lines
+
+        full_content = '\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'CSV File - {len(lines)} lines',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'csv',
+            'metadata': {
+                'lines': len(lines),
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting CSV content: {e}")
+        return None
+
+
+def extract_json_content(response, url):
+    """Extract content from JSON files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        json_text = response.content.decode(encoding, errors='ignore')
+        json_data = json.loads(json_text)
+
+        # Convert JSON to readable text
+        content = []
+        content.append("JSON Structure:")
+        content.append(json.dumps(json_data, indent=2)[:2000])  # First 2000 chars
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'JSON Data - {len(json_text)} characters',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'json',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting JSON content: {e}")
+        return None
+
+
+def extract_xml_content(response, url):
+    """Extract content from XML/RSS files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        xml_text = response.content.decode(encoding, errors='ignore')
+
+        # Check if it's an RSS/Atom feed
+        if '<rss' in xml_text.lower() or '<feed' in xml_text.lower():
+            return extract_feed_content(xml_text, url)
+
+        # Regular XML parsing
+        from xml.etree import ElementTree as ET
+        root = ET.fromstring(xml_text)
+
+        content = []
+        content.append("XML Structure:")
+        content.append(xml_to_text(root, level=0)[:2000])
+
+        full_content = '\n\n'.join(content)
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'XML Document - {len(xml_text)} characters',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'xml',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting XML content: {e}")
+        return None
+
+
+def extract_feed_content(xml_text, url):
+    """Extract content from RSS/Atom feeds."""
+    try:
+        feed = feedparser.parse(xml_text)
+
+        content = []
+        content.append(f"Feed Title: {feed.feed.get('title', 'Unknown')}")
+        content.append(f"Feed Description: {feed.feed.get('description', '')}")
+        content.append(f"Total Entries: {len(feed.entries)}")
+
+        # Add recent entries
+        for i, entry in enumerate(feed.entries[:10]):
+            content.append(f"\n--- Entry {i+1} ---")
+            content.append(f"Title: {entry.get('title', '')}")
+            content.append(f"Link: {entry.get('link', '')}")
+            if 'summary' in entry:
+                content.append(f"Summary: {entry.summary[:500]}...")
+
+        full_content = '\n'.join(content)
+
+        return {
+            'url': url,
+            'title': feed.feed.get('title', extract_title_from_url(url)),
+            'description': f'RSS/Atom Feed - {len(feed.entries)} entries',
+            'content': full_content,
+            'word_count': len(full_content.split()),
+            'content_type': 'feed',
+            'metadata': {
+                'entries': len(feed.entries),
+                'feed_type': 'rss' if '<rss' in xml_text.lower() else 'atom'
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting feed content: {e}")
+        return None
+
+
+def extract_text_content(response, url):
+    """Extract content from plain text files."""
+    try:
+        # Try to detect encoding
+        detected = chardet.detect(response.content)
+        encoding = detected.get('encoding', 'utf-8')
+
+        text_content = response.content.decode(encoding, errors='ignore')
+
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': f'Text File - {len(text_content)} characters',
+            'content': text_content[:10000],  # Limit to 10K chars
+            'word_count': len(text_content.split()),
+            'content_type': 'text',
+            'metadata': {
+                'encoding': encoding,
+                'file_size': len(response.content)
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting text content: {e}")
+        return None
+
+
+def extract_html_content(response, url):
+    """Extract content from HTML pages."""
+    try:
+        # Handle both Scrapy responses and raw HTML content
+        if hasattr(response, 'text'):
+            html_content = response.text
+        elif hasattr(response, 'content'):
+            # Handle raw bytes
+            html_content = response.content.decode('utf-8', errors='ignore')
+        else:
+            # Handle MockResponse or other objects
+            html_content = str(response)
+
+        # Parse with BeautifulSoup
+        soup = BeautifulSoup(html_content, 'lxml')
+
+        title = extract_title_from_soup(soup, url)
+        description = extract_description_from_soup(soup)
+        content = extract_main_content_from_soup(soup)
+
+        return {
+            'url': url,
+            'title': title,
+            'description': description,
+            'content': content,
+            'word_count': len(content.split()) if content else 0,
+            'content_type': 'html'
+        }
+    except Exception as e:
+        print(f"Error extracting HTML content: {e}")
+        return {
+            'url': url,
+            'title': extract_title_from_url(url),
+            'description': '',
+            'content': f'Error extracting HTML content: {str(e)}',
+            'word_count': 0,
+            'content_type': 'html'
+        }
+
+
+def extract_title_from_url(url):
+    """Extract a title from URL when no other title is available."""
+    path = urlparse(url).path
+    filename = path.split('/')[-1]
+    if '.' in filename:
+        filename = filename.split('.')[0]
+    return filename.replace('-', ' ').replace('_', ' ').title() or 'Document'
+
+
+def xml_to_text(element, level=0):
+    """Convert XML element to readable text."""
+    indent = "  " * level
+    text = f"{indent}<{element.tag}>"
+
+    if element.text and element.text.strip():
+        text += f" {element.text.strip()}"
+
+    for child in element:
+        text += "\n" + xml_to_text(child, level + 1)
+
+    if not element.text or not element.text.strip():
+        text += f"{indent}</{element.tag}>"
+
+    return text
+
+
+def extract_title_from_soup(soup, url):
+    """Extract page title from BeautifulSoup object."""
+    title_selectors = [
+        'title',
+        'h1',
+        'h1 a',
+        '[property="og:title"]',
+        'meta[name="title"]'
+    ]
+
+    for selector in title_selectors:
+        try:
+            if selector == 'title':
+                element = soup.title
+                if element and element.string:
+                    return element.string.strip()
+            else:
+                element = soup.select_one(selector)
+                if element:
+                    if 'property' in selector or 'name' in selector:
+                        return element.get('content', '').strip()
+                    else:
+                        return element.get_text().strip()
+        except:
+            continue
+
+    return extract_title_from_url(url)
+
+
+def extract_description_from_soup(soup):
+    """Extract page description from BeautifulSoup object."""
+    desc_selectors = [
+        'meta[name="description"]',
+        'meta[property="og:description"]',
+        'meta[name="twitter:description"]'
+    ]
+
+    for selector in desc_selectors:
+        try:
+            element = soup.select_one(selector)
+            if element:
+                return element.get('content', '').strip()
+        except:
+            continue
+
+    return ''
+
+
+def extract_main_content_from_soup(soup):
+    """Extract main content from BeautifulSoup object."""
+    # Try various content selectors in order of preference
+    content_selectors = [
+        'main',
+        '[role="main"]',
+        '.content',
+        '.main-content',
+        '#content',
+        '#main',
+        'article',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.page-content',
+        '.text-content'
+    ]
+
+    for selector in content_selectors:
+        try:
+            content_elements = soup.select(selector)
+            if content_elements:
+                content = []
+                for element in content_elements:
+                    text = element.get_text()
+                    if text.strip():
+                        content.append(text)
+
+                if content:
+                    combined_content = ' '.join(content)
+                    if len(combined_content.strip()) > 100:  # Minimum content length
+                        return clean_content(combined_content)
+        except:
+            continue
+
+    # Fallback: extract all paragraph text
+    try:
+        paragraphs = soup.select('p')
+        if paragraphs:
+            content = []
+            for p in paragraphs:
+                text = p.get_text().strip()
+                if text:
+                    content.append(text)
+
+            if content:
+                combined_content = ' '.join(content)
+                if len(combined_content.strip()) > 100:
+                    return clean_content(combined_content)
+    except:
+        pass
+
+    # Final fallback: extract all text from body
+    try:
+        body = soup.body
+        if body:
+            body_text = body.get_text()
+            return clean_content(body_text)
+    except:
+        pass
+
+    return ''
+
+
+def extract_title(response, url):
+    """Extract page title."""
+    title_selectors = [
+        'title::text',
+        'h1::text',
+        'h1 a::text',
+        '[property="og:title"]::attr(content)',
+        'meta[name="title"]::attr(content)'
+    ]
+
+    for selector in title_selectors:
+        title = response.css(selector).get()
+        if title:
+            return title.strip()
+
+    return url.split('/')[-1] or 'Untitled Page'
+
+
+def extract_description(response):
+    """Extract page description."""
+    desc_selectors = [
+        'meta[name="description"]::attr(content)',
+        'meta[property="og:description"]::attr(content)',
+        'meta[name="twitter:description"]::attr(content)'
+    ]
+
+    for selector in desc_selectors:
+        desc = response.css(selector).get()
+        if desc:
+            return desc.strip()
+
+    return ''
+
+
+def extract_main_content(response):
+    """Extract main content from the page."""
+    # Try various content selectors in order of preference
+    content_selectors = [
+        'main',
+        '[role="main"]',
+        '.content',
+        '.main-content',
+        '#content',
+        '#main',
+        'article',
+        '.article-content',
+        '.post-content',
+        '.entry-content',
+        '.page-content',
+        '.text-content'
+    ]
+
+    for selector in content_selectors:
+        content_elements = response.css(selector)
+        if content_elements:
+            content = content_elements.css('::text').getall()
+            if content:
+                combined_content = ' '.join(content)
+                if len(combined_content.strip()) > 100:  # Minimum content length
+                    return clean_content(combined_content)
+
+    # Fallback: extract all paragraph text
+    paragraphs = response.css('p::text').getall()
+    if paragraphs:
+        content = ' '.join(paragraphs)
+        if len(content.strip()) > 100:
+            return clean_content(content)
+
+    # Final fallback: extract all text from body
+    body_text = response.css('body ::text').getall()
+    combined_text = ' '.join(body_text)
+    return clean_content(combined_text)
+
+
+def clean_content(content):
+    """Clean and process scraped content."""
+    if not content:
+        return ''
+
+    # Remove excessive whitespace
+    content = re.sub(r'\s+', ' ', content)
+
+    # Remove navigation and footer content
+    content = re.sub(r'\b(home|menu|navigation|footer|copyright|privacy|terms|contact|about|login|signup|register|search)\b',
+                    '', content, flags=re.IGNORECASE)
+
+    # Remove emails, URLs, and phone numbers
+    content = re.sub(r'\S+@\S+\.\S+', '[EMAIL]', content)
+    content = re.sub(r'https?://[^\s]+', '[URL]', content)
+    content = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[PHONE]', content)
+
+    # Remove non-printable characters
+    content = re.sub(r'[^\x20-\x7E\n\r\t]', '', content)
+
+    return content.strip()
+
+
+def scrape_website_with_requests(url, max_pages=10):
+    """Scrape content from a website and its subpaths using requests-based approach."""
+    try:
+        print(f"Starting requests-based crawl for: {url} (max {max_pages} pages)")
+
+        # Parse the URL to get domain
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc
+        base_url = f"{parsed_url.scheme}://{domain}"
+
+        print(f"Crawling domain: {domain}")
+
+        visited_urls = set()
+        pages_to_visit = [url]
+        all_pages = []
+        pages_crawled = 0
+        start_time = time.time()
+
+        headers = {
+            'User-Agent': 'DocifyBot/1.0 (https://docify.app)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+        }
+
+        while pages_to_visit and pages_crawled < max_pages and time.time() - start_time < 300:  # 5 minute timeout
+            current_url = pages_to_visit.pop(0)
+
+            if current_url in visited_urls:
+                continue
+
+            visited_urls.add(current_url)
+            pages_crawled += 1
+
+            print(f"Crawling page {pages_crawled}/{max_pages}: {current_url}")
+
+            try:
+                # Use smart fetch approach
+                html_content, fetch_method, tried_rendering = smart_fetch_html(current_url, timeout=15)
+
+                if not html_content:
+                    print(f"Could not fetch content from: {current_url}")
+                    continue
+
+                # Detect content type
+                response = requests.head(current_url, headers=headers, timeout=10)
+                content_type = detect_content_type_from_response(response, current_url)
+
+                # Create a mock response object for extract_content_by_type
+                class MockResponse:
+                    def __init__(self, content, headers, url):
+                        self.content = content
+                        self.headers = headers
+                        self.url = url
+
+                mock_response = MockResponse(html_content.encode('utf-8'), response.headers, current_url)
+
+                # Extract content
+                page_data = extract_content_by_type(mock_response, content_type, current_url)
+
+                if not page_data:
+                    print(f"Could not extract content from: {current_url}")
+                    continue
+
+                # Skip pages with very little content
+                content_text = page_data.get('content', '')
+                if not content_text or len(content_text.strip()) < 50:
+                    print(f"Skipping page with insufficient content: {current_url}")
+                    continue
+
+                # Store the page data
+                all_pages.append(page_data)
+
+                # Find links to follow (only if we haven't reached max pages and content is HTML)
+                if pages_crawled < max_pages and content_type == 'html':
+                    try:
+                        soup = BeautifulSoup(html_content, 'lxml')
+                        for link in soup.find_all('a', href=True):
+                            next_url = urljoin(current_url, link['href'])
+
+                            # Only follow links within the same domain
+                            if urlparse(next_url).netloc == domain:
+                                # Skip common non-content URLs
+                                path = urlparse(next_url).path.lower()
+                                if not any(skip in path for skip in ['/search', '/login', '/admin', '/wp-admin', '/api/', '/feed', '/tag/', '/category/', '/author/']):
+                                    if next_url not in visited_urls and next_url not in pages_to_visit:
+                                        pages_to_visit.append(next_url)
+
+                                        # Limit the queue size to prevent memory issues
+                                        if len(pages_to_visit) > max_pages * 3:
+                                            break
+                    except Exception as link_error:
+                        print(f"Error finding links on {current_url}: {link_error}")
+
+                # Small delay to be respectful
+                time.sleep(1.0)
+
+            except Exception as page_error:
+                print(f"Error crawling {current_url}: {page_error}")
+                continue
+
+        print(f"Requests-based crawling completed: {len(all_pages)} pages with content")
+
+        if not all_pages:
+            print("No pages were successfully crawled, falling back to single page")
+            return scrape_single_page_fallback(url)
+
+        # Limit to max_pages even if more were crawled
+        all_pages = all_pages[:max_pages]
+
+        # Analyze content types
+        content_type_stats = {}
+        for page in all_pages:
+            content_type = page.get('content_type', 'unknown')
+            content_type_stats[content_type] = content_type_stats.get(content_type, 0) + 1
+
+        print(f"Content types found: {content_type_stats}")
+
+        # Aggregate content from all pages
+        total_word_count = sum(page['word_count'] for page in all_pages if page.get('word_count'))
+
+        # Create combined content (limit content length to prevent memory issues)
+        combined_content = []
+        max_content_length = 75000
+        current_length = 0
+
+        # Group pages by content type for better organization
+        pages_by_type = {}
+        for page in all_pages:
+            content_type = page.get('content_type', 'unknown')
+            if content_type not in pages_by_type:
+                pages_by_type[content_type] = []
+            pages_by_type[content_type].append(page)
+
+        # Add content by type
+        for content_type, pages in pages_by_type.items():
+            if current_length >= max_content_length:
+                break
+
+            # Add type header
+            type_header = f"\n{'='*50}\n{content_type.upper()} CONTENT ({len(pages)} files)\n{'='*50}\n"
+            if current_length + len(type_header) <= max_content_length:
+                combined_content.append(type_header)
+                current_length += len(type_header)
+
+            for page in pages:
+                if page.get('content') and current_length < max_content_length:
+                    # Include metadata for non-HTML content
+                    metadata_info = ""
+                    if page.get('metadata'):
+                        metadata_info = f"\n[Metadata: {page['metadata']}]"
+
+                    page_content = f"\n--- {page['title']} ({page['url']}){metadata_info} ---\n{page['content']}"
+                    if current_length + len(page_content) <= max_content_length:
+                        combined_content.append(page_content)
+                        current_length += len(page_content)
+                    else:
+                        # Truncate if it would exceed limit
+                        remaining_space = max_content_length - current_length
+                        if remaining_space > 100:
+                            truncated_content = page_content[:remaining_space-10] + "..."
+                            combined_content.append(truncated_content)
+                        break
+
+        # Get the main page data (first page crawled)
+        main_page = all_pages[0] if all_pages else {}
+
+        result = {
+            'title': main_page.get('title', 'Multi-Type Content'),
+            'description': f'Crawled {len(all_pages)} items from {domain} - Types: {", ".join([f"{k}({v})" for k,v in content_type_stats.items()])}',
+            'content': '\n'.join(combined_content),
+            'url': url,
+            'word_count': total_word_count,
+            'pages_crawled': len(all_pages),
+            'scraped_at': 'now',
+            'content_types': content_type_stats,
+            'subpages': [{'url': p['url'], 'title': p['title'], 'word_count': p['word_count'], 'content_type': p.get('content_type', 'unknown')} for p in all_pages[1:]]
+        }
+
+        print(f"Successfully scraped {len(all_pages)} items with {total_word_count} total words")
+        print(f"Content breakdown: {content_type_stats}")
+        return result
+
+    except Exception as error:
+        print(f'Requests-based crawling error: {error}')
+        print("Falling back to single page scraping...")
+        return scrape_single_page_fallback(url)
+
+
+def scrape_single_page_fallback(url):
+    """Fallback single page scraper using the new smart fetch approach."""
+    try:
+        print(f"Fallback scraping single page: {url}")
+
+        # Use smart fetch approach
+        html_content, fetch_method, tried_rendering = smart_fetch_html(url, timeout=30)
+
+        if not html_content:
+            raise Exception("Could not fetch content from URL")
+
+        # Parse with BeautifulSoup
+        soup = BeautifulSoup(html_content, 'lxml')
+
+        title = soup.title.string if soup.title else extract_title_from_url(url)
+
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        description = meta_desc.get('content', '') if meta_desc else ''
+
+        # Try to find main content
+        content_selectors = [
+            'main', '[role="main"]', '.content', '.main-content',
+            '#content', '#main', 'article', '.article-content',
+            '.post-content', '.entry-content'
+        ]
+
+        main_content = ''
+        for selector in content_selectors:
+            try:
+                element = soup.select_one(selector)
+                if element and len(element.get_text().strip()) > 100:
+                    main_content = element.get_text().strip()
+                    break
+            except:
+                continue
+
+        if not main_content:
+            main_content = soup.body.get_text().strip() if soup.body else ''
+
+        cleaned_content = clean_content(main_content)
+
+        return {
+            'title': title,
+            'description': description,
+            'content': cleaned_content,
+            'url': url,
+            'word_count': len(cleaned_content.split()),
+            'scraped_at': 'now'
+        }
+
+    except Exception as error:
+        print(f'Fallback scraping error: {error}')
+        raise Exception(f'Failed to scrape website: {str(error)}')
+
 
 # ===== LOGGER CLASS =====
 class Logger:
@@ -471,32 +1445,6 @@ class AdvancedContentProcessor:
             self.logger.error(f"⚠️ Gemini tool analysis failed: {e}")
             return {"error": str(e), "basic_content": initial_content}
 
-    def _extract_research_focus(self, user_instructions: str) -> str:
-        """Extract research focus areas from user instructions"""
-        research_areas = []
-
-        # Common research triggers
-        research_keywords = {
-            'best practices': ['current best practices', 'industry standards', 'recommended approaches'],
-            'tutorial': ['step-by-step guides', 'learning resources', 'examples'],
-            'api': ['integration patterns', 'authentication methods', 'API design'],
-            'performance': ['optimization techniques', 'performance benchmarks', 'scaling strategies'],
-            'security': ['security best practices', 'common vulnerabilities', 'secure implementation'],
-            'comparison': ['alternative solutions', 'feature comparisons', 'trade-offs'],
-            'architecture': ['system design patterns', 'scalability considerations', 'design principles'],
-            'deployment': ['deployment strategies', 'production considerations', 'hosting options']
-        }
-
-        instructions_lower = user_instructions.lower()
-
-        for keyword, areas in research_keywords.items():
-            if keyword in instructions_lower:
-                research_areas.extend(areas)
-
-        if not research_areas:
-            research_areas = ['related concepts', 'practical applications', 'implementation examples']
-
-        return "• " + "\n• ".join(list(set(research_areas))[:5])
 
     def _create_analysis_prompt(self, url: str, content: Dict[str, Any], user_instructions: str) -> str:
         """Create comprehensive analysis prompt for Gemini 2.5 Pro with enhanced user integration"""
@@ -1004,29 +1952,36 @@ class DocifyUnifiedOrchestrator:
             self.logger.log(f"🔗 URL: {document_data.get('url', 'No URL')}")
             self.logger.log(f"📝 Instructions: {document_data.get('instructions', 'No instructions')}")
 
-            # 2. Validate and prepare content
-            self.logger.log("🔍 Step 2: Validating content and preparing for analysis...")
-            content_validation = self._validate_content(document_data)
-            if content_validation.get('error'):
-                raise ValueError(f"Content validation failed: {content_validation['error']}")
+            # Extract document_id from document_data
+            document_id = document_data.get('document_id')
+            if not document_id:
+                raise ValueError("Document ID not found in document data")
 
-            # 3. Multi-round analysis with all Gemini tools
-            self.logger.log("🤖 Step 3: Executing multi-round analysis with all Gemini tools...")
-            analysis_result = self._execute_multi_round_analysis(document_data, self.gemini_client)
+            # 2. Scrape content from the website using comprehensive scraper
+            self.logger.log("🌐 Step 2: Scraping content from website using comprehensive scraper...")
+            scraped_content = self._scrape_website_content(document_data.get('url', ''))
 
-            # 4. Generate comprehensive analysis blocks
-            self.logger.log("📊 Step 4: Generating comprehensive analysis blocks...")
+            # 3. Save scraped content immediately to database
+            self.logger.log("💾 Step 3: Saving scraped content to database...")
+            self._save_scraped_content_immediately(document_id, scraped_content)
+
+            # 4. Multi-round analysis with all Gemini tools using scraped content
+            self.logger.log("🤖 Step 4: Executing multi-round analysis with all Gemini tools...")
+            analysis_result = self._execute_multi_round_analysis_with_scraped_content(document_data, self.gemini_client, scraped_content)
+
+            # 5. Generate comprehensive analysis blocks
+            self.logger.log("📊 Step 5: Generating comprehensive analysis blocks...")
             analysis_blocks = self._generate_comprehensive_blocks(analysis_result, document_data)
 
-            # 5. Synthesize final result
-            self.logger.log("🎯 Step 5: Synthesizing final comprehensive result...")
+            # 6. Synthesize final result
+            self.logger.log("🎯 Step 6: Synthesizing final comprehensive result...")
             final_result = self._create_final_comprehensive_result(
                 analysis_result, analysis_blocks, document_data
             )
 
-            # 6. Update database with comprehensive results
-            self.logger.log("💾 Step 6: Updating database with comprehensive results...")
-            self._update_document_comprehensive(document_data['document_id'], final_result)
+            # 7. Update database with analysis results (content already saved)
+            self.logger.log("💾 Step 7: Updating database with analysis results...")
+            self._update_document_with_analysis_only(document_id, final_result)
 
             processing_time = time.time() - self.start_time
             self.logger.log(f"⏱️ Processing completed in {processing_time:.2f}s")
@@ -1098,6 +2053,207 @@ class DocifyUnifiedOrchestrator:
             if 'document_id' in locals():
                 self._update_document_status(document_data['document_id'], 'failed', error=str(e))
             raise
+
+    def _extract_research_focus(self, user_instructions: str) -> str:
+        """Extract research focus areas from user instructions"""
+        research_areas = []
+
+        # Common research triggers
+        research_keywords = {
+            'best practices': ['current best practices', 'industry standards', 'recommended approaches'],
+            'tutorial': ['step-by-step guides', 'learning resources', 'examples'],
+            'api': ['integration patterns', 'authentication methods', 'API design'],
+            'performance': ['optimization techniques', 'performance benchmarks', 'scaling strategies'],
+            'security': ['security best practices', 'common vulnerabilities', 'secure implementation'],
+            'comparison': ['alternative solutions', 'feature comparisons', 'trade-offs'],
+            'architecture': ['system design patterns', 'scalability considerations', 'design principles'],
+            'deployment': ['deployment strategies', 'production considerations', 'hosting options']
+        }
+
+        instructions_lower = user_instructions.lower()
+
+        for keyword, areas in research_keywords.items():
+            if keyword in instructions_lower:
+                research_areas.extend(areas)
+
+        if not research_areas:
+            research_areas = ['related concepts', 'practical applications', 'implementation examples']
+
+        return "• " + "\n• ".join(list(set(research_areas))[:5])
+
+    def _scrape_website_content(self, url: str) -> Dict[str, Any]:
+        """Scrape content from website using comprehensive scraper"""
+        try:
+            self.logger.log(f"🌐 Starting comprehensive website scraping for: {url}")
+
+            # Use the comprehensive scraping function
+            max_pages = int(os.environ.get('MAX_PAGES_TO_CRAWL', '10'))
+            scraped_data = scrape_website_with_requests(url, max_pages)
+
+            self.logger.log(f"✅ Scraping completed: {scraped_data.get('word_count', 0)} words from {scraped_data.get('pages_crawled', 0)} pages")
+            return scraped_data
+
+        except Exception as e:
+            self.logger.error(f"❌ Website scraping failed: {e}")
+            # Return basic fallback
+            return {
+                "url": url,
+                "title": "Scraping Failed",
+                "description": f"Failed to scrape content: {str(e)}",
+                "content": f"Error occurred while scraping: {str(e)}",
+                "word_count": 0,
+                "scraped_at": "error"
+            }
+
+    def _save_scraped_content_immediately(self, document_id: str, scraped_content: Dict[str, Any]) -> None:
+        """Save scraped content immediately to database"""
+        try:
+            self.logger.log(f"💾 Saving scraped content for document {document_id}")
+
+            update_data = {
+                'status': 'analyzing',  # Status indicating content scraped and analysis starting
+                'scraped_content': scraped_content.get('content', ''),
+                'word_count': scraped_content.get('word_count', 0)
+            }
+
+            self.databases.update_document(
+                DATABASE_ID,
+                DOCUMENTS_COLLECTION_ID,
+                document_id,
+                update_data
+            )
+
+            self.logger.log(f"✅ Scraped content saved for document {document_id}")
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Failed to save scraped content: {e}")
+            # Don't raise - we want to continue with analysis even if saving fails
+
+    def _execute_multi_round_analysis_with_scraped_content(self, document_data: Dict[str, Any], gemini_client, scraped_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute multi-round analysis using already scraped content"""
+        try:
+            url = document_data.get('url', '')
+            instructions = document_data.get('instructions', 'Analyze this content comprehensively')
+
+            self.logger.log("🔄 Round 1: Processing scraped content for analysis")
+
+            # Use the scraped content directly instead of scraping again
+            initial_content = {
+                "url": url,
+                "title": scraped_content.get('title', ''),
+                "description": scraped_content.get('description', ''),
+                "content": scraped_content.get('content', ''),
+                "word_count": scraped_content.get('word_count', 0),
+                "content_type": "scraped_content",
+                "pages_crawled": scraped_content.get('pages_crawled', 0)
+            }
+
+            # Round 2: Enhanced analysis with user instructions
+            self.logger.log("🔄 Round 2: Enhanced analysis with user instructions")
+            enhanced_analysis = self._perform_enhanced_analysis(initial_content, instructions, gemini_client)
+
+            # Round 3: Research enrichment
+            self.logger.log("🔄 Round 3: Research and context enrichment")
+            enriched_analysis = self._perform_research_enrichment_with_content(enhanced_analysis, gemini_client, initial_content)
+
+            # Round 4: Final synthesis and validation
+            self.logger.log("🔄 Round 4: Final synthesis and validation")
+            final_analysis = self._perform_final_synthesis_with_content(enriched_analysis, document_data, gemini_client, instructions, initial_content)
+
+            return {
+                "comprehensive_result": initial_content,
+                "enhanced_analysis": enhanced_analysis,
+                "enriched_analysis": enriched_analysis,
+                "final_analysis": final_analysis,
+                "rounds_completed": 4,
+                "timestamp": time.time(),
+                "scraped_content_used": True
+            }
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Multi-round analysis with scraped content failed: {e}")
+            return {"error": str(e), "rounds_completed": 0, "scraped_content_used": True}
+
+    def _update_document_with_analysis_only(self, document_id: str, result: Dict[str, Any]) -> None:
+        """Update document with analysis results only (content already saved)"""
+        try:
+            self.logger.log(f"💾 Updating document {document_id} with analysis results only")
+
+            # Extract schema-compliant summary from enhanced analysis
+            enhanced_analysis = result.get('enhanced_analysis', {})
+            summary_text = ""
+
+            if isinstance(enhanced_analysis.get('enhanced_analysis'), dict):
+                schema_data = enhanced_analysis['enhanced_analysis']
+                if 'summary' in schema_data and schema_data['summary']:
+                    summary_text = schema_data['summary']
+                    self.logger.log(f"📝 Using schema-compliant summary from LLM: {len(summary_text)} chars")
+                else:
+                    # Fallback to other sources
+                    summary_text = result.get('analysis_summary', '')
+            else:
+                # Fallback to other sources
+                summary_text = result.get('analysis_summary', '')
+
+            # Ensure summary_text is always a valid string and within limits
+            if not isinstance(summary_text, str):
+                summary_text = str(summary_text) if summary_text is not None else ""
+
+            # If still no summary, create a basic one
+            if not summary_text.strip():
+                final_analysis = result.get('final_analysis', {})
+                summary_text = final_analysis.get('final_synthesis', 'Analysis completed successfully')
+
+            # Truncate to 2000 characters to meet database constraints
+            if len(summary_text) > 2000:
+                summary_text = summary_text[:1997] + "..."
+                self.logger.log(f"⚠️ Summary truncated to 2000 chars: {len(summary_text)}")
+
+            # Validate and sanitize blocks data
+            blocks_data = result.get('blocks', [])
+            if not isinstance(blocks_data, list):
+                blocks_data = []
+                self.logger.log("⚠️ analysis_blocks was not a list, using empty array")
+
+            sanitized_blocks = []
+            for block in blocks_data:
+                if isinstance(block, dict) and all(key in block for key in ['id', 'type', 'size', 'title', 'content']):
+                    # Ensure all string fields are actually strings
+                    sanitized_block = {
+                        'id': str(block.get('id', '')),
+                        'type': str(block.get('type', '')),
+                        'size': str(block.get('size', '')),
+                        'title': str(block.get('title', '')),
+                        'content': str(block.get('content', ''))
+                    }
+                    # Add metadata if it exists and is valid
+                    if 'metadata' in block and isinstance(block['metadata'], dict):
+                        sanitized_block['metadata'] = block['metadata']
+                    sanitized_blocks.append(sanitized_block)
+
+            update_data = {
+                'status': 'completed',
+                'analysis_summary': summary_text,
+                'analysis_blocks': json.dumps(sanitized_blocks)
+            }
+
+            # Add processing duration if available
+            available_fields = self._get_available_fields()
+            if 'processing_duration' in available_fields:
+                # Calculate processing time (rough estimate)
+                update_data['processing_duration'] = int(time.time() - self.start_time)
+
+            self.databases.update_document(
+                DATABASE_ID,
+                DOCUMENTS_COLLECTION_ID,
+                document_id,
+                update_data
+            )
+
+            self.logger.log(f"✅ Document {document_id} updated with analysis results")
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Analysis-only update failed: {e}")
 
     def _extract_document_data(self) -> Dict[str, Any]:
         """Extract document data from request with enhanced validation"""
@@ -2126,6 +3282,173 @@ Provide a comprehensive synthesis that includes:
                 "content": f"Document analysis completed. {len(analysis_result.get('comprehensive_result', {}).get('content', ''))} characters processed.",
                 "metadata": {"priority": "high"}
             }]
+
+    def _perform_research_enrichment_with_content(self, analysis_result: Dict[str, Any], gemini_client, scraped_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform research enrichment using scraped content"""
+        try:
+            content = scraped_content.get('content', '')
+            if not content:
+                return analysis_result
+
+            # Generate research queries based on scraped content
+            research_queries = self._generate_research_queries_from_scraped_content(scraped_content)
+
+            research_results = []
+            for query in research_queries[:3]:  # Limit to 3 queries
+                self.logger.log(f"🔍 Researching: {query}")
+                result = self._execute_research_with_tools(query, gemini_client)
+                research_results.append(result)
+
+                # Track tool usage
+                tool_entry = {
+                    "tool": "google_search",
+                    "query": query,
+                    "timestamp": time.time(),
+                    "status": "completed" if not result.get('error') else "failed"
+                }
+                self.tool_usage_log.append(tool_entry)
+                self.logger.log(f"🔧 Tool logged: {len(self.tool_usage_log)} total tools")
+
+            return {
+                **analysis_result,
+                "research_results": research_results,
+                "research_enrichment": True
+            }
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Research enrichment with content failed: {e}")
+            return analysis_result
+
+    def _perform_final_synthesis_with_content(self, enriched_analysis: Dict[str, Any], document_data: Dict[str, Any], gemini_client, user_instructions: str, scraped_content: Dict[str, Any]) -> Dict[str, Any]:
+        """Perform final synthesis using scraped content"""
+        try:
+            # Add null checks
+            if not enriched_analysis:
+                return {"error": "No enriched analysis provided", "fallback_synthesis": "Analysis completed with limited synthesis"}
+
+            content = scraped_content.get('content', '')
+            research_results = enriched_analysis.get('research_results', [])
+
+            # Get user instructions with null check
+            user_instructions = ""
+            if document_data:
+                user_instructions = document_data.get('instructions', '')
+
+            # Enhanced synthesis using system prompt
+            research_summary = chr(10).join([
+                f"• {result.get('insights', '')[:300]}"
+                for result in research_results if result.get('insights')
+            ]) if research_results else "No additional research insights available."
+
+            synthesis_prompt = f"""{self.system_prompt}
+
+🎯 **FINAL SYNTHESIS ROUND**
+Integrating all analysis results into a comprehensive, user-focused understanding.
+
+📄 **ORIGINAL CONTENT ANALYSIS**
+{content[:4000]}
+
+🔬 **RESEARCH & ENHANCEMENT INSIGHTS**
+{research_summary}
+
+🎯 **USER INSTRUCTIONS** (SYNTHESIS FOCUS)
+{user_instructions}
+
+📊 **SYNTHESIS OBJECTIVES**
+1. **Unified Understanding**: Combine all analysis rounds into coherent insights
+2. **User-Centric Focus**: Ensure all findings directly address user instructions
+3. **Practical Application**: Transform insights into actionable recommendations
+4. **Knowledge Integration**: Connect research findings with original content analysis
+
+🎨 **DELIVERABLES REQUIRED**
+Provide a comprehensive synthesis that includes:
+1. **Executive Summary**: Clear, concise overview of all findings
+2. **Key Insights**: Most important discoveries and patterns
+3. **User-Focused Recommendations**: Practical guidance based on user instructions
+4. **Implementation Guidance**: Step-by-step advice for applying insights
+5. **Further Exploration**: Strategic suggestions for deeper learning
+6. **Success Metrics**: How to measure effectiveness of recommendations
+
+⚡ **SYNTHESIS REQUIREMENTS**
+- **User Instruction Alignment**: Every recommendation must tie back to user needs
+- **Research Integration**: Incorporate current best practices and trends
+- **Practical Focus**: Provide immediately actionable insights
+- **Progressive Structure**: Build from foundational to advanced concepts
+- **Visual Enhancement**: Suggest appropriate visualization types for key concepts
+
+🔧 **QUALITY STANDARDS**
+- Content must be immediately applicable to user's stated goals
+- Insights should provide clear value beyond the original content
+- Recommendations should be specific and measurable
+- Synthesis should create a complete learning experience
+
+🎯 **SUCCESS CRITERIA**
+- User can immediately apply at least 3 specific recommendations
+- Synthesis addresses all aspects of user's original instructions
+- Content provides unique value not found in original source
+- Structure enables progressive skill development"""
+
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=synthesis_prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048),
+                    max_output_tokens=2500
+                )
+            )
+
+            synthesis_text = response.text if response.candidates else ""
+
+            # Try to extract structured data from synthesis
+            synthesis_data = None
+            try:
+                if synthesis_text.strip().startswith('{'):
+                    synthesis_data = json.loads(synthesis_text)
+                else:
+                    # Extract JSON from text if embedded
+                    json_match = re.search(r'\{.*\}', synthesis_text, re.DOTALL)
+                    if json_match:
+                        synthesis_data = json.loads(json_match.group())
+            except Exception:
+                pass
+
+            return {
+                "final_synthesis": synthesis_text,
+                "structured_synthesis": synthesis_data,
+                "integrated_insights": True,
+                "timestamp": time.time()
+            }
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Final synthesis with content failed: {e}")
+            return {"error": str(e), "fallback_synthesis": "Analysis completed with limited synthesis"}
+
+    def _generate_research_queries_from_scraped_content(self, scraped_content: Dict[str, Any]) -> List[str]:
+        """Generate research queries from scraped content"""
+        queries = []
+
+        content = scraped_content.get('content', '')
+        title = scraped_content.get('title', '')
+
+        # Generate queries from title
+        if title:
+            queries.append(f"Latest information about {title}")
+            queries.append(f"Best practices for {title}")
+
+        # Generate queries from content analysis
+        if content:
+            # Simple keyword extraction for research
+            words = re.findall(r'\b\w{5,}\b', content.lower())
+            stop_words = {'about', 'would', 'there', 'their', 'which', 'could', 'should', 'these', 'those', 'where', 'after', 'before', 'first', 'second', 'third', 'through', 'during', 'while', 'since', 'until', 'although', 'because', 'unless', 'though', 'whether', 'within', 'among', 'between'}
+
+            keywords = [word for word in words if word not in stop_words]
+            unique_keywords = list(set(keywords))[:5]  # Top 5 unique keywords
+
+            for keyword in unique_keywords:
+                queries.append(f"Understanding {keyword} in detail")
+
+        return list(set(queries))[:5]  # Return max 5 unique queries
 
     def _create_final_comprehensive_result(self, analysis_result: Dict[str, Any], blocks: List[Dict[str, Any]], document_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create the final comprehensive result"""
