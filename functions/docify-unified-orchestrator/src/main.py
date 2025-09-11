@@ -432,7 +432,7 @@ CONTENT BLOCK TYPES:
 - mermaid: Visual diagrams using mermaid syntax
 - code: Code examples with language specification
 - api_reference: API documentation
-- guide: Step-by-step instructions
+- guide: Step-by-step instructions (format: **Title** ***Guide content***)
 - comparison: Compare different approaches
 - best_practices: Best practices and recommendations (format: **Title** ***Best practice content***)
 - troubleshooting: Common issues and solutions (format: **Title** ***Troubleshooting content***)
@@ -460,7 +460,7 @@ BLOCK PLACEMENT RULES:
 IMPORTANT SYNTAX REQUIREMENTS:
 - For mermaid blocks: Use valid Mermaid.js syntax (flowchart TD, graph TD, etc.)
 - For code blocks: Specify programming language in metadata (javascript, python, etc.)
-- For key_points, best_practices, and troubleshooting blocks: Each item title should start and end with **, each item content should start and end with ***
+- For key_points, best_practices, troubleshooting, and guide blocks: Each item title should start and end with **, each item content should start and end with ***
 - All block content must be properly formatted and syntactically correct
 - Use appropriate escaping for special characters in JSON
 
@@ -666,6 +666,29 @@ def validate_block_syntax(block: Dict[str, Any]) -> bool:
 
             if not valid_format:
                 print(f"   ⚠️ Troubleshooting block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Troubleshooting content*** format")
+                return False
+
+        elif block_type == 'guide':
+            # Validate guide formatting: **Title** ***Guide content***
+            lines = content.split('\n')
+            valid_format = True
+
+            for line in lines:
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Check if line contains both **title** and ***content***
+                    if not ('**' in line and '***' in line):
+                        valid_format = False
+                        break
+
+                    # More specific validation: should have **title** followed by ***content***
+                    title_match = '**' in line[:line.find('***')] if '***' in line else False
+                    if not title_match:
+                        valid_format = False
+                        break
+
+            if not valid_format:
+                print(f"   ⚠️ Guide block '{block.get('title', '')}' has invalid formatting - should use **Title** ***Guide content*** format")
                 return False
 
         # Check for basic content validity
