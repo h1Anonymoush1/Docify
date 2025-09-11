@@ -42,6 +42,7 @@ interface ContentBlock {
 
 interface ContentBlockRendererProps {
   block: ContentBlock;
+  onClick?: () => void;
 }
 
 function getSizeClasses(size: string): string {
@@ -57,7 +58,7 @@ function getSizeClasses(size: string): string {
   }
 }
 
-function TextBlock({ block }: { block: ContentBlock }) {
+function TextBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   return (
     <Flex
       fillWidth
@@ -67,6 +68,11 @@ function TextBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -80,7 +86,7 @@ function TextBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function CodeBlock({ block }: { block: ContentBlock }) {
+function CodeBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   // Convert our simple format to advanced format
   const codeInstances = [{
     code: block.content,
@@ -97,6 +103,11 @@ function CodeBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -128,7 +139,7 @@ function CodeBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function MermaidBlock({ block }: { block: ContentBlock }) {
+function MermaidBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   return (
     <Flex
       fillWidth
@@ -138,6 +149,11 @@ function MermaidBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -156,7 +172,7 @@ function MermaidBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function KeyPointsBlock({ block }: { block: ContentBlock }) {
+function KeyPointsBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   const lines = block.content.split('\n').filter(line => line.trim());
 
   const parseKeyPoint = (line: string) => {
@@ -187,6 +203,11 @@ function KeyPointsBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -243,7 +264,7 @@ function KeyPointsBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function GuideBlock({ block }: { block: ContentBlock }) {
+function GuideBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   const steps = block.content.split('\n').filter(step => step.trim());
 
   return (
@@ -255,6 +276,11 @@ function GuideBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -286,7 +312,7 @@ function GuideBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function ApiReferenceBlock({ block }: { block: ContentBlock }) {
+function ApiReferenceBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   return (
     <Flex
       fillWidth
@@ -296,6 +322,11 @@ function ApiReferenceBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -320,7 +351,7 @@ function ApiReferenceBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-function ComparisonBlock({ block }: { block: ContentBlock }) {
+function ComparisonBlock({ block, onClick }: { block: ContentBlock; onClick?: () => void }) {
   // Parse comparison format: ****Side Heading** ***Point*** ****
   const parseComparisonContent = (content: string) => {
     const sides: Array<{ heading: string; points: string[] }> = [];
@@ -359,6 +390,11 @@ function ComparisonBlock({ block }: { block: ContentBlock }) {
       border="neutral-weak"
       radius="l"
       gap="m"
+      style={{
+        cursor: onClick ? 'pointer' : 'default',
+        transition: onClick ? 'all 0.2s ease' : 'none'
+      }}
+      onClick={onClick}
     >
       <Heading as="h3" variant="heading-strong-s" onBackground="neutral-strong">
         {block.title}
@@ -438,7 +474,7 @@ function ComparisonBlock({ block }: { block: ContentBlock }) {
   );
 }
 
-export default function ContentBlockRenderer({ block }: ContentBlockRendererProps) {
+export default function ContentBlockRenderer({ block, onClick }: ContentBlockRendererProps) {
   const sizeClasses = getSizeClasses(block.size);
 
   const renderBlock = () => {
@@ -446,13 +482,13 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
       case 'summary':
       case 'architecture':
       case 'troubleshooting':
-        return <TextBlock block={block} />;
+        return <TextBlock block={block} onClick={onClick} />;
 
       case 'code':
-        return <CodeBlock block={block} />;
+        return <CodeBlock block={block} onClick={onClick} />;
 
       case 'mermaid':
-        return <MermaidBlock block={block} />;
+        return <MermaidBlock block={block} onClick={onClick} />;
 
       case 'key_points':
       case 'best_practices':
@@ -460,13 +496,13 @@ export default function ContentBlockRenderer({ block }: ContentBlockRendererProp
       case 'guide':
       case 'architecture':
       case 'api_reference':
-        return <KeyPointsBlock block={block} />;
+        return <KeyPointsBlock block={block} onClick={onClick} />;
 
       case 'comparison':
-        return <ComparisonBlock block={block} />;
+        return <ComparisonBlock block={block} onClick={onClick} />;
 
       default:
-        return <TextBlock block={block} />;
+        return <TextBlock block={block} onClick={onClick} />;
     }
   };
 

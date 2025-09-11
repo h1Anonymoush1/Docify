@@ -44,6 +44,7 @@ interface ContentBlockCardProps {
   onZoom?: (blockId: string) => void;
   onUnzoom?: (blockId: string) => void;
   isZoomed?: boolean;
+  onClick?: () => void;
 }
 
 // Get unified Docify brand styling for all block types
@@ -96,7 +97,8 @@ export function ContentBlockCard({
   onCopy,
   onZoom,
   onUnzoom,
-  isZoomed = false
+  isZoomed = false,
+  onClick
 }: ContentBlockCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const styles = getBlockStyles(block.type);
@@ -424,7 +426,7 @@ export function ContentBlockCard({
         gridColumn: getGridSpan(block.size),
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
-        cursor: 'pointer',
+        cursor: onClick ? 'pointer' : 'default',
         height: getFixedHeight(block.size),
         backgroundColor: styles.bgColor,
         border: `1px solid ${styles.borderColor}`,
@@ -433,6 +435,7 @@ export function ContentBlockCard({
         scrollbarWidth: 'thin',
         scrollbarColor: 'var(--neutral-weak) transparent'
       }}
+      onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -462,7 +465,7 @@ export function ContentBlockCard({
       </Flex>
 
       {/* Hover effect overlay */}
-      {isHovered && (
+      {isHovered && onClick && (
         <div
           style={{
             position: 'absolute',

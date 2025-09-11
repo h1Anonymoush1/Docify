@@ -5,7 +5,7 @@ import { Flex, Button, Text, Heading, Switch } from '@/once-ui/components';
 import { AuthGuard } from '@/components/AuthGuard';
 import { databases, account, APPWRITE_CONFIG } from '@/lib/appwrite';
 import { Query } from 'appwrite';
-import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard, ContentBlockCard } from '@/components/dashboard';
+import { SmallDashboardCard, MediumDashboardCard, LargeDashboardCard, ContentBlockCard, DashboardOverlay } from '@/components/dashboard';
 import DocumentForm from '@/components/DocumentForm';
 import DocumentViewer from '@/components/DocumentViewer';
 import dynamic from 'next/dynamic';
@@ -19,6 +19,26 @@ const MermaidChart = dynamic(() => import('@/components/MermaidChart'), {
       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
       <div className="text-gray-500 text-sm">Loading chart...</div>
     </div>
+  )
+});
+
+// Dynamically import AdvancedCodeBlock to avoid SSR issues
+const AdvancedCodeBlock = dynamic(() => import('@/once-ui/modules').then(mod => ({ default: mod.CodeBlock })), {
+  ssr: false,
+  loading: () => (
+    <Flex
+      fillWidth
+      fillHeight
+      horizontal="center"
+      vertical="center"
+      style={{
+        minHeight: '200px',
+        borderRadius: 'var(--radius-s)',
+        backgroundColor: 'var(--neutral-weak)'
+      }}
+    >
+      <Text variant="body-default-s" onBackground="neutral-strong">Loading code...</Text>
+    </Flex>
   )
 });
 
@@ -37,6 +57,16 @@ export default function Dashboard() {
   const [documentStatus, setDocumentStatus] = useState<string>('unknown');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createdDocumentId, setCreatedDocumentId] = useState<string | null>(null);
+  const [overlayCard, setOverlayCard] = useState<{
+    isOpen: boolean;
+    title?: string;
+    content?: string | React.ReactNode;
+    children?: React.ReactNode;
+    cardType: 'small' | 'medium' | 'large';
+  }>({
+    isOpen: false,
+    cardType: 'medium'
+  });
 
   const fetchDocuments = async () => {
     try {
@@ -305,6 +335,286 @@ export default function Dashboard() {
     }
   };
 
+  const handleCardClick = (title?: string, content?: string | React.ReactNode, children?: React.ReactNode, cardType: 'small' | 'medium' | 'large' = 'medium') => {
+    setOverlayCard({
+      isOpen: true,
+      title,
+      content,
+      children,
+      cardType
+    });
+  };
+
+  const handleContentBlockClick = (block: any) => {
+    setOverlayCard({
+      isOpen: true,
+      title: block.title,
+      content: undefined,
+      children: renderContentBlockForOverlay(block),
+      cardType: block.size === 'large' ? 'large' : block.size === 'medium' ? 'medium' : 'small'
+    });
+  };
+
+  // Helper function to render content block in overlay format
+  const renderContentBlockForOverlay = (block: any) => {
+
+    switch (block.type) {
+      case 'mermaid':
+        return (
+          <Flex fillWidth direction="column" gap="m">
+            <Flex
+              fillWidth
+              background="neutral-weak"
+              border="neutral-medium"
+              radius="m"
+              padding="m"
+            >
+              <Suspense fallback={
+                <Flex
+                  fillWidth
+                  fillHeight
+                  horizontal="center"
+                  vertical="center"
+                  gap="s"
+                >
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <Text variant="body-default-s" onBackground="neutral-weak">
+                    Loading diagram...
+                  </Text>
+                </Flex>
+              }>
+                <MermaidChart chart={block.content} />
+              </Suspense>
+            </Flex>
+          </Flex>
+        );
+
+      case 'code':
+        const codeInstances = [{
+          code: block.content,
+          language: block.metadata?.language || 'text',
+          label: block.title || 'Code Example'
+        }];
+
+        return (
+          <Flex fillWidth style={{ flex: 1, overflow: 'hidden' }}>
+            <Flex
+              fillWidth
+              style={{
+                overflow: 'hidden',
+                borderRadius: 'var(--radius-s)',
+                maxHeight: '500px'
+              }}
+            >
+              <AdvancedCodeBlock
+                codeInstances={codeInstances}
+                copyButton={true}
+                highlight={block.metadata?.highlight}
+                compact={false}
+                fillWidth
+                codeHeight={400}
+                style={{
+                  overflowY: 'auto',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--neutral-medium) transparent'
+                }}
+              />
+            </Flex>
+          </Flex>
+        );
+
+      case 'key_points':
+      case 'best_practices':
+      case 'troubleshooting':
+      case 'guide':
+      case 'architecture':
+      case 'api_reference':
+        const lines = block.content.split('\n').filter((line: string) => line.trim());
+
+        const parseKeyPoint = (line: string) => {
+          const titleMatch = line.match(/\*\*([^*]+)\*\*/);
+          const contentMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+
+          if (titleMatch && contentMatch) {
+            return {
+              title: titleMatch[1].trim(),
+              content: contentMatch[1].trim()
+            };
+          }
+
+          return {
+            title: null,
+            content: line.replace(/^[-•*]\s*/, '').trim()
+          };
+        };
+
+        return (
+          <Flex fillWidth direction="column" gap="s">
+            {lines.map((line: string, index: number) => {
+              const point = parseKeyPoint(line);
+
+              if (point.title) {
+                return (
+                  <Flex
+                    key={index}
+                    fillWidth
+                    direction="column"
+                    padding="m"
+                    background="brand-alpha-weak"
+                    radius="m"
+                    border="brand-weak"
+                    borderStyle="solid"
+                    borderWidth={1}
+                    gap="xs"
+                    style={{ borderLeftWidth: '4px' }}
+                  >
+                    <Text variant="body-default-m" onBackground="brand-strong" weight="strong">
+                      {point.title}
+                    </Text>
+                    <Text
+                      variant="body-default-m"
+                      onBackground="brand-strong"
+                      style={{ fontStyle: 'italic' }}
+                    >
+                      {point.content}
+                    </Text>
+                  </Flex>
+                );
+              } else {
+                return (
+                  <Flex key={index} fillWidth gap="s" vertical="start">
+                    <Text variant="body-default-m" onBackground="brand-strong">
+                      •
+                    </Text>
+                    <Text variant="body-default-m" onBackground="neutral-strong">
+                      {point.content}
+                    </Text>
+                  </Flex>
+                );
+              }
+            })}
+          </Flex>
+        );
+
+      case 'comparison':
+        const parseComparisonContent = (content: string) => {
+          const sides: Array<{ heading: string; points: string[] }> = [];
+          const parts = content.split('****').filter(part => part.trim());
+
+          for (let i = 0; i < parts.length; i++) {
+            const sideContent = parts[i].trim();
+            const sideLines = sideContent.split('\n').filter(line => line.trim());
+
+            if (sideLines.length > 0) {
+              const headingMatch = sideLines[0].match(/\*\*([^*]+)\*\*/);
+              const heading = headingMatch ? headingMatch[1].trim() : sideLines[0].replace(/\*\*/g, '').trim();
+
+              const points = sideLines.slice(1).map(line => {
+                const pointMatch = line.match(/\*\*\*([^*]+)\*\*\*/);
+                return pointMatch ? pointMatch[1].trim() : line.replace(/\*\*\*/g, '').trim();
+              }).filter(point => point);
+
+              sides.push({ heading, points });
+            }
+          }
+
+          return sides;
+        };
+
+        const comparisonSides = parseComparisonContent(block.content);
+
+        return (
+          <Flex fillWidth direction="column" gap="m">
+            <Flex fillWidth gap="l" style={{ flexWrap: 'wrap', alignItems: 'stretch' }}>
+              {comparisonSides.map((side, sideIndex) => (
+                <Flex
+                  key={sideIndex}
+                  fillWidth
+                  direction="column"
+                  flex={1}
+                  minWidth={250}
+                  padding="m"
+                  background="neutral-weak"
+                  radius="m"
+                  gap="s"
+                  style={{ minHeight: '250px' }}
+                >
+                  <Flex
+                    fillWidth
+                    padding="s"
+                    background="brand-alpha-weak"
+                    radius="s"
+                    horizontal="center"
+                  >
+                    <Text
+                      variant="heading-strong-m"
+                      onBackground="brand-strong"
+                      align="center"
+                    >
+                      {side.heading}
+                    </Text>
+                  </Flex>
+
+                  <Flex fillWidth direction="column" gap="xs">
+                    {side.points.map((point, pointIndex) => (
+                      <Flex
+                        key={pointIndex}
+                        fillWidth
+                        padding="s"
+                        background="surface"
+                        radius="s"
+                        gap="s"
+                        vertical="center"
+                      >
+                        <Text
+                          variant="body-default-xs"
+                          onBackground="brand-strong"
+                          style={{ fontSize: '12px', opacity: 0.7 }}
+                        >
+                          {pointIndex + 1}.
+                        </Text>
+                        <Text
+                          variant="body-default-s"
+                          onBackground="neutral-strong"
+                          style={{ flex: 1, lineHeight: '1.4' }}
+                        >
+                          {point}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </Flex>
+              ))}
+            </Flex>
+          </Flex>
+        );
+
+      default:
+        return (
+          <Flex fillWidth style={{ flex: 1, overflow: 'auto', scrollbarWidth: 'thin' }}>
+            <Text
+              variant="body-default-l"
+              onBackground="neutral-strong"
+              style={{
+                lineHeight: '1.6',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}
+            >
+              {block.content}
+            </Text>
+          </Flex>
+        );
+    }
+  };
+
+  const handleCloseOverlay = () => {
+    setOverlayCard(prev => ({
+      ...prev,
+      isOpen: false
+    }));
+  };
+
 
   return (
     <AuthGuard requireAuth={true}>
@@ -555,7 +865,67 @@ export default function Dashboard() {
                         <Flex fillWidth gap="s" style={{ flexWrap: 'wrap' }}>
                           {/* Small Title/URL Card */}
                           <div style={{ flex: '0 0 300px' }}>
-                            <SmallDashboardCard type="content" title="Document Info">
+                            <SmallDashboardCard
+                              type="content"
+                              title="Document Info"
+                              onClick={() => handleCardClick(
+                                "Document Info",
+                                undefined,
+                                <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                                  <Text variant="body-strong-s" onBackground="neutral-strong">
+                                    {selectedDocument.title || 'Untitled Document'}
+                                  </Text>
+                                  <Text variant="body-default-xs" onBackground="neutral-weak" style={{ wordBreak: 'break-all' }}>
+                                    {selectedDocument.url}
+                                  </Text>
+
+                                  {/* Status */}
+                                  <Flex horizontal="space-between" vertical="center" gap="s" style={{ paddingTop: 'var(--space-s)' }}>
+                                    <Text variant="body-default-xs" onBackground="neutral-weak">
+                                      Status
+                                    </Text>
+                                    <Text variant="body-default-s" onBackground={
+                                      documentStatus === 'completed' ? 'success-strong' :
+                                      documentStatus === 'failed' ? 'danger-strong' :
+                                      documentStatus === 'analyzing' || documentStatus === 'scraping' ? 'warning-strong' :
+                                      'neutral-strong'
+                                    }>
+                                      {documentStatus.charAt(0).toUpperCase() + documentStatus.slice(1)}
+                                    </Text>
+                                  </Flex>
+
+                                  {/* Word Count */}
+                                  <Flex horizontal="space-between" vertical="center" gap="s" style={{ paddingTop: 'var(--space-s)' }}>
+                                    <Text variant="body-default-xs" onBackground="neutral-weak">
+                                      Scraped Content
+                                    </Text>
+                                    <Text variant="body-default-s" onBackground="brand-strong">
+                                      {wordCount > 0 ? wordCount.toLocaleString() + ' words' : 'Not available'}
+                                    </Text>
+                                  </Flex>
+
+                                    {/* Public Toggle */}
+                                  <Flex horizontal="space-between" vertical="center" gap="s" style={{ marginTop: 'auto', paddingTop: 'var(--space-s)' }}>
+                                    <Text variant="body-default-xs" onBackground="neutral-weak">
+                                      Make Public
+                                    </Text>
+                                    <Flex vertical="center" gap="s">
+                                      <Switch
+                                        isChecked={isPublic}
+                                        onToggle={() => handlePublicToggle(!isPublic)}
+                                        disabled={updatingPublic}
+                                        ariaLabel="Toggle document public visibility"
+                                      />
+                                      <Text variant="body-default-xs" onBackground="neutral-weak">
+                                        {updatingPublic ? 'Updating...' : (isPublic ? 'Public' : 'Private')}
+                                      </Text>
+                                    </Flex>
+                                  </Flex>
+
+                                </Flex>,
+                                'small'
+                              )}
+                            >
                               <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
                                 <Text variant="body-strong-s" onBackground="neutral-strong">
                                   {selectedDocument.title || 'Untitled Document'}
@@ -613,7 +983,20 @@ export default function Dashboard() {
 
                           {/* Medium Summary Card */}
                           <div style={{ flex: '1 1 400px', minWidth: '300px' }}>
-                            <MediumDashboardCard type="content" title="Summary">
+                            <MediumDashboardCard
+                              type="content"
+                              title="Summary"
+                              onClick={() => handleCardClick(
+                                "Summary",
+                                undefined,
+                                <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+                                  <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
+                                    {documentAnalysis.summary}
+                                  </Text>
+                                </Flex>,
+                                'medium'
+                              )}
+                            >
                               <Flex direction="column" gap="s" style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
                                 <Text variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: '1.6' }}>
                                   {documentAnalysis.summary}
@@ -748,6 +1131,7 @@ export default function Dashboard() {
                                         onZoom={handleZoomBlock}
                                         onUnzoom={handleUnzoomBlock}
                                         isZoomed={zoomedBlocks.has(block.id)}
+                                        onClick={() => handleContentBlockClick(block)}
                                       />
                                     ))}
                                 </Flex>
@@ -843,13 +1227,43 @@ export default function Dashboard() {
                   }}
                 >
                   {/* Large Component: Top Row (spans 3 columns) */}
-                  <LargeDashboardCard type="content" title="Welcome to Docify" content="Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries." />
+                  <LargeDashboardCard
+                    type="content"
+                    title="Welcome to Docify"
+                    content="Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries."
+                    onClick={() => handleCardClick(
+                      "Welcome to Docify",
+                      "Your AI-powered document analysis platform. Upload documents to get instant insights, charts, and summaries.",
+                      undefined,
+                      'large'
+                    )}
+                  />
 
                   {/* Medium Component: Analytics */}
-                  <MediumDashboardCard type="content" title="Analytics" content="Track your document processing metrics and usage patterns." />
+                  <MediumDashboardCard
+                    type="content"
+                    title="Analytics"
+                    content="Track your document processing metrics and usage patterns."
+                    onClick={() => handleCardClick(
+                      "Analytics",
+                      "Track your document processing metrics and usage patterns.",
+                      undefined,
+                      'medium'
+                    )}
+                  />
 
                   {/* Small Component: Recent Activity */}
-                  <SmallDashboardCard type="content" title="Recent Activity" content="View your latest document uploads and analyses." />
+                  <SmallDashboardCard
+                    type="content"
+                    title="Recent Activity"
+                    content="View your latest document uploads and analyses."
+                    onClick={() => handleCardClick(
+                      "Recent Activity",
+                      "View your latest document uploads and analyses.",
+                      undefined,
+                      'small'
+                    )}
+                  />
 
 
                 </Flex>
@@ -858,6 +1272,16 @@ export default function Dashboard() {
             )}
           </Flex>
         </Flex>
+
+        {/* Dashboard Overlay */}
+        <DashboardOverlay
+          isOpen={overlayCard.isOpen}
+          onClose={handleCloseOverlay}
+          title={overlayCard.title}
+          content={overlayCard.content}
+          children={overlayCard.children}
+          cardType={overlayCard.cardType}
+        />
     </AuthGuard>
   );
 }

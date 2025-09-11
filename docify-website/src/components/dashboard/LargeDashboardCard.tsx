@@ -9,9 +9,10 @@ interface LargeDashboardCardProps {
   content?: string | React.ReactNode;
   type?: 'skeleton' | 'content';
   children?: React.ReactNode;
+  onClick?: () => void;
 }
 
-export function LargeDashboardCard({ delay = 1, className, title, content, type = 'skeleton', children }: LargeDashboardCardProps) {
+export function LargeDashboardCard({ delay = 1, className, title, content, type = 'skeleton', children, onClick }: LargeDashboardCardProps) {
   return (
     <Flex
       background="surface"
@@ -25,16 +26,21 @@ export function LargeDashboardCard({ delay = 1, className, title, content, type 
         gridColumn: 'span 3',
         boxShadow: 'var(--shadow-s)',
         transition: 'all 0.2s ease',
-        cursor: 'pointer',
+        cursor: onClick ? 'pointer' : 'default',
         height: '300px'
       }}
+      onClick={onClick}
       onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+        if (onClick) {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-m)';
+        }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+        if (onClick) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = 'var(--shadow-s)';
+        }
       }}
     >
       {children ? (
