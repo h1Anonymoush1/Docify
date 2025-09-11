@@ -1,7 +1,7 @@
 {
   "name": "docify-unified-orchestrator",
-  "version": "1.0.0",
-  "description": "Unified Docify function using Gemini orchestration with built-in tools",
+  "version": "3.0.0",
+  "description": "Simplified Docify function with raw content preservation and AI-generated titles",
   "main": "src/main.py",
   "scripts": {
     "test": "python -m pytest tests/ -v",
@@ -10,7 +10,7 @@
     "format": "python -m black src/"
   },
   "dependencies": {},
-  "keywords": ["appwrite", "gemini", "orchestrator", "ai", "document-analysis"],
+  "keywords": ["appwrite", "gemini", "safe-scraping", "ai-titles", "document-analysis"],
   "author": "Docify",
   "license": "MIT"
 }

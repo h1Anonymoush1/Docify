@@ -5,7 +5,7 @@
 **Platform**: Appwrite Database
 **Collections**: 1 consolidated collection (documents_table)
 **Architecture**: Single-table design with all document data, scraped content, and analysis results
-**Current Attributes**: 15/17 (at Appwrite limit)
+**Current Attributes**: 13/17 (after removing unused fields)
 
 ## Collections Schema
 
@@ -13,27 +13,29 @@
 **Collection ID**: `documents_table`
 **Purpose**: Single consolidated table storing documents, scraped content, and analysis results
 
-#### Current Attributes (15/17)
+#### Current Attributes (13/17)
 
 | Attribute | Type | Required | Default | Size/Format | Description |
 |-----------|------|----------|---------|-------------|-------------|
 | `instructions` | `string` | ✅ | - | 1000 | User prompt for what to focus on/understand |
-| `title` | `string` | ❌ | - | 255 | Document title provided by user |
+| `title` | `string` | ❌ | - | 255 | AI-generated 2-4 word title (not user-provided) |
 | `status` | `string` | ✅ | - | enum | Processing status (pending/scraping/analyzing/completed/failed) |
 | `user_id` | `string` | ✅ | - | 36 | Appwrite user ID (for user isolation) |
-| `scraped_content` | `string` | ❌ | - | 70000 | Full scraped content (large text) |
+| `scraped_content` | `string` | ❌ | - | 99999 | Raw scraped HTML content (no modification) |
 | `url` | `string` | ✅ | - | URL format | URL to be scraped and analyzed |
-| `word_count` | `integer` | ❌ | `0` | - | Total words in scraped content |
-| `analysis_summary` | `string` | ❌ | - | 2000 | LLM-generated summary |
-| `analysis_blocks` | `string` | ❌ | - | 99999 | JSON array of analysis blocks |
+| `analysis_summary` | `string` | ❌ | - | 2000 | Readable summary (≤200 chars) |
+| `analysis_blocks` | `string` | ❌ | - | 99999 | JSON array of analysis blocks (frontend compatible) |
 | `public` | `boolean` | ❌ | `false` | - | Whether document is publicly accessible |
-| `imported` | `boolean` | ❌ | `false` | - | Whether document was imported (custom field) |
-| `user_interests` | `string` | ❌ | - | 2000 | JSON array of user's interests for personalized research |
-| `gemini_tools_used` | `string` | ❌ | - | 1000 | JSON array tracking which Gemini tools were used |
-| `research_context` | `string` | ❌ | - | 5000 | Research results from user interests analysis |
-| `processing_duration` | `integer` | ❌ | `0` | - | Total processing time in seconds |
-| `created_at` | `datetime` | ✅ | `auto` | - | Document creation timestamp |
-| `updated_at` | `datetime` | ✅ | `auto` | - | Last update timestamp |
+| `gemini_tools_used` | `string` | ❌ | - | 1000 | JSON array of Gemini tools used |
+| `research_context` | `string` | ❌ | - | 5000 | Research context for responses |
+| `$createdAt` | `datetime` | ✅ | `auto` | - | Document creation timestamp |
+| `$updatedAt` | `datetime` | ✅ | `auto` | - | Last update timestamp |
+
+#### Removed Fields:
+- `word_count` - Not needed with raw content preservation
+- `user_interests` - Removed for simplified approach
+- `processing_duration` - Removed for unified function simplicity
+- `imported` - Not implemented in current version
 
 #### Status Enum Values
 - `"pending"`: Document created, waiting for processing
@@ -295,28 +297,29 @@ delete: ["user:$userId"] // Users can only delete their own documents
 - **Simplified Architecture**: Eliminates cross-table relationships
 - **Atomic Operations**: Document lifecycle managed in one record
 
-### Current Features in 2.1 (15/17 attributes active)
-- **User Interests Field**: JSON array for personalized research (`user_interests`, 2000 chars)
-- **Gemini Tools Tracking**: Track which tools were used (`gemini_tools_used`, 1000 chars)
-- **Research Context**: Store research results from user interests (`research_context`, 5000 chars)
-- **Processing Duration**: Track total processing time (`processing_duration`, integer)
-- **Imported Flag**: Custom boolean field for import tracking (`imported`)
-- **Enhanced Content Limits**: `scraped_content` (70000 chars), `analysis_blocks` (99999 chars)
-- **Missing Fields**: `tool_execution_log` and `enhanced_metadata` (would exceed 17 attribute limit)
-- **Graceful Degradation**: Function adapts to available database fields automatically
+### Current Features in 3.0 (13/17 attributes active)
+- **AI-Generated Titles**: Smart 2-4 word titles using Gemini (`title`, 255 chars)
+- **Raw Content Preservation**: Store exact browserless HTML (`scraped_content`, 99999 chars)
+- **Readable Summaries**: Human-friendly summaries ≤200 chars (`analysis_summary`, 2000 chars)
+- **Compatible Blocks**: Same JSON format as original analyzer (`analysis_blocks`, 99999 chars)
+- **Gemini Tools Tracking**: Simple tools array (`gemini_tools_used`, 1000 chars)
+- **Research Context**: Context for responses (`research_context`, 5000 chars)
+- **Simplified Schema**: Removed unused fields for cleaner design
+- **Unified Function**: Single function handles all processing steps
 
 ### Current Status & Future Enhancements
-- ✅ **Document Sharing**: `public` boolean field already implemented
-- ✅ **User Interests**: Basic implementation with `user_interests` field
-- ✅ **Tool Analytics**: `gemini_tools_used` and `processing_duration` tracking
-- ⚠️ **Enhanced Analytics**: Limited by 17 attribute database constraint
+- ✅ **Document Sharing**: `public` boolean field implemented
+- ✅ **Unified Function**: Single function handles all processing
+- ✅ **Raw Content**: Preserves exact scraped HTML
+- ✅ **AI Titles**: 2-4 word intelligent titles
+- ✅ **Compatible Format**: Same JSON blocks as original analyzer
+- ✅ **Simplified Schema**: Removed unused fields (13/17 attributes used)
 - 🔄 **Future Plans**:
-  - Add document categories/tags (requires database schema expansion)
-  - Add user preferences for analysis types (requires database schema expansion)
-  - Add document templates (requires database schema expansion)
-  - Add collaborative features (requires database schema expansion)
+  - Enhanced user interests tracking (requires schema expansion)
+  - Advanced tool execution logging (requires schema expansion)
+  - Document categories and tags (requires schema expansion)
+  - Collaborative features (requires schema expansion)
   - Enhanced analytics dashboard (blocked by attribute limit)
-  - Machine learning model for analysis recommendations
 - 🚧 **Database Constraints**: Appwrite 17-attribute limit affects expansion plans
 
 ## Backup and Recovery

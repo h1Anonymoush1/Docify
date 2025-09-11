@@ -51,7 +51,7 @@ Docify is an intelligent documentation analysis platform that transforms any onl
 
 ### Processing Pipeline
 ```
-URL Input → Scraper Function → Validation Function → LLM Analysis Function → Summary Storage → Frontend Display
+URL Input → Unified Orchestrator Function → 8-Step Processing → Summary Storage → Frontend Display
 ```
 
 ## 🔧 Technical Stack
@@ -71,11 +71,12 @@ URL Input → Scraper Function → Validation Function → LLM Analysis Function
 - **Auth**: Appwrite Authentication
 
 ### AI/ML Services
-- **Primary LLM**: Hugging Face Inference API
-- **Models**: 
-  - Main: `microsoft/DialoGPT-large` or `meta-llama/Llama-2-7b-chat-hf`
-  - Validation: `distilbert-base-uncased` (lighter model)
-- **Processing**: Custom prompt engineering for structured outputs
+- **Primary LLM**: Google Gemini AI API
+- **Models**:
+  - Main: `gemini-2.5-pro` (latest model)
+  - Fallback: Standard Gemini models
+- **Processing**: Advanced prompt engineering for structured JSON outputs
+- **Features**: AI-generated titles, content analysis, diagram generation
 
 ### External APIs
 - **Web Scraping**: Puppeteer or Cheerio for content extraction
@@ -134,47 +135,27 @@ URL Input → Scraper Function → Validation Function → LLM Analysis Function
 
 ## 🔄 Function Workflow
 
-### Function 1: Document Scraper
-**Trigger**: User submits URL
-**Input**: `{ url: string, userId: string }`
-**Process**:
-1. Validate URL accessibility
-2. Detect document type (HTML, MD, PDF, etc.)
-3. Extract content using appropriate parser
-4. Clean and structure content
-5. Save as JSON to Appwrite Storage
-6. Update database with scraping results
-7. Trigger validation function
+### Unified Function: Docify Orchestrator
+**Trigger**: User submits URL (database event on document creation)
+**Input**: `{ $id: string, url: string, user_id: string, instructions: string }`
+**Process - 8-Step Linear Pipeline**:
+1. **Extract Document Data** - Parse and validate request parameters
+2. **Validate Environment** - Check API keys and configuration
+3. **Raw Browserless Scraping** - Scrape content without modification
+4. **Save Raw Content** - Store exact HTML in database
+5. **Generate AI Title** - Create 2-4 word intelligent titles using Gemini
+6. **Generate Analysis** - Produce comprehensive AI analysis
+7. **Create Compatible Blocks** - Format blocks for frontend compatibility
+8. **Final Save & Complete** - Update database and mark as completed
 
-**Output**: `{ scrapedData: object, contentType: string, status: string }`
+**Output**: `{ success: boolean, title: string, processing_time: number, analysis_blocks: json }`
 
-### Function 2: Content Validator
-**Trigger**: Scraper function completion
-**Input**: Scraped content reference
-**Process**:
-1. Load scraped content
-2. Use lightweight LLM to validate content structure
-3. Check for completeness and accuracy
-4. Generate validation report
-5. Trigger main analysis if valid
-
-**Output**: `{ isValid: boolean, confidence: number, issues: string[] }`
-
-### Function 3: LLM Analyzer
-**Trigger**: Successful validation
-**Input**: Validated scraped content
-**Process**:
-1. Load content and validation results
-2. Send structured prompt to Hugging Face LLM
-3. Parse LLM response into structured format
-4. Generate Mermaid diagrams
-5. Create HTML/CSS previews
-6. Generate markdown summary
-7. Save all outputs to database and storage
-8. Deduct user credit
-9. Update summary status to completed
-
-**Output**: Complete analysis object with all generated content
+### Key Improvements:
+- **Single Function**: Eliminates complex inter-function orchestration
+- **Raw Content Preservation**: No dangerous cleaning/modification
+- **AI-Generated Titles**: Smart 2-4 word titles
+- **Linear Processing**: Clear step-by-step workflow
+- **Error Recovery**: Graceful failure handling with status updates
 
 ## 🎨 User Interface Specifications
 

@@ -277,8 +277,8 @@ Authorization: Bearer <jwt_token>
 
 ## Appwrite Function Endpoints
 
-### POST `/functions/document-scraper-python/executions`
-**Purpose**: Manually trigger document scraping (admin/debug use)
+### POST `/functions/docify-unified-orchestrator/executions`
+**Purpose**: Manually trigger unified document processing (admin/debug use)
 
 **Headers**:
 ```
@@ -290,7 +290,8 @@ x-appwrite-key: <dynamic_api_key>
 ```json
 {
   "documentId": "doc_id",
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "instructions": "Analyze this documentation and provide structured insights"
 }
 ```
 
@@ -300,68 +301,41 @@ x-appwrite-key: <dynamic_api_key>
   "success": true,
   "data": {
     "documentId": "doc_id",
-    "wordCount": 1250,
-    "title": "Scraped Title",
-    "url": "https://example.com",
-    "pagesCrawled": 3,
-    "contentTypes": {
-      "html": 2,
-      "pdf": 1
-    },
-    "subpages": [
-      {
-        "url": "https://example.com/page1",
-        "title": "Page 1",
-        "word_count": 500
-      }
-    ]
+    "title": "API Documentation Guide",
+    "status": "completed",
+    "processingTime": 45.23,
+    "summary": "Comprehensive API documentation with authentication...",
+    "blocksCount": 4
   }
 }
 ```
 
-### POST `/functions/llm-analyzer/executions`
-**Purpose**: Manually trigger LLM analysis (admin/debug use)
-
-**Headers**:
-```
-Authorization: Bearer <jwt_token>
-x-appwrite-key: <dynamic_api_key>
-```
-
-**Request Body**:
-```json
-{
-  "documentId": "doc_id"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "documentId": "doc_id",
-    "summary": "Analysis summary...",
-    "blockCount": 5,
-    "processingTime": 5000
-  }
-}
-```
+#### 8-Step Processing Details:
+The unified function executes 8 sequential steps:
+1. **Extract Document Data** - Validate request parameters
+2. **Validate Environment** - Check API keys and configuration
+3. **Raw Browserless Scraping** - Scrape content without modification
+4. **Save Raw Content** - Store exact HTML in database
+5. **Generate AI Title** - Create 2-4 word intelligent titles
+6. **Generate Analysis** - Produce comprehensive AI analysis
+7. **Create Compatible Blocks** - Format blocks for frontend
+8. **Final Save & Complete** - Update database and mark complete
 
 ## Webhook/Event Endpoints
 
 ### Database Event Triggers
 These are internal Appwrite triggers, not exposed as REST endpoints:
 
-1. **Document Creation Trigger**
+1. **Unified Document Processing Trigger**
    - Event: `databases.docify_db.collections.documents_table.documents.*.create`
-   - Triggers: `document-scraper-python` function
-   - Payload: New document data
+   - Triggers: `docify-unified-orchestrator` function
+   - Payload: New document data (url, instructions, user_id)
+   - Process: Executes complete 8-step processing pipeline
 
-2. **Document Status Update Trigger**
-   - Event: `databases.docify_db.collections.documents_table.documents.*.update`
-   - Triggers: `llm-analyzer` function when status changes to 'analyzing'
-   - Payload: Document update with status change
+#### Processing Status Flow:
+- **pending** → **scraping** → **analyzing** → **completed**/**failed**
+- Each status change triggers appropriate processing steps
+- Function handles all steps sequentially within one execution
 
 ## Error Response Format
 

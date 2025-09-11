@@ -9,15 +9,16 @@ Single consolidated table storing all document data, scraped content, and analys
 
 **Attributes:**
 - `user_id` (string, required) - Appwrite user ID for isolation
-- `title` (string, optional) - User-provided document title
+- `title` (string, optional) - AI-generated 2-4 word title
 - `url` (string, required) - URL to be scraped and analyzed
 - `instructions` (string, required) - User analysis instructions
 - `status` (enum: 'pending', 'scraping', 'analyzing', 'completed', 'failed') - Processing state
 - `public` (boolean, optional) - Whether document is publicly accessible
-- `scraped_content` (string, optional) - Full scraped text content
-- `word_count` (integer, optional) - Total words scraped
-- `analysis_summary` (string, optional) - LLM-generated summary
-- `analysis_blocks` (string, optional) - JSON array of analysis blocks
+- `scraped_content` (string, optional) - Raw scraped HTML content (no cleaning)
+- `analysis_summary` (string, optional) - Readable summary (≤200 chars)
+- `analysis_blocks` (string, optional) - JSON array of analysis blocks (frontend compatible)
+- `gemini_tools_used` (string, optional) - JSON array of Gemini tools used
+- `research_context` (string, optional) - Research context (≤5000 chars)
 - `error_message` (string, optional) - Error details if processing failed
 - `$createdAt` (datetime, auto) - Creation timestamp
 - `$updatedAt` (datetime, auto) - Last update timestamp

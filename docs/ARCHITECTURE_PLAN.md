@@ -16,26 +16,28 @@ graph TB
         K[API Gateway] --> L[Real-time]
     end
     
-    subgraph "Processing Pipeline"
-        M[Scraper Function] --> N[Validator Function]
-        N --> O[LLM Analyzer Function]
-        O --> P[Summary Generator]
+    subgraph "8-Step Processing Pipeline"
+        M[Extract Document] --> N[Validate Environment]
+        N --> O[Raw Browserless Scraping]
+        O --> P[Save Raw Content]
+        P --> Q[Generate AI Title]
+        Q --> R[Generate Analysis]
+        R --> S[Create Compatible Blocks]
+        S --> T[Final Save & Complete]
     end
-    
+
     subgraph "External Services"
-        Q[Hugging Face API]
-        R[Web Scraping APIs]
-        S[Document Parsers]
+        U[Gemini AI API]
+        V[Browserless.io]
     end
-    
+
     B --> K
     K --> M
-    M --> R
-    M --> S
-    N --> Q
-    O --> Q
-    P --> H
-    P --> I
+    O --> V
+    P --> U
+    R --> U
+    T --> H
+    T --> I
     H --> C
     H --> E
 ```
@@ -48,23 +50,21 @@ sequenceDiagram
     participant U as User
     participant F as Frontend
     participant A as Appwrite
-    participant S as Scraper Function
-    participant V as Validator Function
-    participant L as LLM Function
-    participant H as Hugging Face
+    participant UF as Unified Function
+    participant G as Gemini AI
+    participant B as Browserless.io
 
     U->>F: Submit URL
     F->>A: Create processing job
-    A->>S: Trigger scraper with URL
-    S->>S: Scrape & parse content
-    S->>A: Save scraped data
-    S->>V: Trigger validation
-    V->>H: Validate content structure
-    V->>A: Save validation results
-    V->>L: Trigger LLM analysis
-    L->>H: Generate structured summary
-    L->>A: Save complete analysis
-    L->>F: Notify completion
+    A->>UF: Trigger unified orchestrator
+    UF->>UF: Extract & validate document
+    UF->>B: Raw browserless scraping
+    UF->>UF: Save raw content to DB
+    UF->>G: Generate AI-powered title
+    UF->>G: Generate comprehensive analysis
+    UF->>UF: Create compatible blocks
+    UF->>A: Save final results & update status
+    A->>F: Notify completion
     F->>U: Display results
 ```
 
@@ -172,60 +172,40 @@ flowchart TD
 
 ## 🔧 Function Architecture
 
-### Function 1: Document Scraper
+### Unified Function: Docify Orchestrator
 ```javascript
-// functions/document-scraper/
+// functions/docify-unified-orchestrator/
 {
-  name: "document-scraper",
-  runtime: "node-18.0",
-  timeout: 300, // 5 minutes
-  memory: 512,
-  environment: {
-    HUGGING_FACE_API_KEY: "secret",
-    MAX_CONTENT_SIZE: "10MB"
-  },
-  triggers: ["http", "schedule"],
-  dependencies: {
-    "puppeteer": "^21.0.0",
-    "cheerio": "^1.0.0-rc.12",
-    "pdf-parse": "^1.1.1",
-    "turndown": "^7.1.2"
-  }
-}
-```
-
-### Function 2: Content Validator
-```javascript
-// functions/content-validator/
-{
-  name: "content-validator",
-  runtime: "node-18.0",
-  timeout: 120, // 2 minutes
-  memory: 256,
-  triggers: ["http"],
-  dependencies: {
-    "@huggingface/inference": "^2.6.4",
-    "natural": "^6.5.0"
-  }
-}
-```
-
-### Function 3: LLM Analyzer
-```javascript
-// functions/llm-analyzer/
-{
-  name: "llm-analyzer",
-  runtime: "node-18.0",
-  timeout: 600, // 10 minutes
+  name: "docify-unified-orchestrator",
+  runtime: "python-3.9",
+  timeout: 500, // 8 minutes (8-step process)
   memory: 1024,
-  triggers: ["http"],
+  environment: {
+    GEMINI_API_KEY: "secret",
+    BROWSERLESS_API_KEY: "optional",
+    DATABASE_ID: "docify_db",
+    DOCUMENTS_COLLECTION_ID: "documents_table"
+  },
+  triggers: ["database"],
   dependencies: {
-    "@huggingface/inference": "^2.6.4",
-    "mermaid": "^10.4.0",
-    "marked": "^5.1.2"
+    "google-genai": "^0.8.0",
+    "requests": "^2.31.0",
+    "chardet": "^5.2.0",
+    "beautifulsoup4": "^4.12.0",
+    "appwrite": "^13.0.0"
   }
 }
 ```
+
+#### 8-Step Processing Pipeline:
+1. **Extract Document Data** - Parse request and validate inputs
+2. **Validate Environment** - Check API keys and configuration
+3. **Raw Browserless Scraping** - Scrape content without modification
+4. **Save Raw Content** - Store exact HTML in database
+5. **Generate AI Title** - Create 2-4 word intelligent titles
+6. **Generate Analysis** - Produce comprehensive AI analysis
+7. **Create Compatible Blocks** - Format blocks for frontend
+8. **Final Save & Complete** - Update database and mark complete
 
 ## 🌐 API Endpoints Design
 

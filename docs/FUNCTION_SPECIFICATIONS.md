@@ -2,29 +2,35 @@
 
 ## 🔧 Function Architecture Overview
 
-Docify uses a three-stage processing pipeline implemented as separate Appwrite Functions:
-1. **Document Scraper**: Extracts content from URLs
-2. **Content Validator**: Validates scraped content quality
-3. **LLM Analyzer**: Generates AI-powered summaries and visualizations
+Docify uses a **unified 8-step processing pipeline** implemented as a single Appwrite Function:
+1. **Docify Unified Orchestrator**: Complete document processing in one streamlined function
 
-## 📝 Function 1: Document Scraper
+### Key Improvements:
+- **Single Function**: Eliminates complex inter-function orchestration
+- **Raw Content Preservation**: No dangerous cleaning/modification
+- **AI-Powered Titles**: 2-4 word intelligent titles using Gemini
+- **Compatible Output**: Same JSON format as original analyzer
+- **Linear Processing**: Clear 8-step workflow with proper error handling
+
+## 🚀 Unified Function: Docify Orchestrator
 
 ### Configuration
 ```json
 {
-  "functionId": "document-scraper",
-  "name": "Document Scraper",
-  "runtime": "node-18.0",
-  "entrypoint": "src/main.js",
-  "timeout": 300,
-  "memory": 512,
+  "functionId": "docify-unified-orchestrator",
+  "name": "Docify Unified Orchestrator v3.0",
+  "runtime": "python-3.9",
+  "entrypoint": "src/main.py",
+  "timeout": 500,
+  "memory": 1024,
   "execute": ["users"],
-  "events": [],
+  "events": ["databases.docify_db.collections.documents_table.documents.*.create"],
   "schedule": "",
   "variables": {
-    "MAX_CONTENT_SIZE": "10485760",
-    "TIMEOUT_SECONDS": "30",
-    "USER_AGENT": "Docify-Bot/1.0"
+    "GEMINI_API_KEY": "secret",
+    "BROWSERLESS_API_KEY": "optional",
+    "DATABASE_ID": "docify_db",
+    "DOCUMENTS_COLLECTION_ID": "documents_table"
   }
 }
 ```
@@ -33,571 +39,151 @@ Docify uses a three-stage processing pipeline implemented as separate Appwrite F
 ```json
 {
   "dependencies": {
-    "node-appwrite": "^13.0.0",
-    "puppeteer": "^21.0.0",
-    "cheerio": "^1.0.0-rc.12",
-    "pdf-parse": "^1.1.1",
-    "turndown": "^7.1.2",
-    "mime-types": "^2.1.35",
-    "url-parse": "^1.5.10",
-    "crypto": "^1.0.1"
+    "google-genai": "^0.8.0",
+    "requests": "^2.31.0",
+    "chardet": "^5.2.0",
+    "beautifulsoup4": "^4.12.0",
+    "appwrite": "^13.0.0"
   }
 }
 ```
 
 ### Input Schema
 ```typescript
-interface ScraperInput {
+interface UnifiedInput {
+  $id: string;           // Document ID (auto-generated)
   url: string;           // Target URL to scrape
-  userId: string;        // User ID for attribution
-  summaryId: string;     // Summary document ID
-  options?: {
-    maxSize?: number;    // Max content size in bytes
-    timeout?: number;    // Request timeout in seconds
-    format?: 'auto' | 'html' | 'markdown' | 'pdf';
-  };
+  user_id: string;       // User ID for attribution
+  instructions: string;  // User analysis instructions
 }
 ```
 
 ### Output Schema
 ```typescript
-interface ScraperOutput {
+interface UnifiedOutput {
   success: boolean;
-  summaryId: string;
+  message: string;
   data?: {
-    title: string;
-    content: string;
-    contentType: string;
-    wordCount: number;
-    metadata: {
-      url: string;
-      domain: string;
-      extractedAt: string;
-      processingTime: number;
-      contentLength: number;
-    };
+    document_id: string;
+    title: string;       // AI-generated 2-4 word title
+    processing_time: number;
   };
-  error?: {
-    code: string;
-    message: string;
-    details?: any;
-  };
+  error?: string;
+  processing_time?: number;
 }
 ```
 
-### Core Logic Flow
-```javascript
-export default async ({ req, res, log, error }) => {
-  try {
-    // 1. Parse and validate input
-    const { url, userId, summaryId, options = {} } = JSON.parse(req.payload);
-    
-    // 2. Initialize Appwrite clients
-    const { databases, storage } = initializeAppwrite();
-    
-    // 3. Validate URL accessibility
-    const urlInfo = await validateUrl(url);
-    
-    // 4. Detect content type and choose scraping method
-    const contentType = await detectContentType(url);
-    
-    // 5. Scrape content based on type
-    let scrapedData;
-    switch (contentType) {
-      case 'text/html':
-        scrapedData = await scrapeHtml(url, options);
-        break;
-      case 'text/markdown':
-        scrapedData = await scrapeMarkdown(url, options);
-        break;
-      case 'application/pdf':
-        scrapedData = await scrapePdf(url, options);
-        break;
-      default:
-        scrapedData = await scrapeGeneric(url, options);
-    }
-    
-    // 6. Clean and structure content
-    const cleanedData = await cleanContent(scrapedData);
-    
-    // 7. Save to Appwrite Storage
-    const storageFileId = await saveToStorage(storage, summaryId, cleanedData);
-    
-    // 8. Update database
-    await updateSummaryDocument(databases, summaryId, {
-      status: 'scraped',
-      scrapedDataId: storageFileId,
-      contentType: contentType,
-      title: cleanedData.title,
-      updatedAt: new Date().toISOString()
-    });
-    
-    // 9. Trigger validation function
-    await triggerFunction('content-validator', {
-      summaryId,
-      userId,
-      scrapedDataId: storageFileId
-    });
-    
-    return res.json({
-      success: true,
-      summaryId,
-      data: {
-        title: cleanedData.title,
-        contentType,
-        wordCount: cleanedData.wordCount,
-        metadata: cleanedData.metadata
-      }
-    });
-    
-  } catch (err) {
-    error(`Scraping failed: ${err.message}`);
-    
-    // Update database with error
-    await updateSummaryDocument(databases, summaryId, {
-      status: 'failed',
-      errorMessage: err.message,
-      updatedAt: new Date().toISOString()
-    });
-    
-    return res.json({
-      success: false,
-      summaryId,
-      error: {
-        code: err.code || 'SCRAPING_ERROR',
-        message: err.message
-      }
-    }, 500);
-  }
-};
+### Database Updates
+The function updates the document record with:
+- `status`: `pending` → `scraping` → `analyzing` → `completed`/`failed`
+- `scraped_content`: Raw HTML content (no modification)
+- `title`: AI-generated 2-4 word title
+- `analysis_summary`: Readable summary (≤200 chars)
+- `analysis_blocks`: JSON array (frontend compatible)
+- `gemini_tools_used`: Simple tools array
+- `research_context`: Context (≤5000 chars)
+
+### 8-Step Processing Flow
+```python
+def main(context):
+    try:
+        # Step 1: Extract document data
+        doc_data = extract_document_data(context)
+
+        # Step 2: Validate environment
+        validate_environment()
+
+        # Step 3: Raw browserless scraping
+        raw_content = scrape_raw_content(doc_data['url'])
+
+        # Step 4: Save raw content
+        save_raw_content(doc_data['document_id'], raw_content)
+
+        # Step 5: Generate AI title
+        ai_title = generate_ai_title(doc_data['url'], raw_content, doc_data['instructions'])
+
+        # Step 6: Generate analysis
+        analysis_result = generate_analysis(doc_data['url'], raw_content, doc_data['instructions'], ai_title)
+
+        # Step 7: Create compatible blocks
+        blocks_json = create_compatible_blocks(analysis_result)
+
+        # Step 8: Final save and complete
+        final_save_and_complete(doc_data['document_id'], ai_title, analysis_result, blocks_json)
+
+        return {
+            'success': True,
+            'message': 'Document processed successfully',
+            'data': {
+                'document_id': doc_data['document_id'],
+                'title': ai_title,
+                'processing_time': processing_time
+            }
+        }
+
+    except Exception as e:
+        # Update status to failed
+        update_document_status(doc_data['document_id'], 'failed')
+        return {
+            'success': False,
+            'error': str(e),
+            'processing_time': processing_time
+        }
 ```
 
-### Key Helper Functions
-```javascript
-// HTML scraping with Puppeteer
-async function scrapeHtml(url, options) {
-  const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  
-  const page = await browser.newPage();
-  await page.setUserAgent(process.env.USER_AGENT);
-  await page.goto(url, { waitUntil: 'networkidle0', timeout: options.timeout * 1000 });
-  
-  const content = await page.evaluate(() => {
-    // Remove script, style, and nav elements
-    const elementsToRemove = document.querySelectorAll('script, style, nav, header, footer');
-    elementsToRemove.forEach(el => el.remove());
-    
-    // Extract main content
-    const main = document.querySelector('main, article, .content, #content') || document.body;
-    return {
-      title: document.title,
-      html: main.innerHTML,
-      text: main.innerText
-    };
-  });
-  
-  await browser.close();
-  return content;
-}
+### Key Features
 
-// PDF processing
-async function scrapePdf(url, options) {
-  const response = await fetch(url);
-  const buffer = await response.arrayBuffer();
-  const data = await pdfParse(buffer);
-  
-  return {
-    title: extractTitleFromPdf(data.text),
-    content: data.text,
-    text: data.text,
-    metadata: {
-      pages: data.numpages,
-      info: data.info
-    }
-  };
-}
-```
+#### 🔒 Raw Content Preservation
+- **No Dangerous Cleaning**: Saves browserless content exactly as received
+- **Complete Transparency**: You can always see what was actually scraped
+- **Reliable Storage**: Raw HTML preserved in `scraped_content` field
 
-## 🔍 Function 2: Content Validator
+#### 🤖 AI-Powered Intelligence
+- **Smart Titles**: Generates 2-4 word titles using Gemini AI
+- **Readable Summaries**: Human-friendly summaries up to 200 characters
+- **Compatible Blocks**: Exact same JSON format as original `llm-analyzer-python`
 
-### Configuration
-```json
-{
-  "functionId": "content-validator",
-  "name": "Content Validator",
-  "runtime": "node-18.0",
-  "entrypoint": "src/main.js",
-  "timeout": 120,
-  "memory": 256,
-  "execute": ["users"],
-  "variables": {
-    "HUGGING_FACE_API_KEY": "secret",
-    "VALIDATION_MODEL": "distilbert-base-uncased",
-    "MIN_CONTENT_LENGTH": "100",
-    "MAX_CONTENT_LENGTH": "50000"
-  }
-}
-```
+#### 🎯 8-Step Linear Process
+1. **Extract Document Data** - Validate request parameters
+2. **Validate Environment** - Check API keys and configuration
+3. **Raw Browserless Scraping** - Scrape content without modification
+4. **Save Raw Content** - Store exact HTML in database
+5. **Generate AI Title** - Create 2-4 word intelligent titles
+6. **Generate Analysis** - Produce comprehensive AI analysis
+7. **Create Compatible Blocks** - Format blocks for frontend
+8. **Final Save & Complete** - Update database and mark complete
 
-### Input Schema
-```typescript
-interface ValidatorInput {
-  summaryId: string;
-  userId: string;
-  scrapedDataId: string;
-}
-```
+#### 🛡️ Error Handling & Recovery
+- **Graceful Failure**: Updates status to 'failed' with error details
+- **Retry Capability**: Failed documents can be retried
+- **Status Tracking**: Clear status progression throughout process
 
-### Output Schema
-```typescript
-interface ValidatorOutput {
-  success: boolean;
-  summaryId: string;
-  validation: {
-    isValid: boolean;
-    confidence: number;     // 0-1 score
-    issues: string[];
-    metrics: {
-      contentLength: number;
-      structureScore: number;
-      readabilityScore: number;
-      completenessScore: number;
-    };
-  };
-  error?: {
-    code: string;
-    message: string;
-  };
-}
-```
+### Environment Variables
+```bash
+# Required
+GEMINI_API_KEY=your_gemini_api_key
+DATABASE_ID=docify_db
+DOCUMENTS_COLLECTION_ID=documents_table
 
-### Core Logic
-```javascript
-export default async ({ req, res, log, error }) => {
-  try {
-    const { summaryId, userId, scrapedDataId } = JSON.parse(req.payload);
-    
-    // Load scraped content from storage
-    const content = await loadScrapedContent(scrapedDataId);
-    
-    // Run validation checks
-    const validation = await validateContent(content);
-    
-    // Update database with validation results
-    await updateSummaryDocument(databases, summaryId, {
-      status: validation.isValid ? 'validated' : 'validation_failed',
-      validationData: JSON.stringify(validation),
-      updatedAt: new Date().toISOString()
-    });
-    
-    // Trigger LLM analyzer if validation passes
-    if (validation.isValid && validation.confidence > 0.7) {
-      await triggerFunction('llm-analyzer', {
-        summaryId,
-        userId,
-        scrapedDataId
-      });
-    }
-    
-    return res.json({
-      success: true,
-      summaryId,
-      validation
-    });
-    
-  } catch (err) {
-    error(`Validation failed: ${err.message}`);
-    return res.json({
-      success: false,
-      summaryId,
-      error: { code: 'VALIDATION_ERROR', message: err.message }
-    }, 500);
-  }
-};
-
-async function validateContent(content) {
-  // Basic structure validation
-  const structureScore = calculateStructureScore(content);
-  const readabilityScore = calculateReadabilityScore(content);
-  const completenessScore = calculateCompletenessScore(content);
-  
-  // LLM-based validation
-  const llmValidation = await validateWithLLM(content);
-  
-  const overallConfidence = (structureScore + readabilityScore + completenessScore + llmValidation.score) / 4;
-  
-  return {
-    isValid: overallConfidence > 0.6,
-    confidence: overallConfidence,
-    issues: llmValidation.issues,
-    metrics: {
-      contentLength: content.text.length,
-      structureScore,
-      readabilityScore,
-      completenessScore
-    }
-  };
-}
-```
-
-## 🤖 Function 3: LLM Analyzer
-
-### Configuration
-```json
-{
-  "functionId": "llm-analyzer",
-  "name": "LLM Analyzer",
-  "runtime": "node-18.0",
-  "entrypoint": "src/main.js",
-  "timeout": 600,
-  "memory": 1024,
-  "execute": ["users"],
-  "variables": {
-    "HUGGING_FACE_API_KEY": "secret",
-    "PRIMARY_MODEL": "microsoft/DialoGPT-large",
-    "MAX_TOKENS": "4000",
-    "TEMPERATURE": "0.7"
-  }
-}
-```
-
-### Input Schema
-```typescript
-interface AnalyzerInput {
-  summaryId: string;
-  userId: string;
-  scrapedDataId: string;
-}
-```
-
-### Output Schema
-```typescript
-interface AnalyzerOutput {
-  success: boolean;
-  summaryId: string;
-  analysis: {
-    overview: string;
-    keyPoints: string[];
-    mermaidDiagrams: string[];
-    htmlPreview: string;
-    markdownSummary: string;
-    tags: string[];
-    metadata: {
-      processingTime: number;
-      tokensUsed: number;
-      confidence: number;
-    };
-  };
-  error?: {
-    code: string;
-    message: string;
-  };
-}
-```
-
-### Core Analysis Logic
-```javascript
-export default async ({ req, res, log, error }) => {
-  try {
-    const { summaryId, userId, scrapedDataId } = JSON.parse(req.payload);
-    
-    // Load and prepare content
-    const content = await loadScrapedContent(scrapedDataId);
-    const preparedPrompt = await prepareAnalysisPrompt(content);
-    
-    // Generate analysis with LLM
-    const analysis = await generateAnalysis(preparedPrompt);
-    
-    // Process and structure the results
-    const structuredAnalysis = await structureAnalysisResults(analysis);
-    
-    // Generate additional content
-    const mermaidDiagrams = await generateMermaidDiagrams(structuredAnalysis);
-    const htmlPreview = await generateHtmlPreview(structuredAnalysis);
-    const markdownSummary = await generateMarkdownSummary(structuredAnalysis);
-    
-    // Save complete analysis
-    const analysisData = {
-      overview: structuredAnalysis.overview,
-      keyPoints: structuredAnalysis.keyPoints,
-      mermaidDiagrams,
-      htmlPreview,
-      markdownSummary,
-      tags: structuredAnalysis.tags,
-      metadata: {
-        processingTime: Date.now() - startTime,
-        tokensUsed: analysis.usage?.total_tokens || 0,
-        confidence: structuredAnalysis.confidence || 0.8
-      }
-    };
-    
-    // Update database
-    await updateSummaryDocument(databases, summaryId, {
-      status: 'completed',
-      analysisData: JSON.stringify(analysisData),
-      mermaidDiagrams: mermaidDiagrams,
-      htmlPreview: htmlPreview,
-      markdownSummary: markdownSummary,
-      tags: structuredAnalysis.tags,
-      updatedAt: new Date().toISOString()
-    });
-    
-    // Deduct user credit
-    await deductUserCredit(databases, userId);
-    
-    return res.json({
-      success: true,
-      summaryId,
-      analysis: analysisData
-    });
-    
-  } catch (err) {
-    error(`Analysis failed: ${err.message}`);
-    
-    await updateSummaryDocument(databases, summaryId, {
-      status: 'failed',
-      errorMessage: err.message,
-      updatedAt: new Date().toISOString()
-    });
-    
-    return res.json({
-      success: false,
-      summaryId,
-      error: { code: 'ANALYSIS_ERROR', message: err.message }
-    }, 500);
-  }
-};
-```
-
-### Prompt Engineering
-```javascript
-function prepareAnalysisPrompt(content) {
-  return `
-You are a documentation analysis expert. Analyze the following content and provide a structured response in JSON format.
-
-Content to analyze:
-Title: ${content.title}
-Content: ${content.text.substring(0, 3000)}...
-
-Please provide your analysis in this exact JSON structure:
-{
-  "overview": "A comprehensive 2-3 paragraph overview of the documentation",
-  "keyPoints": ["array", "of", "key", "points", "from", "the", "content"],
-  "diagrams": [
-    {
-      "type": "flowchart",
-      "title": "Process Flow",
-      "mermaid": "graph TD\\n    A[Start] --> B[Process]\\n    B --> C[End]"
-    }
-  ],
-  "codeExamples": [
-    {
-      "language": "javascript",
-      "title": "Example Implementation",
-      "code": "// Example code here"
-    }
-  ],
-  "tags": ["relevant", "tags", "for", "categorization"],
-  "confidence": 0.85
-}
-
-Focus on:
-1. Creating accurate Mermaid diagrams that represent workflows, architectures, or processes
-2. Extracting practical code examples with proper syntax highlighting
-3. Identifying key concepts and technical details
-4. Generating relevant tags for categorization
-5. Providing actionable insights
-
-Respond only with valid JSON, no additional text.
-`;
-}
-```
-
-### Mermaid Diagram Generation
-```javascript
-async function generateMermaidDiagrams(analysis) {
-  const diagrams = [];
-  
-  // Process each diagram from the analysis
-  for (const diagramData of analysis.diagrams || []) {
-    try {
-      // Validate Mermaid syntax
-      const validatedMermaid = await validateMermaidSyntax(diagramData.mermaid);
-      
-      diagrams.push({
-        type: diagramData.type,
-        title: diagramData.title,
-        code: validatedMermaid,
-        svg: await renderMermaidToSvg(validatedMermaid)
-      });
-    } catch (err) {
-      log(`Failed to process diagram: ${err.message}`);
-    }
-  }
-  
-  return diagrams;
-}
-```
-
-## 🔄 Function Orchestration
-
-### Trigger Chain
-```javascript
-// Function 1 triggers Function 2
-await triggerFunction('content-validator', payload);
-
-// Function 2 triggers Function 3 (if validation passes)
-await triggerFunction('llm-analyzer', payload);
-
-// Helper function for triggering
-async function triggerFunction(functionId, payload) {
-  const functions = new Functions(client);
-  return await functions.createExecution(
-    functionId,
-    JSON.stringify(payload),
-    false, // not async
-    '/',   // path
-    'POST', // method
-    {}     // headers
-  );
-}
-```
-
-### Error Handling & Retries
-```javascript
-async function executeWithRetry(operation, maxRetries = 3) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      if (attempt === maxRetries) throw error;
-      
-      const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-}
+# Optional (Enhanced)
+BROWSERLESS_API_KEY=your_browserless_api_key
 ```
 
 ### Monitoring & Logging
-```javascript
-// Structured logging for monitoring
-function logMetrics(functionName, operation, duration, success, metadata = {}) {
-  const logData = {
-    function: functionName,
-    operation,
-    duration,
-    success,
-    timestamp: new Date().toISOString(),
-    ...metadata
-  };
-  
-  console.log(JSON.stringify(logData));
-}
+```python
+# Structured logging for monitoring
+def log_metrics(step, duration, success, metadata={}):
+    log_data = {
+        "function": "docify-unified-orchestrator",
+        "step": step,
+        "duration": duration,
+        "success": success,
+        "timestamp": datetime.now().isoformat(),
+        **metadata
+    }
+    print(json.dumps(log_data))
 ```
 
 ---
 
-*These function specifications provide detailed implementation guidance for building Docify's serverless processing pipeline with Appwrite Functions.*
+*This unified function specification replaces the previous three-function architecture with a streamlined, reliable single-function approach that maintains all the original functionality while adding new capabilities.*

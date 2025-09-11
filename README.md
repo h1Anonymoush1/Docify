@@ -1,38 +1,81 @@
 # Docify - AI-Powered Document Analysis
 
-Docify is a web application that allows users to analyze any website using AI-powered content extraction and visualization. Users can input a URL and instructions, and the system will scrape the content, analyze it with Hugging Face's LLM, and present the results in interactive charts and summaries.
+Docify is a web application that allows users to analyze any website using AI-powered content extraction and visualization. Users can input a URL and instructions, and the system will scrape the content, analyze it with Google's Gemini AI, and present the results in interactive charts and summaries.
 
-## 🚀 Features
+## 🎯 Key Features
 
-- **Universal Web Scraping**: Extract content from any website
-- **AI-Powered Analysis**: Uses Hugging Face's Mistral model for intelligent analysis
-- **Interactive Visualizations**: Automatic generation of Mermaid diagrams and charts
-- **Flexible Content Types**: Supports summaries, code examples, API references, guides, and more
-- **Responsive Design**: Works on all devices with adaptive grid layouts
-- **Real-time Processing**: Live status updates during document processing
+- **🔒 Raw Content Preservation**: Saves exact browserless HTML without dangerous cleaning
+- **🤖 AI-Generated Titles**: Smart 2-4 word titles using Gemini AI
+- **📝 Readable Summaries**: Human-friendly summaries up to 200 characters
+- **🔗 Format Compatibility**: Same JSON blocks format as original analyzer
+- **🎯 8-Step Linear Process**: Clear, reliable processing pipeline
+- **🛡️ Error Recovery**: Graceful failure handling with status updates
+- **🌐 Universal Web Scraping**: Extract content from any website
+- **📊 Interactive Visualizations**: Automatic generation of Mermaid diagrams and charts
+- **📱 Responsive Design**: Works on all devices with adaptive grid layouts
+
+## 🔄 How It Works
+
+```mermaid
+graph TD
+    A[User Submits URL] --> B[Create Document Record]
+    B --> C[Trigger Unified Function]
+    C --> D[Extract Document Data]
+    D --> E[Validate Environment]
+    E --> F[Raw Browserless Scraping]
+    F --> G[Save Raw Content]
+    G --> H[Generate AI Title]
+    H --> I[Generate Analysis]
+    I --> J[Create Compatible Blocks]
+    J --> K[Final Save & Complete]
+    K --> L[Display Results]
+
+    style A fill:#14b8a6,color:#ffffff
+    style K fill:#14b8a6,color:#ffffff
+    style L fill:#14b8a6,color:#ffffff
+```
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   User Input    │    │   Web Scraper   │    │   LLM Analyzer  │
-│   (Frontend)    │───▶│   (Appwrite     │───▶│   (Appwrite     │
-│                 │    │   Function)     │    │   Function)     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────────┐    ┌─────────────────┐
+│   User Input    │    │   Unified Function   │    │   Results View  │
+│   (Frontend)    │───▶│   (Appwrite)         │───▶│   (Frontend)    │
+│                 │    │   8-Step Process     │    │                 │
+└─────────────────┘    └─────────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Document DB   │    │   Analysis DB   │    │   Results View  │
-│   (Appwrite)    │    │   (Appwrite)    │    │   (Frontend)    │
+│   Document      │    │   Gemini AI     │    │   Browserless   │
+│   Creation      │    │   (Analysis)    │    │   (Scraping)    │
+│   (Database)    │    │                 │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
+
+### 🔄 Processing Flow
+1. **User submits URL** → Document record created
+2. **Unified function triggered** → 8-step processing begins
+3. **Raw content scraped** → Exact HTML preserved
+4. **AI analysis performed** → Gemini generates insights
+5. **Results formatted** → Compatible with existing frontend
+6. **Document updated** → Ready for display
+
+### 🛠️ Technical Stack
+- **Frontend**: SvelteKit with TypeScript
+- **Backend**: Appwrite Functions (Python)
+- **Database**: Appwrite Database (consolidated schema)
+- **AI**: Google Gemini 2.5 Pro
+- **Scraping**: Browserless.io + Requests
+- **Hosting**: Vercel (frontend) + Appwrite Cloud (backend)
 
 ## 📋 Prerequisites
 
 - Node.js 18+
 - npm or yarn
+- Python 3.9+ (for function development)
 - Appwrite account and project
-- Hugging Face API token
+- Google Gemini API key
+- Browserless.io API key (optional, enhances scraping)
 
 ## 🛠️ Setup Instructions
 
@@ -47,66 +90,70 @@ Docify is a web application that allows users to analyze any website using AI-po
 
 ### 2. Database Configuration
 
-Create the following collections in your Appwrite database:
+Create a single consolidated collection in your Appwrite database:
 
-#### Documents Collection
+#### Documents Collection (Consolidated)
 ```json
 {
-  "name": "documents",
+  "name": "documents_table",
   "permissions": ["create", "read", "update"],
   "attributes": [
+    {"key": "user_id", "type": "string", "size": 36, "required": true},
+    {"key": "title", "type": "string", "size": 255, "required": false},
     {"key": "url", "type": "string", "required": true},
-    {"key": "instructions", "type": "string", "required": true},
-    {"key": "title", "type": "string", "required": false},
+    {"key": "instructions", "type": "string", "size": 1000, "required": true},
     {"key": "status", "type": "enum", "elements": ["pending", "scraping", "analyzing", "completed", "failed"], "required": true},
-    {"key": "user_id", "type": "string", "required": true},
-    {"key": "scraped_content", "type": "string", "required": false}
+    {"key": "public", "type": "boolean", "default": false},
+    {"key": "scraped_content", "type": "string", "size": 99999, "required": false},
+    {"key": "analysis_summary", "type": "string", "size": 2000, "required": false},
+    {"key": "analysis_blocks", "type": "string", "size": 99999, "required": false},
+    {"key": "gemini_tools_used", "type": "string", "size": 1000, "required": false},
+    {"key": "research_context", "type": "string", "size": 5000, "required": false},
+    {"key": "$createdAt", "type": "datetime", "required": true},
+    {"key": "$updatedAt", "type": "datetime", "required": true}
   ]
 }
 ```
 
-#### Analysis Results Collection
-```json
-{
-  "name": "analysis_results",
-  "permissions": ["create", "read"],
-  "attributes": [
-    {"key": "document_id", "type": "string", "required": true},
-    {"key": "summary", "type": "string", "required": true},
-    {"key": "charts", "type": "array", "required": true},
-    {"key": "raw_response", "type": "string", "required": false},
-    {"key": "processing_time", "type": "integer", "required": false}
-  ]
-}
-```
+**Key Changes:**
+- **Single Collection**: All data consolidated into one table
+- **AI-Generated Titles**: `title` field now contains AI-generated 2-4 word titles
+- **Raw Content**: `scraped_content` stores exact browserless HTML
+- **Compatible Format**: `analysis_blocks` maintains same JSON structure as original analyzer
+- **Enhanced Fields**: Added `gemini_tools_used` and `research_context` for tracking
 
 ### 3. Environment Variables
 
-Create a `.env.local` file in the `docify-website` directory:
+Create environment files for both frontend and backend:
 
+#### Frontend (.env.local in docify-website/)
 ```env
 # Appwrite Configuration
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://your-region.cloud.appwrite.io/v1
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=your-project-id
 NEXT_PUBLIC_APPWRITE_DATABASE_ID=your-database-id
-NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID=documents
-NEXT_PUBLIC_APPWRITE_ANALYSIS_COLLECTION_ID=analysis_results
+NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID=documents_table
 
-# Hugging Face API
-HUGGINGFACE_ACCESS_TOKEN=your-huggingface-token
-
-# Appwrite Server-side (for API routes)
-APPWRITE_ENDPOINT=https://your-region.cloud.appwrite.io/v1
-APPWRITE_PROJECT_ID=your-project-id
-APPWRITE_API_KEY=your-server-api-key
-DATABASE_ID=your-database-id
-DOCUMENTS_COLLECTION_ID=documents
-ANALYSIS_COLLECTION_ID=analysis_results
+# OAuth Configuration (if using social login)
+NEXT_PUBLIC_APPWRITE_OAUTH_SUCCESS_URL=http://localhost:5173/auth/success
+NEXT_PUBLIC_APPWRITE_OAUTH_FAILURE_URL=http://localhost:5173/auth/error
 ```
 
-### 4. Deploy Functions
+#### Backend Function Environment Variables
+Set these in your Appwrite function configuration:
+```env
+# Required
+GEMINI_API_KEY=your-gemini-api-key
+DATABASE_ID=your-database-id
+DOCUMENTS_COLLECTION_ID=documents_table
 
-Deploy the Appwrite functions using the Appwrite CLI:
+# Optional (enhances scraping)
+BROWSERLESS_API_KEY=your-browserless-api-key
+```
+
+### 4. Deploy Unified Function
+
+Deploy the unified orchestrator function:
 
 ```bash
 # Install Appwrite CLI
@@ -115,11 +162,24 @@ npm install -g appwrite-cli
 # Login to Appwrite
 appwrite login
 
-# Deploy functions
-appwrite deploy function
+# Navigate to function directory
+cd functions/docify-unified-orchestrator
+
+# Deploy the unified function
+appwrite functions create-deployment \
+  --function-id docify-unified-orchestrator \
+  --activate true \
+  --code .
 ```
 
-Or deploy manually through the Appwrite Console by uploading the function code.
+**Function Details:**
+- **Name**: Docify Unified Orchestrator v3.0
+- **Runtime**: Python 3.9
+- **Trigger**: Database events on document creation
+- **Timeout**: 500 seconds (for 8-step process)
+- **Memory**: 1024MB
+
+**Note**: The unified function replaces the previous separate scraper and analyzer functions.
 
 ### 5. Frontend Setup
 
@@ -133,23 +193,37 @@ npm run dev
 
 ### Creating a Document
 
-1. Navigate to `/documents` in your application
+1. Navigate to the main page of your application
 2. Enter a URL you want to analyze
 3. Provide analysis instructions (e.g., "Create a visual overview of the API endpoints")
 4. Click "Create Document"
 
+### 8-Step Processing Flow
+
+The unified function executes 8 sequential steps:
+
+1. **📋 Extract Document Data** - Parse request and validate inputs
+2. **📝 Validate Environment** - Check API keys and configuration
+3. **🌐 Raw Browserless Scraping** - Scrape content without modification
+4. **💾 Save Raw Content** - Store exact HTML in database
+5. **🏷️ Generate AI Title** - Create 2-4 word intelligent titles
+6. **📈 Generate Analysis** - Produce comprehensive AI analysis
+7. **🧩 Create Compatible Blocks** - Format blocks for frontend
+8. **✅ Final Save & Complete** - Update database and mark complete
+
 ### Analysis Results
 
 The system will:
-1. **Scrape** the website content
-2. **Analyze** it using AI
-3. **Generate** multiple content blocks including:
-   - Summary of the document
-   - Mermaid diagrams and charts
-   - Code examples
+1. **Preserve** raw HTML content without dangerous cleaning
+2. **Generate** AI-powered 2-4 word titles
+3. **Analyze** content using Google Gemini AI
+4. **Create** multiple content blocks in compatible JSON format:
+   - Summary of the document (≤200 chars)
+   - Mermaid diagrams and flowcharts
+   - Code examples with syntax highlighting
    - Key points and highlights
-   - API references
-   - Step-by-step guides
+   - API references and guides
+   - Troubleshooting and best practices
 
 ### Content Block Types
 
@@ -165,33 +239,40 @@ The system will:
 
 ## 🔧 Configuration
 
-### Function Environment Variables
+### Unified Function Environment Variables
 
-#### Document Scraper Function
-- `DATABASE_ID`: Your database ID
-- `DOCUMENTS_COLLECTION_ID`: Documents collection ID
-- `ANALYSIS_COLLECTION_ID`: Analysis results collection ID
+#### Required Variables
+- `GEMINI_API_KEY`: Your Google Gemini API key
+- `DATABASE_ID`: Your Appwrite database ID
+- `DOCUMENTS_COLLECTION_ID`: Documents table ID (documents_table)
 
-#### LLM Analyzer Function
-- `DATABASE_ID`: Your database ID
-- `DOCUMENTS_COLLECTION_ID`: Documents collection ID
-- `ANALYSIS_COLLECTION_ID`: Analysis results collection ID
-- `HUGGINGFACE_ACCESS_TOKEN`: Your Hugging Face API token
+#### Optional Variables
+- `BROWSERLESS_API_KEY`: Browserless.io API key for enhanced scraping
 
-### Customizing the LLM Prompt
+### Status Tracking
 
-Edit the `createAnalysisPrompt` function in `functions/llm-analyzer/src/main.js` to customize how the AI analyzes documents.
+The function updates document status through 5 stages:
+- `pending` → Document created, waiting for processing
+- `scraping` → Currently scraping content from URL
+- `analyzing` → Scraping complete, analyzing with Gemini
+- `completed` → Analysis complete, ready for display
+- `failed` → Processing failed (can be retried)
+
+### Customizing the AI Analysis
+
+Edit the analysis prompt in `functions/docify-unified-orchestrator/src/main.py` to customize how Gemini analyzes documents. The prompt includes instructions for generating compatible JSON blocks.
 
 ## 📊 API Endpoints
 
-### POST `/api/scrape`
-Triggers the document scraping process.
+### POST `/functions/docify-unified-orchestrator/executions`
+Triggers the unified document processing pipeline.
 
 **Request Body:**
 ```json
 {
   "documentId": "document-id",
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "instructions": "Analyze this documentation and create visual diagrams"
 }
 ```
 
@@ -200,52 +281,80 @@ Triggers the document scraping process.
 {
   "success": true,
   "executionId": "execution-id",
-  "message": "Document scraping started successfully"
+  "message": "Unified processing started - 8 steps will be executed"
 }
 ```
+
+### Database Event Triggers
+The unified function is automatically triggered when:
+- **Document Creation**: `databases.docify_db.collections.documents_table.documents.*.create`
+- **Status Updates**: Automatic progression through processing stages
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Scraping Fails**: Some websites block scraping. Try with different URLs or check if the site has anti-bot measures.
+1. **Function Deployment Fails**: Ensure Python 3.9+ runtime is selected and all dependencies are installed.
 
-2. **LLM Analysis Fails**: Check your Hugging Face API token and ensure you have sufficient API credits.
+2. **Gemini API Errors**: Check your `GEMINI_API_KEY` and ensure you have API quota remaining.
 
-3. **Database Errors**: Verify your collection permissions and database configuration.
+3. **Browserless Scraping Fails**: Some websites block scraping. Try without `BROWSERLESS_API_KEY` or use different URLs.
 
-4. **Function Timeouts**: Large documents may take longer to process. Consider increasing function timeout limits.
+4. **Database Connection Issues**: Verify your Appwrite database configuration and collection permissions.
+
+5. **Function Timeouts**: The 8-step process may take time. The default 500s timeout should handle most documents.
 
 ### Debug Mode
 
-Enable debug logging by setting the log level in your functions:
-
-```javascript
-log('Debug information here');
+Monitor function logs through the Appwrite Console:
+```bash
+appwrite functions logs --function-id docify-unified-orchestrator
 ```
+
+Check document status in your database to see processing progress through the 5 stages: `pending` → `scraping` → `analyzing` → `completed`/`failed`.
 
 ## 🔒 Security
 
-- All functions require proper authentication
-- Database collections have user-based permissions
-- API keys are stored securely as environment variables
-- Web scraping respects robots.txt (when possible)
+- OAuth authentication with Google and GitHub
+- User-based data isolation in database
+- API keys stored securely as environment variables
+- Raw content preservation maintains original security context
+- Function execution limited to authorized users only
 
 ## 🚀 Deployment
 
 ### Production Deployment
 
-1. Set up production environment variables
-2. Deploy functions to Appwrite
-3. Build and deploy the Next.js application
-4. Configure custom domain (optional)
+1. **Appwrite Setup**:
+   - Create production project on Appwrite Cloud
+   - Set up database with consolidated schema
+   - Configure OAuth providers (Google, GitHub)
+
+2. **Function Deployment**:
+   ```bash
+   cd functions/docify-unified-orchestrator
+   appwrite functions create-deployment --function-id docify-unified-orchestrator --activate true --code .
+   ```
+
+3. **Frontend Deployment**:
+   ```bash
+   cd docify-website
+   npm run build
+   npm run preview  # or deploy to Vercel/Netlify
+   ```
+
+4. **Environment Configuration**:
+   - Set production API keys
+   - Configure production database
+   - Set up monitoring and alerts
 
 ### Scaling Considerations
 
-- Function execution time limits
-- Database read/write limits
-- API rate limits for external services
-- Storage limits for large documents
+- **Function Limits**: 500s timeout, 1024MB memory for complex analyses
+- **Gemini API**: Monitor usage and costs
+- **Database**: Consolidated schema reduces query complexity
+- **Browserless**: Optional enhancement for difficult sites
+- **Storage**: Raw content preservation requires adequate storage
 
 ## 🤝 Contributing
 
@@ -264,8 +373,28 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For support and questions:
 - Check the troubleshooting section above
 - Review the Appwrite documentation
-- Create an issue in the repository
+- Monitor function logs: `appwrite functions logs --function-id docify-unified-orchestrator`
+- Check document status in database for processing progress
+
+## 📈 Key Improvements (v3.0)
+
+### 🔄 Unified Architecture
+- **Single Function**: Replaced separate scraper + analyzer with unified orchestrator
+- **8-Step Process**: Clear, linear processing pipeline
+- **Raw Content**: Preserves exact HTML without dangerous cleaning
+- **AI Titles**: Smart 2-4 word titles using Gemini
+
+### 🤖 Enhanced AI
+- **Google Gemini**: Latest AI model with advanced capabilities
+- **Compatible Format**: Same JSON blocks as original analyzer
+- **Error Recovery**: Graceful failure handling with status updates
+- **Simple Tools**: Clean tracking of AI tool usage
+
+### 🗄️ Database Optimization
+- **Consolidated Schema**: Single table for all document data
+- **Removed Fields**: Cleaned up unused attributes (13/17 used)
+- **Enhanced Fields**: Added tracking for tools and research context
 
 ---
 
-Built with ❤️ using Appwrite, Next.js, and Hugging Face
+Built with ❤️ using Appwrite, SvelteKit, Google Gemini, and Python
