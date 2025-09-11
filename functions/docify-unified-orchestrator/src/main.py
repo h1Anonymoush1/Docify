@@ -165,13 +165,13 @@ def scrape_raw_content(url: str) -> str:
                         print(f"   ⚠️ Browserless returned same/smaller content")
                 else:
                     print(f"   ❌ Browserless failed: {response.status_code}")
-    except Exception as e:
+            except Exception as e:
                 print(f"   ❌ Browserless error: {e}")
         else:
             print("   ⚠️ No BROWSERLESS_API_KEY provided")
 
-                if not html_content:
-        raise ValueError("Failed to scrape content from URL")
+        if not html_content:
+            raise ValueError("Failed to scrape content from URL")
 
     print(f"✅ Raw content scraped: {len(html_content)} characters")
     return html_content
@@ -217,8 +217,8 @@ Generate a title with exactly 2-4 words that captures the essence of this conten
     try:
         gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-            response = gemini_client.models.generate_content(
-                model=GEMINI_MODEL,
+        response = gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
             contents=title_prompt,
             config=genai.types.GenerateContentConfig(
                 temperature=0.7,
@@ -315,8 +315,8 @@ Ensure the response is valid JSON."""
     try:
         gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 
-            response = gemini_client.models.generate_content(
-                model=GEMINI_MODEL,
+        response = gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
             contents=analysis_prompt,
             config=genai.types.GenerateContentConfig(
                 temperature=0.7,
@@ -346,12 +346,12 @@ Ensure the response is valid JSON."""
                 print(f"   Blocks: {len(parsed_response['blocks'])}")
 
                 return parsed_response
-                else:
-                raise ValueError('No JSON found in response')
             else:
+                raise ValueError('No JSON found in response')
+        else:
             raise ValueError('No response from Gemini')
 
-        except Exception as e:
+    except Exception as e:
         print(f"❌ Analysis generation failed: {e}")
         raise
 
@@ -412,8 +412,8 @@ def final_save_and_complete(document_id: str, ai_title: str, analysis_result: Di
     # Research context (for now, just a portion of the summary)
     research_context = full_summary[:5000] if full_summary else ""
 
-            update_data = {
-                'status': 'completed',
+    update_data = {
+        'status': 'completed',
         'title': ai_title,
         'analysis_summary': readable_summary,
         'analysis_blocks': blocks_json,
@@ -484,7 +484,7 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
         print(f"⏱️ Total processing time: {processing_time:.2f}s")
         print("🎉 === DOCIFY UNIFIED ORCHESTRATOR COMPLETED ===")
 
-            return {
+        return {
             'success': True,
             'message': 'Document processed successfully',
             'data': {
@@ -494,7 +494,7 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
             }
         }
 
-        except Exception as e:
+    except Exception as e:
         processing_time = time.time() - start_time
         print(f"❌ Processing failed in {processing_time:.2f}s: {e}")
 
@@ -508,9 +508,9 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
                     {'status': 'failed'}
                 )
         except:
-                pass
+            pass
 
-            return {
+        return {
             'success': False,
             'error': str(e),
             'processing_time': round(processing_time, 2)
