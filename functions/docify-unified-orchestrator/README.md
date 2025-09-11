@@ -1,19 +1,28 @@
-# Docify Unified Orchestrator v2.5
+# Docify Unified Orchestrator v2.5 Pro
 
-A revolutionary document analysis function that leverages **all available Gemini API tools** for comprehensive web scraping, research, and content analysis. This is the unified replacement for the old `llm-analyzer-python` and `document-scraper-python` functions.
+A revolutionary document analysis function that leverages **Gemini 2.5 Pro** with advanced system prompts and comprehensive tool integration for personalized, research-enhanced content analysis. This is the unified replacement for the old `llm-analyzer-python` and `document-scraper-python` functions.
 
 ## 🎯 **Core Innovation**
 
-This function uses **Gemini as the central AI orchestrator** with access to available built-in tools:
-- **Google Search**: Research related topics and find additional context
-- **URL Context**: Enhanced content analysis with web context
+This function uses **Gemini 2.5 Pro as the central AI orchestrator** with an advanced system prompt that creates personalized learning experiences:
 
-The orchestrator:
-- **Analyzes requests** and decides what tools to use
-- **Orchestrates multi-round workflows** using all available Gemini tools
-- **Synthesizes results** from multiple tools into comprehensive analysis
-- **Learns from user interests** to provide personalized research
-- **Processes multiple content types** with advanced scraping capabilities
+### **Advanced System Prompt Integration**
+- **User-Centric Analysis**: Every analysis is tailored to user instructions and learning goals
+- **Research-Driven Enhancement**: Automatically researches complementary topics based on user context
+- **Progressive Learning**: Adapts complexity and presentation based on user expertise level
+- **Practical Application**: Focuses on actionable insights and real-world implementation
+
+### **Multi-Tool Orchestration**
+- **Google Search**: Research current best practices, trends, and related technologies
+- **URL Context**: Enhanced content analysis with web relationships and context
+- **Code Analysis**: Detect, validate, and enhance code examples
+- **Content Extraction**: Multi-format parsing with intelligent metadata processing
+
+### **Personalized Learning Experience**
+- **Instruction-Driven Research**: Uses user prompts to guide research direction
+- **Context-Aware Presentation**: Adapts block types and complexity based on user needs
+- **Progressive Disclosure**: Builds from foundational to advanced concepts
+- **Practical Focus**: Ensures all insights are immediately applicable
 
 ## 🏗️ **Architecture**
 
@@ -34,17 +43,18 @@ docify-unified-orchestrator/
 
 ### **Tool Ecosystem**
 
-#### **Built-in Gemini Tools (Always Available)**
-- 🔍 **Google Search**: Research related topics, verify information, find additional context
-- 🌐 **URL Context**: Enhanced content analysis with web context and related content
+#### **Gemini 2.5 Pro Tools (Advanced Integration)**
+- 🔍 **Google Search**: Research current best practices, industry trends, and complementary technologies
+- 🌐 **URL Context**: Enhanced content analysis with web relationships and contextual enrichment
+- 💻 **Code Analysis**: Intelligent code detection, validation, and enhancement
+- 📊 **Content Intelligence**: Multi-format parsing with semantic understanding
 
-#### **Advanced Processing Capabilities**
-- 📄 **Multi-Format Content Extraction**: HTML, PDF, JSON, XML, and plain text
-- 🔬 **Comprehensive Content Analysis**: Metadata extraction, structured data parsing
-- 🎯 **Research Enrichment**: Multi-round research with user interests integration
-- 💾 **Code Analysis**: Language detection, code validation, example extraction
-- 🔗 **Link Analysis**: Contextual link extraction with relationship mapping
-- 🖼️ **Media Processing**: Image and video content detection and analysis
+#### **Streamlined Processing Capabilities**
+- 🌐 **Web Content Extraction**: Intelligent HTML content extraction with smart fallbacks
+- 🔬 **Content Analysis**: Metadata extraction, code block detection, link analysis
+- 🎯 **Research Enhancement**: User-instruction-driven research using Google Search
+- 💻 **Code Intelligence**: Syntax highlighting detection and code example extraction
+- 📊 **Smart Content Processing**: Clean text extraction with navigation filtering
 
 ## 🚀 **Key Features**
 
@@ -54,13 +64,12 @@ docify-unified-orchestrator/
 - **Context Awareness**: Each tool call includes relevant context from previous operations
 - **Dynamic Workflow**: Tools are orchestrated in the most efficient sequence
 
-### **Comprehensive Content Support**
-- **📄 Documents**: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), CSV, TXT, Markdown
-- **🌐 Web Content**: HTML, XML, RSS/Atom feeds, JSON APIs with advanced parsing
-- **📊 Structured Data**: JSON, XML, CSV spreadsheets with schema detection
-- **📝 Text Files**: Plain text, Markdown, configuration files
-- **🔗 Rich Metadata**: Open Graph, Twitter Cards, JSON-LD structured data
-- **💾 Code Content**: Multi-language code detection and validation
+### **Focused Content Support**
+- **🌐 Web Pages**: HTML content with intelligent extraction and cleaning
+- **📝 Text Content**: Plain text and structured web content
+- **💻 Code Examples**: Syntax-highlighted code blocks and inline code
+- **🔗 Link Analysis**: Contextual link extraction and filtering
+- **📊 Metadata**: Title, description, and content structure analysis
 
 ### **Advanced Research & Enrichment**
 - **Personalized Research**: Automatically researches topics based on user interests
@@ -86,10 +95,11 @@ DOCUMENTS_COLLECTION_ID=documents_table
 APPWRITE_FUNCTION_API_ENDPOINT=https://cloud.appwrite.io/v1
 APPWRITE_FUNCTION_PROJECT_ID=your_project_id
 
-# Optional
+# Optional (Enhanced for Pro model)
 ANALYSIS_COLLECTION_ID=analysis_results
-MAX_CONTENT_LENGTH=50000
-MAX_TOOL_EXECUTIONS=10
+MAX_CONTENT_LENGTH=150000  # Increased for Gemini 2.5 Pro
+MAX_TOOL_EXECUTIONS=20     # Increased for advanced orchestration
+TOOL_TIMEOUT=45            # Extended timeout for Pro model
 ```
 
 ### **2. Install Dependencies**

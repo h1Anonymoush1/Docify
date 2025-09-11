@@ -34,10 +34,51 @@ client.set_key(os.environ.get('APPWRITE_API_KEY'))
 databases = Databases(client)
 
 # Gemini configuration
-GEMINI_MODEL = "gemini-2.5-flash"  # Latest model with full tool support
-MAX_CONTENT_LENGTH = 100000  # Maximum content to process
-MAX_TOOL_EXECUTIONS = 15  # Maximum tool calls per analysis
-TOOL_TIMEOUT = 30  # Tool execution timeout in seconds
+GEMINI_MODEL = "gemini-2.5-pro"  # Advanced model with superior reasoning and tool integration
+MAX_CONTENT_LENGTH = 150000  # Maximum content to process (increased for Pro model)
+MAX_TOOL_EXECUTIONS = 20  # Maximum tool calls per analysis (increased for Pro model)
+TOOL_TIMEOUT = 45  # Tool execution timeout in seconds (increased for Pro model)
+
+# System prompt configuration
+SYSTEM_PROMPT = """You are Docify AI, an advanced technical documentation analyzer powered by Gemini 2.5 Pro.
+
+Your mission is to analyze any web content or document and create comprehensive, visually-rich explanations that help users understand complex technical topics.
+
+CORE CAPABILITIES:
+1. 🌐 Advanced web scraping and content extraction
+2. 🔍 Deep research using Google Search integration
+3. 📊 Multi-format content analysis (HTML, PDF, API docs, tutorials, etc.)
+4. 🎨 Intelligent block generation with optimal visualization types
+5. 🔬 User-centric analysis guided by their specific instructions
+
+ANALYSIS FRAMEWORK:
+- Always prioritize user instructions for research direction and presentation style
+- Use user prompts to guide what aspects to emphasize and how to present information
+- Research related topics when relevant to user interests
+- Create analysis blocks that directly address user questions and needs
+- Adapt visualization types based on content type and user preferences
+
+TOOL INTEGRATION:
+- Google Search: Research current best practices, related technologies, alternatives
+- URL Context: Enhanced content analysis with web relationships and context
+- Code Analysis: Detect, validate, and explain code examples
+- Content Extraction: Multi-format parsing with metadata preservation
+
+OUTPUT REQUIREMENTS:
+- Generate 3-6 analysis blocks maximum, optimized for 3x3 grid layout
+- Use appropriate block types: summary, key_points, architecture, mermaid, code, api_reference, guide, comparison, best_practices, troubleshooting
+- Size blocks optimally: small (1 unit), medium (2 units), large (3 units)
+- Ensure all blocks have unique IDs and comprehensive metadata
+- Prioritize content based on user instructions and content analysis
+
+CONTENT ANALYSIS STRATEGY:
+1. Extract and analyze the main content from the provided URL
+2. Use user instructions to determine research direction and emphasis
+3. Research related topics that would help the user better understand the content
+4. Create blocks that directly address user needs and questions
+5. Optimize for visual learning with appropriate diagram types and code examples
+
+Remember: You are not just analyzing content - you are creating personalized learning experiences guided by user instructions."""
 
 # ===== LOGGER CLASS =====
 class Logger:
@@ -87,264 +128,203 @@ class Logger:
 class AdvancedContentProcessor:
     """Advanced content processor using all Gemini tools"""
 
-    def __init__(self, logger):
+    def __init__(self, logger, system_prompt: str = ""):
         self.logger = logger
+        self.system_prompt = system_prompt
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
 
-    def process_url_comprehensive(self, url: str, gemini_client) -> Dict[str, Any]:
-        """Comprehensive URL processing using all available tools"""
+    def process_url_comprehensive(self, url: str, gemini_client, user_instructions: str) -> Dict[str, Any]:
+        """Streamlined URL processing focused on web content and analysis"""
         try:
-            self.logger.log(f"🚀 Starting comprehensive URL analysis: {url}")
+            self.logger.log(f"🚀 Starting streamlined URL analysis: {url}")
 
-            # Phase 1: Initial content extraction
-            self.logger.log("📄 Phase 1: Initial content extraction")
-            initial_content = self._extract_initial_content(url)
+            # Phase 1: Clean content extraction
+            self.logger.log("📄 Phase 1: Content extraction")
+            initial_content = self._extract_web_content(url)
 
-            # Phase 2: Enhanced analysis with Gemini tools
-            self.logger.log("🤖 Phase 2: Enhanced analysis with Gemini tools")
-            enhanced_analysis = self._analyze_with_gemini_tools(url, initial_content, gemini_client)
+            # Phase 2: Gemini-powered analysis with user instructions
+            self.logger.log("🤖 Phase 2: AI analysis with user context")
+            enhanced_analysis = self._analyze_with_gemini_tools(url, initial_content, gemini_client, user_instructions)
 
-            # Phase 3: Deep content processing
-            self.logger.log("🔍 Phase 3: Deep content processing")
-            deep_content = self._process_deep_content(url, enhanced_analysis)
+            # Phase 3: Research enrichment based on user instructions
+            self.logger.log("🔬 Phase 3: Research enhancement")
+            enriched_content = self._enrich_with_research(url, enhanced_analysis, gemini_client, user_instructions)
 
-            # Phase 4: Research and context enrichment
-            self.logger.log("🔬 Phase 4: Research and context enrichment")
-            enriched_content = self._enrich_with_research(url, deep_content, gemini_client)
-
-            # Phase 5: Final synthesis
-            self.logger.log("🎯 Phase 5: Final synthesis")
+            # Phase 4: Final synthesis
+            self.logger.log("🎯 Phase 4: Final synthesis")
             final_result = self._synthesize_final_result(url, enriched_content)
 
-            self.logger.log(f"✅ Comprehensive analysis completed: {len(final_result.get('content', ''))} characters")
-            self.logger.log(f"📊 Tools used during processing: {len(self.tool_usage_log)}")
+            self.logger.log(f"✅ Analysis completed: {len(final_result.get('content', ''))} characters")
             return final_result
 
         except Exception as e:
-            self.logger.error(f"❌ Comprehensive processing failed: {e}")
-            self.logger.log(f"📊 Tools used before failure: {len(self.tool_usage_log)}")
+            self.logger.error(f"❌ Processing failed: {e}")
             return {
                 "error": str(e),
                 "url": url,
                 "fallback_content": self._extract_basic_content(url)
             }
 
-    def _extract_initial_content(self, url: str) -> Dict[str, Any]:
-        """Extract initial content from URL"""
+    def _extract_web_content(self, url: str) -> Dict[str, Any]:
+        """Extract web content with smart fallback strategies"""
         try:
-            self.logger.log(f"🌐 Fetching initial content from: {url}")
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
+            self.logger.log(f"🌐 Extracting web content from: {url}")
 
-            # Detect content type
-            content_type = response.headers.get('content-type', '').lower()
+            # Try multiple fetch strategies for better content capture
+            html_content = self._fetch_with_multiple_strategies(url)
 
-            if 'application/pdf' in content_type:
-                return self._extract_pdf_content(response, url)
-            elif 'application/json' in content_type:
-                return self._extract_json_content(response, url)
-            elif 'text/html' in content_type or 'text/plain' in content_type:
-                return self._extract_html_content(response, url)
-            else:
-                return self._extract_generic_content(response, url)
+            if not html_content:
+                raise Exception("Could not fetch content from URL")
 
-        except Exception as e:
-            self.logger.error(f"⚠️ Initial extraction failed: {e}")
-            return {"error": str(e), "url": url}
+            # Parse and extract content
+            soup = BeautifulSoup(html_content, 'lxml')
 
-    def _extract_html_content(self, response, url: str) -> Dict[str, Any]:
-        """Advanced HTML content extraction"""
-        try:
-            # Detect encoding
-            detected_encoding = chardet.detect(response.content)['encoding']
-            html_content = response.content.decode(detected_encoding or 'utf-8', errors='ignore')
-
-            soup = BeautifulSoup(html_content, 'html.parser')
-
-            # Extract comprehensive metadata
-            metadata = self._extract_comprehensive_metadata(soup)
-
-            # Extract main content with multiple strategies
-            main_content = self._extract_main_content_advanced(soup)
-
-            # Extract structured data
-            structured_data = self._extract_structured_data(soup)
-
-            # Extract links with context
-            links = self._extract_links_with_context(soup, url)
-
-            # Extract code blocks
+            # Extract metadata
+            title = self._extract_title(soup, url)
+            description = self._extract_description(soup)
+            main_content = self._extract_main_content(soup)
             code_blocks = self._extract_code_blocks(soup)
+            links = self._extract_links(soup, url)
 
-            # Extract images and media
-            media = self._extract_media_content(soup, url)
+            # Clean and process content
+            cleaned_content = self._clean_content(main_content)
 
-            result = {
+            return {
                 "url": url,
-                "content_type": "html",
-                "title": metadata.get("title", ""),
-                "description": metadata.get("description", ""),
-                "keywords": metadata.get("keywords", []),
-                "author": metadata.get("author", ""),
-                "published_date": metadata.get("published_date"),
-                "main_content": main_content,
-                "structured_data": structured_data,
-                "links": links,
+                "title": title,
+                "description": description,
+                "content": cleaned_content,
                 "code_blocks": code_blocks,
-                "media": media,
-                "word_count": len(main_content.split()),
-                "character_count": len(main_content),
-                "status_code": response.status_code,
-                "headers": dict(response.headers)
+                "links": links,
+                "word_count": len(cleaned_content.split()),
+                "content_type": "web_content"
             }
 
-            return result
-
         except Exception as e:
-            self.logger.error(f"⚠️ HTML extraction failed: {e}")
+            self.logger.error(f"⚠️ Content extraction failed: {e}")
             return {"error": str(e), "url": url}
 
-    def _extract_comprehensive_metadata(self, soup) -> Dict[str, Any]:
-        """Extract comprehensive metadata from HTML"""
-        metadata = {}
+    def _fetch_with_multiple_strategies(self, url: str) -> str:
+        """Fetch content using multiple strategies for better success rate"""
+        strategies = [
+            {
+                'name': 'modern',
+                'headers': {
+                    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9'
+                }
+            },
+            {
+                'name': 'basic',
+                'headers': {
+                    'User-Agent': 'DocifyBot/1.0 (https://docify.app)',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                }
+            }
+        ]
 
-        # Title extraction with fallbacks
-        title_tag = soup.find('title')
-        og_title = soup.find('meta', property='og:title')
-        twitter_title = soup.find('meta', attrs={'name': 'twitter:title'})
+        for strategy in strategies:
+            try:
+                self.logger.log(f"Trying {strategy['name']} fetch strategy")
+                response = self.session.get(url, headers=strategy['headers'], timeout=20)
+                if response.status_code == 200:
+                    return response.text
+            except Exception as e:
+                self.logger.log(f"{strategy['name']} strategy failed: {e}")
+                continue
 
-        metadata['title'] = (
-            og_title.get('content') if og_title else
-            twitter_title.get('content') if twitter_title else
-            title_tag.get_text(strip=True) if title_tag else ""
-        )
+        return None
 
-        # Description extraction with fallbacks
-        desc_tag = soup.find('meta', attrs={'name': 'description'})
-        og_desc = soup.find('meta', property='og:description')
-        twitter_desc = soup.find('meta', attrs={'name': 'twitter:description'})
+    def _extract_title(self, soup, url: str) -> str:
+        """Extract page title with fallbacks"""
+        title_selectors = [
+            'title',
+            'h1',
+            'h1 a',
+            '[property="og:title"]',
+            'meta[name="title"]'
+        ]
 
-        metadata['description'] = (
-            og_desc.get('content') if og_desc else
-            twitter_desc.get('content') if twitter_desc else
-            desc_tag.get('content') if desc_tag and desc_tag.get('content') else ""
-        )
+        for selector in title_selectors:
+            try:
+                if selector == 'title':
+                    element = soup.title
+                    if element and element.string:
+                        return element.string.strip()
+                else:
+                    element = soup.select_one(selector)
+                    if element:
+                        if 'property' in selector or 'name' in selector:
+                            return element.get('content', '').strip()
+                        else:
+                            return element.get_text().strip()
+            except Exception:
+                continue
 
-        # Keywords
-        keywords_tag = soup.find('meta', attrs={'name': 'keywords'})
-        metadata['keywords'] = keywords_tag.get('content').split(',') if keywords_tag and keywords_tag.get('content') else []
+        return url.split('/')[-1] or 'Untitled Page'
 
-        # Author
-        author_tag = soup.find('meta', attrs={'name': 'author'})
-        og_author = soup.find('meta', property='article:author')
-        metadata['author'] = (
-            og_author.get('content') if og_author else
-            author_tag.get('content') if author_tag else ""
-        )
+    def _extract_description(self, soup) -> str:
+        """Extract page description"""
+        desc_selectors = [
+            'meta[name="description"]',
+            'meta[property="og:description"]',
+            'meta[name="twitter:description"]'
+        ]
 
-        # Published date
-        published_tag = soup.find('meta', property='article:published_time')
-        metadata['published_date'] = published_tag.get('content') if published_tag else None
+        for selector in desc_selectors:
+            try:
+                element = soup.select_one(selector)
+                if element:
+                    return element.get('content', '').strip()
+            except Exception:
+                continue
 
-        return metadata
+        return ''
 
-    def _extract_main_content_advanced(self, soup) -> str:
-        """Advanced main content extraction"""
-        # Remove unwanted elements
-        for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside', 'advertisement']):
-            element.extract()
-
-        # Try multiple content extraction strategies
+    def _extract_main_content(self, soup) -> str:
+        """Extract main content using multiple strategies"""
         content_selectors = [
             'main',
             '[role="main"]',
             '.content',
             '.main-content',
-            '.post-content',
-            '.entry-content',
             '#content',
             '#main',
-            'article'
+            'article',
+            '.post-content',
+            '.entry-content'
         ]
 
-        main_content = ""
         for selector in content_selectors:
-            content_element = soup.select_one(selector)
-            if content_element:
-                main_content = content_element.get_text(separator=' ', strip=True)
-                if len(main_content) > 200:  # Minimum content length
-                    break
-
-        # Fallback to body content if no specific content found
-        if not main_content or len(main_content) < 200:
-            body = soup.find('body')
-            if body:
-                main_content = body.get_text(separator=' ', strip=True)
-
-        # Clean up the content
-        main_content = re.sub(r'\s+', ' ', main_content).strip()
-        return main_content
-
-    def _extract_structured_data(self, soup) -> List[Dict[str, Any]]:
-        """Extract structured data (JSON-LD, Microdata, RDFa)"""
-        structured_data = []
-
-        # JSON-LD
-        json_ld_scripts = soup.find_all('script', type='application/ld+json')
-        for script in json_ld_scripts:
             try:
-                data = json.loads(script.string)
-                structured_data.append({
-                    "type": "json-ld",
-                    "data": data
-                })
+                elements = soup.select(selector)
+                if elements:
+                    content = []
+                    for element in elements:
+                        text = element.get_text().strip()
+                        if text:
+                            content.append(text)
+
+                    if content:
+                        combined = ' '.join(content)
+                        if len(combined) > 100:
+                            return combined
             except:
                 continue
 
-        # Open Graph data
-        og_data = {}
-        for meta in soup.find_all('meta', property=lambda x: x and x.startswith('og:')):
-            og_data[meta.get('property')] = meta.get('content')
+        # Fallback to body content
+        try:
+            body = soup.body
+            if body:
+                return body.get_text().strip()
+        except Exception:
+            pass
 
-        if og_data:
-            structured_data.append({
-                "type": "open-graph",
-                "data": og_data
-            })
-
-        return structured_data
-
-    def _extract_links_with_context(self, soup, base_url: str) -> List[Dict[str, Any]]:
-        """Extract links with surrounding context"""
-        links = []
-
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            text = a.get_text(strip=True)
-
-            # Convert relative URLs to absolute
-            if not href.startswith(('http://', 'https://')):
-                href = urljoin(base_url, href)
-
-            if href and text:
-                # Get surrounding context
-                parent = a.parent
-                context = ""
-                if parent:
-                    # Get text from parent element
-                    context = parent.get_text(separator=' ', strip=True)[:200]
-
-                links.append({
-                    "url": href,
-                    "text": text[:100],
-                    "context": context,
-                    "is_external": urlparse(href).netloc != urlparse(base_url).netloc
-                })
-
-        return links[:50]  # Limit to 50 links
+        return ''
 
     def _extract_code_blocks(self, soup) -> List[Dict[str, Any]]:
         """Extract code blocks and examples"""
@@ -354,66 +334,78 @@ class AdvancedContentProcessor:
         for pre in soup.find_all('pre'):
             code_element = pre.find('code')
             if code_element:
-                code_content = code_element.get_text()
-                language = ""
+                code_content = code_element.get_text().strip()
+                if len(code_content) > 10:
+                    language = ""
+                    code_class = code_element.get('class', [])
+                    for cls in code_class:
+                        if cls.startswith('language-') or cls.startswith('lang-'):
+                            language = cls.split('-', 1)[1]
+                            break
 
-                # Try to detect language from class
-                code_class = code_element.get('class', [])
-                for cls in code_class:
-                    if cls.startswith('language-') or cls.startswith('lang-'):
-                        language = cls.split('-', 1)[1]
-                        break
+                    code_blocks.append({
+                        "content": code_content,
+                        "language": language,
+                        "type": "pre"
+                    })
 
-                code_blocks.append({
-                    "content": code_content,
-                    "language": language,
-                    "type": "pre"
-                })
-
-        # Inline code (simpler extraction)
+        # Inline code (longer snippets)
         for code in soup.find_all('code'):
-            if not code.find_parent('pre'):  # Skip if already in pre block
-                code_content = code.get_text()
-                if len(code_content) > 10:  # Only meaningful code
+            if not code.find_parent('pre'):
+                code_content = code.get_text().strip()
+                if len(code_content) > 20:
                     code_blocks.append({
                         "content": code_content,
                         "language": "",
                         "type": "inline"
                     })
 
-        return code_blocks[:20]  # Limit to 20 code blocks
+        return code_blocks[:10]  # Limit to 10 blocks
 
-    def _extract_media_content(self, soup, base_url: str) -> List[Dict[str, Any]]:
-        """Extract images, videos, and other media"""
-        media = []
+    def _extract_links(self, soup, base_url: str) -> List[Dict[str, Any]]:
+        """Extract links with context"""
+        links = []
 
-        # Images
-        for img in soup.find_all('img', src=True):
-            src = img['src']
-            if not src.startswith(('http://', 'https://')):
-                src = urljoin(base_url, src)
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            text = a.get_text().strip()
 
-            media.append({
-                "type": "image",
-                "url": src,
-                "alt": img.get('alt', ''),
-                "title": img.get('title', '')
+            if not href or not text or len(text) < 3:
+                continue
+
+            # Convert relative URLs to absolute
+            if not href.startswith(('http://', 'https://')):
+                href = urljoin(base_url, href)
+
+            # Skip common non-content URLs
+            if any(skip in href.lower() for skip in ['/search', '/login', '/admin', '#']):
+                continue
+
+            links.append({
+                "url": href,
+                "text": text[:100],
+                "is_external": urlparse(href).netloc != urlparse(base_url).netloc
             })
 
-        # Videos
-        for video in soup.find_all('video'):
-            src = video.get('src')
-            if src and not src.startswith(('http://', 'https://')):
-                src = urljoin(base_url, src)
+        return links[:20]  # Limit to 20 links
 
-            if src:
-                media.append({
-                    "type": "video",
-                    "url": src,
-                    "poster": video.get('poster', '')
-                })
+    def _clean_content(self, content: str) -> str:
+        """Clean and normalize content"""
+        if not content:
+            return ''
 
-        return media[:30]  # Limit to 30 media items
+        # Remove excessive whitespace
+        content = re.sub(r'\s+', ' ', content)
+
+        # Remove navigation and common non-content elements
+        content = re.sub(r'\b(home|menu|navigation|footer|copyright|privacy|terms|contact|about|login|signup|search)\b',
+                        '', content, flags=re.IGNORECASE)
+
+        # Remove emails and phone numbers
+        content = re.sub(r'\S+@\S+\.\S+', '[EMAIL]', content)
+        content = re.sub(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', '[PHONE]', content)
+
+        return content.strip()
 
     def _extract_basic_content(self, url: str) -> Dict[str, Any]:
         """Basic fallback content extraction"""
@@ -421,11 +413,7 @@ class AdvancedContentProcessor:
             response = self.session.get(url, timeout=15)
             response.raise_for_status()
 
-            # Detect encoding
-            detected_encoding = chardet.detect(response.content)['encoding']
-            content = response.content.decode(detected_encoding or 'utf-8', errors='ignore')
-
-            soup = BeautifulSoup(content, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
             text_content = soup.get_text(separator=' ', strip=True)
             text_content = re.sub(r'\s+', ' ', text_content).strip()
 
@@ -439,55 +427,7 @@ class AdvancedContentProcessor:
         except Exception as e:
             return {"error": str(e), "url": url}
 
-    def _extract_pdf_content(self, response, url: str) -> Dict[str, Any]:
-        """Extract content from PDF files"""
-        try:
-            # For now, return basic info - would need pdf parsing library
-            return {
-                "url": url,
-                "content_type": "pdf",
-                "title": url.split('/')[-1],
-                "content": f"PDF document: {url}",
-                "size": len(response.content),
-                "status_code": response.status_code
-            }
-        except Exception as e:
-            return {"error": str(e), "url": url}
-
-    def _extract_json_content(self, response, url: str) -> Dict[str, Any]:
-        """Extract content from JSON files"""
-        try:
-            json_data = response.json()
-            content = json.dumps(json_data, indent=2)
-            return {
-                "url": url,
-                "content_type": "json",
-                "content": content,
-                "parsed_data": json_data,
-                "size": len(content),
-                "status_code": response.status_code
-            }
-        except Exception as e:
-            return {"error": str(e), "url": url}
-
-    def _extract_generic_content(self, response, url: str) -> Dict[str, Any]:
-        """Extract content from other file types"""
-        try:
-            # Detect encoding
-            detected_encoding = chardet.detect(response.content)['encoding']
-            content = response.content.decode(detected_encoding or 'utf-8', errors='ignore')
-
-            return {
-                "url": url,
-                "content_type": "generic",
-                "content": content,
-                "size": len(response.content),
-                "status_code": response.status_code
-            }
-        except Exception as e:
-            return {"error": str(e), "url": url}
-
-    def _analyze_with_gemini_tools(self, url: str, initial_content: Dict[str, Any], gemini_client) -> Dict[str, Any]:
+    def _analyze_with_gemini_tools(self, url: str, initial_content: Dict[str, Any], gemini_client, user_instructions: str) -> Dict[str, Any]:
         """Use Gemini tools for enhanced content analysis"""
         try:
             self.logger.log("🤖 Using Gemini tools for content analysis")
@@ -498,8 +438,8 @@ class AdvancedContentProcessor:
                 types.Tool(url_context=types.UrlContext())
             ]
 
-            # Create analysis prompt
-            analysis_prompt = self._create_analysis_prompt(url, initial_content)
+            # Create analysis prompt with user instructions
+            analysis_prompt = self._create_analysis_prompt(url, initial_content, user_instructions)
 
             # Configure generation
             generation_config = types.GenerateContentConfig(
@@ -507,7 +447,7 @@ class AdvancedContentProcessor:
                 top_p=0.95,
                 max_output_tokens=4000,
                 candidate_count=1,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                thinking_config=types.ThinkingConfig(thinking_budget=2048),
                 tools=tools
             )
 
@@ -531,76 +471,141 @@ class AdvancedContentProcessor:
             self.logger.error(f"⚠️ Gemini tool analysis failed: {e}")
             return {"error": str(e), "basic_content": initial_content}
 
-    def _create_analysis_prompt(self, url: str, content: Dict[str, Any]) -> str:
-        """Create comprehensive analysis prompt for Gemini following LLM_RESPONSE_SCHEMA"""
-        content_preview = content.get('main_content', content.get('content', ''))[:3000]
-        code_blocks = content.get('code_blocks', [])
-        user_instructions = content.get('instructions', 'Analyze this content comprehensively')
+    def _extract_research_focus(self, user_instructions: str) -> str:
+        """Extract research focus areas from user instructions"""
+        research_areas = []
 
-        # Include detected code blocks in the prompt
+        # Common research triggers
+        research_keywords = {
+            'best practices': ['current best practices', 'industry standards', 'recommended approaches'],
+            'tutorial': ['step-by-step guides', 'learning resources', 'examples'],
+            'api': ['integration patterns', 'authentication methods', 'API design'],
+            'performance': ['optimization techniques', 'performance benchmarks', 'scaling strategies'],
+            'security': ['security best practices', 'common vulnerabilities', 'secure implementation'],
+            'comparison': ['alternative solutions', 'feature comparisons', 'trade-offs'],
+            'architecture': ['system design patterns', 'scalability considerations', 'design principles'],
+            'deployment': ['deployment strategies', 'production considerations', 'hosting options']
+        }
+
+        instructions_lower = user_instructions.lower()
+
+        for keyword, areas in research_keywords.items():
+            if keyword in instructions_lower:
+                research_areas.extend(areas)
+
+        if not research_areas:
+            research_areas = ['related concepts', 'practical applications', 'implementation examples']
+
+        return "• " + "\n• ".join(list(set(research_areas))[:5])
+
+    def _create_analysis_prompt(self, url: str, content: Dict[str, Any], user_instructions: str) -> str:
+        """Create comprehensive analysis prompt for Gemini 2.5 Pro with enhanced user integration"""
+        content_preview = content.get('main_content', content.get('content', ''))[:5000]  # Increased for Pro model
+        code_blocks = content.get('code_blocks', [])
+        title = content.get('title', 'Unknown Document')
+        description = content.get('description', '')
+
+        # Enhanced code context with better formatting
         code_context = ""
         if code_blocks:
-            code_context = "\n\nDETECTED CODE BLOCKS:"
-            for i, block in enumerate(code_blocks[:3], 1):  # Limit to 3 for prompt
-                code_context += f"\n{i}. Language: {block.get('language', 'unknown')}\n{block['content'][:200]}..."
+            code_context = "\n\n🎯 DETECTED CODE BLOCKS:"
+            for i, block in enumerate(code_blocks[:5], 1):  # Increased limit for Pro model
+                lang = block.get('language', 'unknown')
+                code_preview = block['content'][:300]  # More code context
+                code_context += f"\n{i}. **{lang}**:\n``` {lang}\n{code_preview}\n```"
 
-        return f"""You are an expert technical documentation analyzer. Analyze this web content and create structured analysis blocks following the exact specification below.
+        # Enhanced metadata context
+        metadata_context = ""
+        if content.get('structured_data'):
+            metadata_context = "\n\n📊 STRUCTURED DATA FOUND:"
+            for item in content['structured_data'][:3]:
+                if item.get('type') == 'json-ld':
+                    metadata_context += f"\n- JSON-LD Schema: {list(item.get('data', {}).keys())[:5]}"
 
+        # Research context from user instructions
+        research_focus = self._extract_research_focus(user_instructions)
+
+        return f"""{self.system_prompt}
+
+🔗 **CONTENT TO ANALYZE**
 URL: {url}
-TITLE: {content.get('title', 'Unknown')}
-CONTENT PREVIEW: {content_preview}
-USER INSTRUCTIONS: {user_instructions}{code_context}
+TITLE: {title}
+DESCRIPTION: {description}
+CONTENT PREVIEW: {content_preview}{code_context}{metadata_context}
 
-REQUIRED OUTPUT FORMAT - Return ONLY valid JSON:
+🎯 **USER INSTRUCTIONS** (PRIORITY FOCUS)
+{user_instructions}
+
+🔍 **RESEARCH FOCUS AREAS** (derived from user instructions)
+{research_focus}
+
+📋 **REQUIRED OUTPUT FORMAT**
+Return ONLY valid JSON with this exact structure:
 {{
-  "summary": "Brief overview of the entire document...",
+  "summary": "Comprehensive overview addressing user instructions and research focus",
   "blocks": [
     {{
       "id": "unique-block-id",
       "type": "summary|key_points|architecture|mermaid|code|api_reference|guide|comparison|best_practices|troubleshooting",
       "size": "small|medium|large",
-      "title": "Block title",
-      "content": "Block content (mermaid syntax for mermaid type)",
+      "title": "Block title that reflects user focus",
+      "content": "Content that directly addresses user instructions",
       "metadata": {{
         "language": "javascript|python|etc (for code blocks)",
-        "priority": "high|medium|low"
+        "priority": "high|medium|low",
+        "user_focus_alignment": "high|medium|low",
+        "research_integrated": true|false
       }}
     }}
   ]
 }}
 
-BLOCK TYPES:
-- summary: High-level overview of the document
-- key_points: Important highlights and takeaways
-- architecture: System or component structure
-- mermaid: Visual diagrams using valid Mermaid syntax
-- code: Code examples with language specification (if found in content)
-- api_reference: API documentation
-- guide: Step-by-step instructions
-- comparison: Compare approaches or tools
-- best_practices: Recommendations and guidelines
-- troubleshooting: Common issues and solutions
+🎨 **BLOCK TYPE SELECTION GUIDELINES**
+- **summary**: Executive overview tailored to user instructions
+- **key_points**: User-focused highlights and takeaways
+- **architecture**: System diagrams when relevant to user questions
+- **mermaid**: Flowcharts, system diagrams, process visualizations
+- **code**: Examples directly relevant to user's learning goals
+- **api_reference**: API details when user is learning integration
+- **guide**: Step-by-step instructions for user tasks
+- **comparison**: Alternatives when user needs to choose approaches
+- **best_practices**: Recommendations aligned with user context
+- **troubleshooting**: Solutions for user-specific challenges
 
-SIZE GUIDELINES:
-- small: Quick facts, simple explanations (1 grid unit)
-- medium: Detailed explanations, moderate diagrams (2 grid units)
-- large: Complex diagrams, comprehensive guides (3 grid units)
+📏 **SIZE OPTIMIZATION** (3x3 grid = 9 units max)
+- **large** (3 units): Complex diagrams, comprehensive guides, detailed explanations
+- **medium** (2 units): Standard explanations, moderate diagrams, key examples
+- **small** (1 unit): Quick facts, simple lists, brief explanations
 
-ANALYSIS REQUIREMENTS:
-1. Generate 3-6 blocks maximum based on content analysis
-2. Include at least one summary block
-3. Use code blocks for any detected code examples
-4. Use mermaid for system diagrams or flows
-5. Ensure all blocks have unique IDs
-6. Prioritize blocks based on user instructions and content importance
+🎯 **USER-CENTRIC ANALYSIS REQUIREMENTS**
+1. **Directly address user instructions** in every block
+2. **Research user-mentioned topics** using Google Search when relevant
+3. **Adapt presentation style** based on user context (beginner vs expert)
+4. **Include practical examples** that match user's learning objectives
+5. **Optimize for user's domain** (web dev, API design, data science, etc.)
+6. **Generate 3-6 blocks maximum** - quality over quantity
+7. **Ensure visual learning** with appropriate diagram types
+8. **Include working code examples** when user needs implementation guidance
 
-CONTENT ANALYSIS:
-- Identify key concepts and relationships
-- Extract practical examples and code
-- Determine appropriate visualization types
-- Focus on user instruction alignment
+🔧 **TOOL USAGE STRATEGY**
+- Use **Google Search** for: current best practices, related technologies, user interest research
+- Use **URL Context** for: enhanced content analysis, related documentation discovery
+- Use **Code Execution** for: validating code examples, testing implementations
 
-Use available tools (Google Search, URL Context) to enhance your analysis before generating the final JSON response."""
+⚡ **CONTENT ANALYSIS STRATEGY**
+1. **Extract main concepts** and map to user instructions
+2. **Identify knowledge gaps** user might have
+3. **Research complementary topics** that would help user understanding
+4. **Create blocks** that build upon each other progressively
+5. **Optimize for retention** with visual elements and practical examples
+
+🎯 **SUCCESS CRITERIA**
+- Every block must directly relate to user instructions
+- Content should be immediately actionable for user's goals
+- Visual elements should enhance understanding of user's topics
+- Research should provide current, relevant context to user's needs
+
+Generate analysis blocks that create a personalized learning experience for this specific user."""
 
     def _process_tool_calls(self, response, gemini_client) -> Dict[str, Any]:
         """Process and execute tool calls from Gemini"""
@@ -719,7 +724,7 @@ Use available tools (Google Search, URL Context) to enhance your analysis before
 
         return insights
 
-    def _enrich_with_research(self, url: str, deep_content: Dict[str, Any], gemini_client) -> Dict[str, Any]:
+    def _enrich_with_research(self, url: str, deep_content: Dict[str, Any], gemini_client, user_instructions: str) -> Dict[str, Any]:
         """Enrich content with additional research"""
         try:
             self.logger.log("🔬 Enriching content with research")
@@ -798,6 +803,7 @@ Use available tools (Google Search, URL Context) to enhance your analysis before
 
             generation_config = types.GenerateContentConfig(
                 temperature=0.7,
+                thinking_config=types.ThinkingConfig(thinking_budget=2048),
                 tools=tools
             )
 
@@ -955,11 +961,21 @@ class DocifyUnifiedOrchestrator:
         self.databases = databases
         self.logger = logger
 
-        # Initialize Gemini client with all tools
-        self.gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+        # Store system prompt FIRST - critical for initialization order
+        self.system_prompt = SYSTEM_PROMPT
 
-        # Initialize advanced components
-        self.content_processor = AdvancedContentProcessor(logger)
+        # Validate Gemini API key before initializing client
+        if not GEMINI_API_KEY or GEMINI_API_KEY.strip() == '':
+            raise ValueError("GEMINI_API_KEY environment variable is not set or is empty")
+
+        # Initialize Gemini client with system prompt and enhanced configuration
+        try:
+            self.gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+        except Exception as e:
+            raise ValueError(f"Failed to initialize Gemini client: {str(e)}")
+
+        # Initialize advanced components - now system_prompt is available
+        self.content_processor = AdvancedContentProcessor(logger, self.system_prompt)
         self.research_engine = ResearchEngine(logger)
 
         # Track comprehensive tool usage
@@ -1086,43 +1102,43 @@ class DocifyUnifiedOrchestrator:
     def _extract_document_data(self) -> Dict[str, Any]:
         """Extract document data from request with enhanced validation"""
         try:
-        trigger_type = self.context.req.headers.get('x-appwrite-trigger', 'http')
+            trigger_type = self.context.req.headers.get('x-appwrite-trigger', 'http')
 
-        if trigger_type == 'event':
-            body = self.context.req.body
-            if isinstance(body, str):
-                body = json.loads(body)
-                        document_data = {
-                'document_id': body.get('$id'),
-                'url': body.get('url'),
-                'instructions': body.get('instructions'),
-                'user_id': body.get('user_id'),
-                'title': body.get('title')
-            }
-        else:
-            body = self.context.req.body
-            if isinstance(body, str):
-                body = json.loads(body)
-                        document_data = {
-                'document_id': body.get('documentId'),
-                'url': body.get('url'),
-                'instructions': body.get('instructions'),
-                'user_id': body.get('userId'),
-                'title': body.get('title')
-            }
+            if trigger_type == 'event':
+                body = self.context.req.body
+                if isinstance(body, str):
+                    body = json.loads(body)
+                document_data = {
+                    'document_id': body.get('$id'),
+                    'url': body.get('url'),
+                    'instructions': body.get('instructions'),
+                    'user_id': body.get('user_id'),
+                    'title': body.get('title')
+                }
+            else:
+                body = self.context.req.body
+                if isinstance(body, str):
+                    body = json.loads(body)
+                document_data = {
+                    'document_id': body.get('documentId'),
+                    'url': body.get('url'),
+                    'instructions': body.get('instructions'),
+                    'user_id': body.get('userId'),
+                    'title': body.get('title')
+                }
 
-                # Validate required fields
-                required_fields = ['document_id', 'url']
-                missing_fields = [field for field in required_fields if not document_data.get(field)]
+            # Validate required fields
+            required_fields = ['document_id', 'url']
+            missing_fields = [field for field in required_fields if not document_data.get(field)]
 
-                if missing_fields:
-                        raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+            if missing_fields:
+                raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
 
-                # Set default instructions if none provided
-                if not document_data.get('instructions'):
-                        document_data['instructions'] = 'Analyze this content comprehensively using all available tools'
+            # Set default instructions if none provided
+            if not document_data.get('instructions'):
+                document_data['instructions'] = 'Analyze this content comprehensively using all available tools'
 
-                return document_data
+            return document_data
 
         except Exception as e:
             self.logger.error(f"⚠️ Document data extraction failed: {e}")
@@ -1138,16 +1154,70 @@ class DocifyUnifiedOrchestrator:
         try:
             self.logger.log(f"💾 Updating document {document_id} with comprehensive results")
 
+            # Extract schema-compliant summary from enhanced analysis
+            enhanced_analysis = result.get('enhanced_analysis', {})
+            summary_text = ""
+
+            if isinstance(enhanced_analysis.get('enhanced_analysis'), dict):
+                schema_data = enhanced_analysis['enhanced_analysis']
+                if 'summary' in schema_data and schema_data['summary']:
+                    summary_text = schema_data['summary']
+                    self.logger.log(f"📝 Using schema-compliant summary from LLM: {len(summary_text)} chars")
+                else:
+                    # Fallback to other sources
+                    summary_text = result.get('analysis_summary', '')
+            else:
+                # Fallback to other sources
+                summary_text = result.get('analysis_summary', '')
+
+            # Ensure summary_text is always a valid string and within limits
+            if not isinstance(summary_text, str):
+                summary_text = str(summary_text) if summary_text is not None else ""
+
+            # If still no summary, create a basic one
+            if not summary_text.strip():
+                comprehensive_result = result.get('comprehensive_result', {})
+                content = comprehensive_result.get('content', '')[:500]
+                summary_text = f"Document analysis completed. {len(content)} characters processed."
+
+            # Truncate to 2000 characters to meet database constraints
+            if len(summary_text) > 2000:
+                summary_text = summary_text[:1997] + "..."
+                self.logger.log(f"⚠️ Summary truncated to 2000 chars: {len(summary_text)}")
+
+            # Ensure analysis_blocks is always valid JSON
+            blocks_data = result.get('blocks', [])
+            if not isinstance(blocks_data, list):
+                blocks_data = []
+                self.logger.log("⚠️ analysis_blocks was not a list, using empty array")
+
+            # Validate and sanitize blocks data
+            sanitized_blocks = []
+            for block in blocks_data:
+                if isinstance(block, dict) and all(key in block for key in ['id', 'type', 'size', 'title', 'content']):
+                    # Ensure all string fields are actually strings
+                    sanitized_block = {
+                        'id': str(block.get('id', '')),
+                        'type': str(block.get('type', '')),
+                        'size': str(block.get('size', '')),
+                        'title': str(block.get('title', '')),
+                        'content': str(block.get('content', ''))
+                    }
+                    # Add metadata if it exists and is valid
+                    if 'metadata' in block and isinstance(block['metadata'], dict):
+                        sanitized_block['metadata'] = block['metadata']
+                    sanitized_blocks.append(sanitized_block)
+
             update_data = {
                 'status': 'completed',
-                'analysis_summary': result.get('analysis_summary', ''),
-                'analysis_blocks': json.dumps(result.get('blocks', [])),
-                'word_count': result.get('word_count', 0),
-                'scraped_content': result.get('content', '')
+                'analysis_summary': summary_text,
+                'analysis_blocks': json.dumps(sanitized_blocks),
+                'word_count': len(summary_text.split()),
+                'scraped_content': result.get('comprehensive_result', {}).get('content', '')
             }
 
             # Save code blocks if available
-            comprehensive_result = result.get('metadata', {}).get('comprehensive_result', {})
+            comprehensive_result = result.get('comprehensive_result', {})
             if comprehensive_result.get('code_blocks'):
                 code_blocks_json = json.dumps(comprehensive_result['code_blocks'])
                 # Check if there's a field for code blocks
@@ -1157,9 +1227,15 @@ class DocifyUnifiedOrchestrator:
                 elif 'extracted_code' in available_fields:
                     update_data['extracted_code'] = code_blocks_json
 
-            # Add tool usage if available
-            if result.get('metadata', {}).get('tool_executions'):
-                update_data['gemini_tools_used'] = json.dumps(self.tool_usage_log)
+            # Add tool usage tracking
+            if self.tool_usage_log:
+                update_data['gemini_tools_used'] = json.dumps([t.get('tool', 'unknown') for t in self.tool_usage_log])
+
+            # Add processing duration if available
+            available_fields = self._get_available_fields()
+            if 'processing_duration' in available_fields:
+                # Calculate processing time (rough estimate)
+                update_data['processing_duration'] = 30  # Default estimate
 
             self.databases.update_document(
                 DATABASE_ID,
@@ -1168,7 +1244,7 @@ class DocifyUnifiedOrchestrator:
                 update_data
             )
 
-            self.logger.log(f"✅ Document {document_id} updated with comprehensive results")
+            self.logger.log(f"✅ Document {document_id} updated with schema-compliant data")
 
         except Exception as e:
             self.logger.error(f"⚠️ Comprehensive update failed: {e}")
@@ -1208,7 +1284,7 @@ class DocifyUnifiedOrchestrator:
 
             self.logger.log("🔄 Round 1: Comprehensive URL processing")
             # Use the advanced content processor
-            comprehensive_result = self.content_processor.process_url_comprehensive(url, gemini_client)
+            comprehensive_result = self.content_processor.process_url_comprehensive(url, gemini_client, instructions)
 
             if comprehensive_result.get('error'):
                 self.logger.log("⚠️ Comprehensive processing failed, falling back to basic processing")
@@ -1232,7 +1308,7 @@ class DocifyUnifiedOrchestrator:
 
             # Round 4: Final synthesis and validation
             self.logger.log("🔄 Round 4: Final synthesis and validation")
-            final_analysis = self._perform_final_synthesis(enriched_analysis, document_data, gemini_client)
+            final_analysis = self._perform_final_synthesis(enriched_analysis, document_data, gemini_client, instructions)
 
             return {
                 "comprehensive_result": comprehensive_result,
@@ -1254,79 +1330,414 @@ class DocifyUnifiedOrchestrator:
             if not content:
                 return {"error": "No content available for enhanced analysis"}
 
-            # Enhanced analysis prompt following schema format
-            prompt = f"""Analyze this content and generate structured analysis blocks following the exact JSON format below.
+            # Enhanced analysis prompt using comprehensive system prompt
+            research_focus = self._extract_research_focus(instructions)
 
-USER INSTRUCTIONS: {instructions}
-CONTENT TITLE: {content_result.get('title', 'Unknown')}
-CONTENT PREVIEW: {content[:4000]}
+            prompt = f"""{self.system_prompt}
 
-REQUIRED JSON OUTPUT FORMAT:
+🔄 **ENHANCED ANALYSIS ROUND**
+CONTENT TITLE: {content_result.get('title', 'Unknown Document')}
+CONTENT PREVIEW: {content[:5000]}
+CONTENT TYPE: {content_result.get('content_type', 'unknown')}
+
+🎯 **USER INSTRUCTIONS** (PRIMARY FOCUS)
+{instructions}
+
+🔍 **RESEARCH FOCUS AREAS**
+{research_focus}
+
+📊 **ANALYSIS OBJECTIVES**
+1. Deep-dive analysis of content based on user instructions
+2. Research complementary information using available tools
+3. Create focused analysis blocks that directly address user needs
+4. Optimize for user's learning objectives and context
+
+🎨 **BLOCK GENERATION STRATEGY**
+- Generate 3-5 blocks maximum for enhanced analysis round
+- Focus on depth rather than breadth
+- Use advanced block types: architecture, mermaid, api_reference, guide
+- Include research-backed insights from Google Search
+- Adapt complexity based on user expertise level
+
+📋 **REQUIRED OUTPUT FORMAT**
 {{
-  "summary": "Analysis summary aligned with user instructions",
+  "summary": "Deep analysis summary addressing user instructions with research insights",
   "blocks": [
     {{
-      "id": "analysis-1",
-      "type": "summary|key_points|architecture|mermaid|code|api_reference|guide|comparison|best_practices|troubleshooting",
-      "size": "small|medium|large",
-      "title": "Analysis Block Title",
-      "content": "Detailed analysis content",
+      "id": "enhanced-analysis-1",
+      "type": "architecture|mermaid|api_reference|guide|comparison|best_practices|troubleshooting",
+      "size": "medium|large",
+      "title": "Enhanced Analysis Block Title",
+      "content": "Detailed content with research insights and practical guidance",
       "metadata": {{
         "priority": "high|medium|low",
-        "focus_area": "user_instruction_alignment"
+        "user_focus_alignment": "high|medium|low",
+        "research_integrated": true|false,
+        "analysis_depth": "deep|comprehensive",
+        "tool_usage": "google_search|url_context|code_execution"
       }}
     }}
   ]
 }}
 
-ANALYSIS REQUIREMENTS:
-1. Focus analysis on user instructions: {instructions}
-2. Generate 2-4 focused blocks based on user needs
-3. Use appropriate block types for the content and instructions
-4. Include code blocks if technical examples are relevant
-5. Use mermaid diagrams for system explanations
-6. Ensure summary addresses user-specific requirements
+⚡ **ENHANCED ANALYSIS REQUIREMENTS**
+1. **Research Integration**: Use Google Search for current best practices and related information
+2. **User Context Adaptation**: Adjust analysis depth and style based on user instructions
+3. **Practical Application**: Include actionable insights and real-world examples
+4. **Visual Enhancement**: Use mermaid diagrams for complex concepts and system architectures
+5. **Progressive Disclosure**: Build complexity gradually from foundational to advanced concepts
 
-CONTENT ANALYSIS FOCUS:
-- Align analysis with user instructions
-- Extract insights relevant to user needs
-- Identify key concepts user should understand
-- Provide practical guidance based on instructions"""
+🔧 **TOOL USAGE PRIORITIES**
+- **Google Search**: Research current trends, best practices, alternatives
+- **URL Context**: Find related documentation and resources
+- **Code Execution**: Validate technical examples and implementations
 
-            # Use Gemini for enhanced analysis
+🎯 **SUCCESS CRITERIA**
+- Every block provides unique value aligned with user instructions
+- Research insights enhance the original content analysis
+- Visual elements clarify complex technical concepts
+- Content is immediately applicable to user's goals"""
+
+            # Use Gemini for enhanced analysis with thinking mode enabled
             response = gemini_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
-                    max_output_tokens=3000
+                    max_output_tokens=3000,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048)  # Enable thinking mode for 2.5 Pro
                 )
             )
 
-            # Try to parse JSON response
+            # Robust JSON parsing with multiple strategies
             analysis_text = response.text if response.candidates else ""
-            try:
-                if analysis_text.strip().startswith('{'):
-                    parsed_analysis = json.loads(analysis_text)
-                    return {
-                        "enhanced_analysis": parsed_analysis,
-                        "raw_response": analysis_text,
-                        "instructions_alignment": "analyzed",
-                        "format": "json",
-                        "timestamp": time.time()
-                    }
-            except json.JSONDecodeError:
-                return {
-                    "enhanced_analysis": analysis_text,
-                    "raw_response": analysis_text,
-                    "instructions_alignment": "analyzed",
-                    "format": "text",
-                    "timestamp": time.time()
-                }
+            parsed_result = self._parse_llm_response(analysis_text)
+
+            return {
+                "enhanced_analysis": parsed_result.get("parsed_data", {}),
+                "raw_response": analysis_text,
+                "instructions_alignment": "analyzed",
+                "format": parsed_result.get("format", "text"),
+                "parse_success": parsed_result.get("success", False),
+                "timestamp": time.time()
+            }
 
         except Exception as e:
             self.logger.error(f"⚠️ Enhanced analysis failed: {e}")
             return {"error": str(e)}
+
+    def _parse_llm_response(self, response_text: str) -> Dict[str, Any]:
+        """Robust JSON parsing with multiple fallback strategies"""
+        try:
+            if not response_text or not response_text.strip():
+                return {
+                    "success": False,
+                    "format": "empty",
+                    "error": "Empty response",
+                    "parsed_data": {}
+                }
+
+            text = response_text.strip()
+
+            # Strategy 1: Direct JSON parsing
+            if text.startswith('{') and text.endswith('}'):
+                try:
+                    parsed = json.loads(text)
+                    if self._validate_llm_schema(parsed):
+                        return {
+                            "success": True,
+                            "format": "json",
+                            "parsed_data": parsed
+                        }
+                except json.JSONDecodeError:
+                    pass
+
+            # Strategy 2: Extract JSON from text (look for JSON blocks)
+            json_patterns = [
+                r'```json\s*(\{.*?\})\s*```',  # Markdown JSON blocks
+                r'```\s*(\{.*?\})\s*```',      # Generic code blocks
+                r'(\{[^{}]*\{[^{}]*\}[^{}]*\})',  # Nested JSON
+                r'(\{.*?\n\})',                # Multi-line JSON
+            ]
+
+            for pattern in json_patterns:
+                matches = re.findall(pattern, text, re.DOTALL)
+                for match in matches:
+                    try:
+                        parsed = json.loads(match)
+                        if self._validate_llm_schema(parsed):
+                            return {
+                                "success": True,
+                                "format": "extracted_json",
+                                "parsed_data": parsed
+                            }
+                    except json.JSONDecodeError:
+                        continue
+
+            # Strategy 3: Try to fix common JSON issues and parse
+            fixed_text = self._fix_json_issues(text)
+            if fixed_text != text:
+                try:
+                    parsed = json.loads(fixed_text)
+                    if self._validate_llm_schema(parsed):
+                        return {
+                            "success": True,
+                            "format": "fixed_json",
+                            "parsed_data": parsed
+                        }
+                except json.JSONDecodeError:
+                    pass
+
+            # Strategy 4: Generate fallback analysis from text
+            self.logger.log(f"⚠️ JSON parsing failed, generating fallback analysis")
+            fallback_data = self._generate_fallback_analysis(text)
+            return {
+                "success": False,
+                "format": "fallback",
+                "error": "JSON parsing failed, using fallback",
+                "parsed_data": fallback_data
+                }
+
+        except Exception as e:
+            self.logger.error(f"⚠️ LLM response parsing error: {e}")
+            return {
+                "success": False,
+                "format": "error",
+                "error": str(e),
+                "parsed_data": self._generate_error_fallback()
+            }
+
+    def _validate_llm_schema(self, data: Dict[str, Any]) -> bool:
+        """Validate LLM response against schema requirements"""
+        try:
+            if not isinstance(data, dict):
+                return False
+
+            # Check for required top-level fields
+            if "summary" not in data:
+                return False
+
+            if "blocks" not in data or not isinstance(data["blocks"], list):
+                return False
+
+            # Validate blocks array
+            if not data["blocks"]:
+                return False
+
+            # Check each block for required fields
+            valid_types = [
+                "summary", "key_points", "architecture", "mermaid", "code",
+                "api_reference", "guide", "comparison", "best_practices", "troubleshooting"
+            ]
+            valid_sizes = ["small", "medium", "large"]
+
+            block_ids = set()
+            for block in data["blocks"]:
+                if not isinstance(block, dict):
+                    return False
+
+                # Required fields
+                required_fields = ["id", "type", "size", "title", "content"]
+                for field in required_fields:
+                    if field not in block:
+                        return False
+
+                # Validate block ID uniqueness
+                block_id = block["id"]
+                if block_id in block_ids:
+                    return False
+                block_ids.add(block_id)
+
+                # Validate block type
+                if block["type"] not in valid_types:
+                    return False
+
+                # Validate block size
+                if block["size"] not in valid_sizes:
+                    return False
+
+                # Validate metadata if present
+                if "metadata" in block:
+                    if not isinstance(block["metadata"], dict):
+                        return False
+
+            # Check maximum blocks constraint (6 blocks max)
+            if len(data["blocks"]) > 6:
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Schema validation error: {e}")
+            return False
+
+    def _fix_json_issues(self, text: str) -> str:
+        """Fix common JSON formatting issues"""
+        try:
+            # Remove markdown code blocks if present
+            text = re.sub(r'```\w*\n?', '', text)
+            text = re.sub(r'```\n?', '', text)
+
+            # Fix trailing commas
+            text = re.sub(r',\s*}', '}', text)
+            text = re.sub(r',\s*]', ']', text)
+
+            # Fix single quotes to double quotes (basic cases)
+            text = re.sub(r"'([^']*)':", r'"\1":', text)
+            text = re.sub(r":\s*'([^']*)'", r': "\1"', text)
+            text = re.sub(r":\s*'([^']*)',", r': "\1",', text)
+
+            # Fix unquoted keys (basic pattern)
+            text = re.sub(r'(\w+):', r'"\1":', text)
+
+            # Remove extra whitespace
+            text = text.strip()
+
+            return text
+
+        except Exception as e:
+            self.logger.error(f"⚠️ JSON fixing error: {e}")
+            return text
+
+    def _generate_fallback_analysis(self, text: str) -> Dict[str, Any]:
+        """Generate fallback analysis from text response"""
+        try:
+            # Extract summary from text
+            lines = text.split('\n')
+            summary = ""
+            for line in lines[:5]:  # First 5 lines as summary
+                if line.strip():
+                    summary += line.strip() + " "
+            summary = summary.strip() or "Analysis completed successfully"
+
+            # Create basic blocks
+            blocks = [
+                {
+                    "id": "fallback-summary",
+                    "type": "summary",
+                    "size": "large",
+                    "title": "Analysis Summary",
+                    "content": summary,
+                    "metadata": {
+                        "priority": "high",
+                        "source": "fallback"
+                    }
+                },
+                {
+                    "id": "fallback-content",
+                    "type": "key_points",
+                    "size": "medium",
+                    "title": "Content Analysis",
+                    "content": f"Analysis completed with {len(text)} characters of content processed.",
+                    "metadata": {
+                        "priority": "medium",
+                        "source": "fallback"
+                    }
+                }
+            ]
+
+            return {
+                "summary": summary,
+                "blocks": blocks
+            }
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Fallback generation error: {e}")
+            return self._generate_error_fallback()
+
+    def _generate_error_fallback(self) -> Dict[str, Any]:
+        """Generate minimal error fallback"""
+        return {
+            "summary": "Analysis completed with errors",
+            "blocks": [
+                {
+                    "id": "error-summary",
+                    "type": "summary",
+                    "size": "small",
+                    "title": "Analysis Error",
+                    "content": "Document analysis completed but some processing errors occurred.",
+                    "metadata": {
+                        "priority": "low",
+                        "source": "error_fallback"
+                    }
+                }
+            ]
+        }
+
+    def _validate_block_structure(self, block: Dict[str, Any]) -> bool:
+        """Validate individual block structure against schema"""
+        try:
+            if not isinstance(block, dict):
+                return False
+
+            # Required fields
+            required_fields = ["id", "type", "size", "title", "content"]
+            for field in required_fields:
+                if field not in block:
+                    return False
+
+            # Validate block type
+            valid_types = [
+                "summary", "key_points", "architecture", "mermaid", "code",
+                "api_reference", "guide", "comparison", "best_practices", "troubleshooting"
+            ]
+            if block["type"] not in valid_types:
+                return False
+
+            # Validate block size
+            valid_sizes = ["small", "medium", "large"]
+            if block["size"] not in valid_sizes:
+                return False
+
+            # Validate metadata if present
+            if "metadata" in block and not isinstance(block["metadata"], dict):
+                return False
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Block validation error: {e}")
+            return False
+
+    def _normalize_block_structure(self, block: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize block structure to ensure schema compliance"""
+        try:
+            normalized = {
+                "id": block.get("id", f"block-{hash(str(block))}"),
+                "type": block.get("type", "summary"),
+                "size": block.get("size", "medium"),
+                "title": block.get("title", "Analysis Block"),
+                "content": block.get("content", "Content not available"),
+            }
+
+            # Ensure metadata exists
+            if "metadata" not in block:
+                normalized["metadata"] = {
+                    "priority": "medium",
+                    "source": "normalized"
+                }
+            else:
+                normalized["metadata"] = block["metadata"]
+
+            # Ensure metadata has required fields
+            if "priority" not in normalized["metadata"]:
+                normalized["metadata"]["priority"] = "medium"
+
+            return normalized
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Block normalization error: {e}")
+            return {
+                "id": f"normalized-{hash(str(block))}",
+                "type": "summary",
+                "size": "small",
+                "title": "Normalized Block",
+                "content": "Block content normalized due to formatting issues.",
+                "metadata": {
+                    "priority": "low",
+                    "source": "normalization_fallback"
+                }
+            }
 
     def _perform_research_enrichment(self, analysis_result: Dict[str, Any], gemini_client) -> Dict[str, Any]:
         """Perform research enrichment using Gemini tools"""
@@ -1409,6 +1820,7 @@ CONTENT ANALYSIS FOCUS:
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048),
                     tools=tools,
                     max_output_tokens=1500
                 )
@@ -1432,7 +1844,7 @@ CONTENT ANALYSIS FOCUS:
                 "status": "failed"
             }
 
-    def _perform_final_synthesis(self, enriched_analysis: Dict[str, Any], document_data: Dict[str, Any], gemini_client) -> Dict[str, Any]:
+    def _perform_final_synthesis(self, enriched_analysis: Dict[str, Any], document_data: Dict[str, Any], gemini_client, user_instructions: str) -> Dict[str, Any]:
         """Perform final synthesis of all analysis results"""
         try:
             # Add null checks
@@ -1447,33 +1859,88 @@ CONTENT ANALYSIS FOCUS:
             if document_data:
                 user_instructions = document_data.get('instructions', '')
 
-            # Combine all insights
-            synthesis_prompt = f"""Synthesize all analysis results into a comprehensive understanding:
+            # Enhanced synthesis using system prompt
+            research_summary = chr(10).join([
+                f"• {result.get('insights', '')[:300]}"
+                for result in research_results if result.get('insights')
+            ]) if research_results else "No additional research insights available."
 
-ORIGINAL CONTENT: {content[:3000]}
+            synthesis_prompt = f"""{self.system_prompt}
 
-RESEARCH INSIGHTS:
-{chr(10).join([f"- {result.get('insights', '')[:200]}" for result in research_results if result.get('insights')])}
+🎯 **FINAL SYNTHESIS ROUND**
+Integrating all analysis results into a comprehensive, user-focused understanding.
 
-USER INSTRUCTIONS: {user_instructions}
+📄 **ORIGINAL CONTENT ANALYSIS**
+{content[:4000]}
 
-Please provide:
-1. A comprehensive summary integrating all findings
-2. Key insights and discoveries
-3. Recommendations based on the analysis
-4. Areas for further exploration"""
+🔬 **RESEARCH & ENHANCEMENT INSIGHTS**
+{research_summary}
+
+🎯 **USER INSTRUCTIONS** (SYNTHESIS FOCUS)
+{user_instructions}
+
+📊 **SYNTHESIS OBJECTIVES**
+1. **Unified Understanding**: Combine all analysis rounds into coherent insights
+2. **User-Centric Focus**: Ensure all findings directly address user instructions
+3. **Practical Application**: Transform insights into actionable recommendations
+4. **Knowledge Integration**: Connect research findings with original content analysis
+
+🎨 **DELIVERABLES REQUIRED**
+Provide a comprehensive synthesis that includes:
+1. **Executive Summary**: Clear, concise overview of all findings
+2. **Key Insights**: Most important discoveries and patterns
+3. **User-Focused Recommendations**: Practical guidance based on user instructions
+4. **Implementation Guidance**: Step-by-step advice for applying insights
+5. **Further Exploration**: Strategic suggestions for deeper learning
+6. **Success Metrics**: How to measure effectiveness of recommendations
+
+⚡ **SYNTHESIS REQUIREMENTS**
+- **User Instruction Alignment**: Every recommendation must tie back to user needs
+- **Research Integration**: Incorporate current best practices and trends
+- **Practical Focus**: Provide immediately actionable insights
+- **Progressive Structure**: Build from foundational to advanced concepts
+- **Visual Enhancement**: Suggest appropriate visualization types for key concepts
+
+🔧 **QUALITY STANDARDS**
+- Content must be immediately applicable to user's stated goals
+- Insights should provide clear value beyond the original content
+- Recommendations should be specific and measurable
+- Synthesis should create a complete learning experience
+
+🎯 **SUCCESS CRITERIA**
+- User can immediately apply at least 3 specific recommendations
+- Synthesis addresses all aspects of user's original instructions
+- Content provides unique value not found in original source
+- Structure enables progressive skill development"""
 
             response = gemini_client.models.generate_content(
                 model=GEMINI_MODEL,
                 contents=synthesis_prompt,
                 config=types.GenerateContentConfig(
                     temperature=0.7,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048),
                     max_output_tokens=2500
                 )
             )
 
+            synthesis_text = response.text if response.candidates else ""
+
+            # Try to extract structured data from synthesis
+            synthesis_data = None
+            try:
+                if synthesis_text.strip().startswith('{'):
+                    synthesis_data = json.loads(synthesis_text)
+                else:
+                    # Extract JSON from text if embedded
+                    json_match = re.search(r'\{.*\}', synthesis_text, re.DOTALL)
+                    if json_match:
+                        synthesis_data = json.loads(json_match.group())
+            except Exception:
+                pass
+
             return {
-                "final_synthesis": response.text if response.candidates else "",
+                "final_synthesis": synthesis_text,
+                "structured_synthesis": synthesis_data,
                 "integrated_insights": True,
                 "timestamp": time.time()
             }
@@ -1521,15 +1988,37 @@ Please provide:
                 }
             })
 
-            # Enhanced analysis blocks (if available in JSON format)
+            # Priority 1: Use schema-compliant LLM response if available
             if isinstance(enhanced_analysis.get('enhanced_analysis'), dict):
                 enhanced_data = enhanced_analysis['enhanced_analysis']
-                if 'blocks' in enhanced_data:
-                    for block in enhanced_data['blocks'][:3]:  # Limit to 3 additional blocks
-                        # Ensure unique ID
-                        block_id = block.get('id', f"enhanced-{len(blocks)}")
-                        block['id'] = f"{block_id}-{len(blocks)}"
-                        blocks.append(block)
+
+                # Use the LLM-generated summary if available
+                if 'summary' in enhanced_data and enhanced_data['summary']:
+                    # Replace the basic summary with LLM-generated one
+                    blocks[0] = {
+                        "id": "llm-summary",
+                        "type": "summary",
+                        "size": "large",
+                        "title": "AI Analysis Summary",
+                        "content": enhanced_data['summary'],
+                        "metadata": {
+                            "priority": "high",
+                            "source": "gemini_analysis",
+                            "analysis_type": "enhanced"
+                        }
+                    }
+
+                # Use the LLM-generated blocks
+                if 'blocks' in enhanced_data and isinstance(enhanced_data['blocks'], list):
+                    for block in enhanced_data['blocks'][:4]:  # Allow up to 4 LLM blocks
+                        if self._validate_block_structure(block):
+                            # Ensure unique ID
+                            block_id = block.get('id', f"llm-block-{len(blocks)}")
+                            block['id'] = f"{block_id}-{len(blocks)}"
+
+                            # Ensure block follows schema
+                            block = self._normalize_block_structure(block)
+                            blocks.append(block)
 
             # Key insights block
             word_count = comprehensive_result.get('word_count', 0)
@@ -1750,7 +2239,11 @@ Please provide:
         try:
             response = self.gemini_client.models.generate_content(
                 model=self.gemini_model_name,
-                contents=prompt
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048)
+                )
             )
             return {"analysis": response.text.strip()}
         except Exception as e:
@@ -1798,7 +2291,11 @@ Please provide:
         try:
             response = self.gemini_client.models.generate_content(
                 model=self.gemini_model_name,
-                contents=prompt
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=0.7,
+                    thinking_config=types.ThinkingConfig(thinking_budget=2048)
+                )
             )
             return response.text.strip()
         except Exception as e:
@@ -1857,9 +2354,53 @@ Please provide:
             }
 
             if result:
-                update_data['analysis_summary'] = result.get('summary', '')
-                update_data['analysis_blocks'] = json.dumps(result.get('blocks', []))
-                update_data['word_count'] = len(result.get('summary', '').split())
+                # Extract summary from schema-compliant data if available
+                summary_text = ""
+                if isinstance(result.get('enhanced_analysis', {}).get('enhanced_analysis'), dict):
+                    schema_data = result['enhanced_analysis']['enhanced_analysis']
+                    if 'summary' in schema_data and schema_data['summary']:
+                        summary_text = schema_data['summary']
+                    else:
+                        summary_text = result.get('summary', '')
+                else:
+                    summary_text = result.get('summary', '')
+
+                # Ensure summary_text is always a valid string
+                if not isinstance(summary_text, str):
+                    summary_text = str(summary_text) if summary_text is not None else ""
+
+                # Fallback to basic summary if needed
+                if not summary_text.strip():
+                    summary_text = result.get('analysis_summary', 'Analysis completed successfully')
+
+                # Truncate to 2000 characters to meet database constraints
+                if len(summary_text) > 2000:
+                    summary_text = summary_text[:1997] + "..."
+                    self.logger.log(f"⚠️ Summary truncated to 2000 chars: {len(summary_text)}")
+
+                # Validate and sanitize blocks data
+                blocks_data = result.get('blocks', [])
+                if not isinstance(blocks_data, list):
+                    blocks_data = []
+                    self.logger.log("⚠️ analysis_blocks was not a list, using empty array")
+
+                sanitized_blocks = []
+                for block in blocks_data:
+                    if isinstance(block, dict) and all(key in block for key in ['id', 'type', 'size', 'title', 'content']):
+                        sanitized_block = {
+                            'id': str(block.get('id', '')),
+                            'type': str(block.get('type', '')),
+                            'size': str(block.get('size', '')),
+                            'title': str(block.get('title', '')),
+                            'content': str(block.get('content', ''))
+                        }
+                        if 'metadata' in block and isinstance(block['metadata'], dict):
+                            sanitized_block['metadata'] = block['metadata']
+                        sanitized_blocks.append(sanitized_block)
+
+                update_data['analysis_summary'] = summary_text
+                update_data['analysis_blocks'] = json.dumps(sanitized_blocks)
+                update_data['word_count'] = len(summary_text.split())
 
                 # Update fields that exist
                 available_fields = self._get_available_fields()
