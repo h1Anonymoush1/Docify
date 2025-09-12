@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { databases, account, ID } from '../lib/appwrite';
+import React, { useState, useEffect } from 'react';
+import { databases, account, ID, getUserCredits, deductUserCredit } from '../lib/appwrite';
 import { APPWRITE_CONFIG } from '../lib/appwrite';
-import { Flex, Heading, Button, Input, Textarea, Text } from '@/once-ui/components';
+import { Flex, Heading, Button, Input, Textarea, Text, Feedback } from '@/once-ui/components';
 
 interface DocumentFormProps {
   onSuccess?: (documentId: string) => void;
@@ -14,7 +14,25 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
   const [url, setUrl] = useState('');
   const [instructions, setInstructions] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<{url?: string; instructions?: string}>({});
+  const [errors, setErrors] = useState<{url?: string; instructions?: string; credits?: string}>({});
+  const [userCredits, setUserCredits] = useState<number | null>(null);
+  const [creditError, setCreditError] = useState<string>('');
+
+  // Load user credits on component mount
+  useEffect(() => {
+    const loadUserCredits = async () => {
+      try {
+        const credits = await getUserCredits();
+        setUserCredits(credits);
+        setCreditError('');
+      } catch (error) {
+        console.error('Failed to load user credits:', error);
+        setCreditError('Unable to check your credits. Please try again.');
+      }
+    };
+
+    loadUserCredits();
+  }, []);
 
   const validateUrl = (url: string): boolean => {
     try {
@@ -26,7 +44,7 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
   };
 
   const validateForm = (): boolean => {
-    const newErrors: {url?: string; instructions?: string} = {};
+    const newErrors: {url?: string; instructions?: string; credits?: string} = {};
 
     if (!url.trim()) {
       newErrors.url = 'URL is required';
@@ -38,6 +56,13 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
       newErrors.instructions = 'Instructions are required';
     } else if (instructions.length < 10) {
       newErrors.instructions = 'Instructions must be at least 10 characters long';
+    }
+
+    // Check credits
+    if (userCredits === null) {
+      newErrors.credits = 'Checking your credits...';
+    } else if (userCredits < 1) {
+      newErrors.credits = 'You have insufficient credits. Please purchase more credits to continue.';
     }
 
     setErrors(newErrors);
@@ -78,6 +103,22 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
       );
 
       console.log('Document created:', document);
+
+      // Deduct 1 credit from user
+      try {
+        console.log('💰 Deducting 1 credit from user...');
+        const creditResult = await deductUserCredit('document_processing', document.$id);
+        console.log('✅ Credit deducted successfully. New balance:', creditResult.credits);
+
+        // Update local credit state
+        setUserCredits(creditResult.credits);
+        setCreditError('');
+      } catch (creditError) {
+        console.error('❌ Failed to deduct credit:', creditError);
+        // Don't fail the entire operation if credit deduction fails
+        // The document is already created, so we should still proceed
+        setCreditError('Document created but failed to deduct credit. Please contact support.');
+      }
 
       // The scraper function will be automatically triggered by the document creation event
       // No need to manually call the API - this is handled by Appwrite's event system
@@ -121,6 +162,31 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
         <Heading variant="heading-strong-l">Create New Document</Heading>
       </Flex>
 
+
+      {/* Credit Error */}
+      {creditError && (
+        <Flex fillWidth horizontal="center" padding="m">
+          <Feedback
+            variant="danger"
+            title="Credit Error"
+            description={creditError}
+            showCloseButton={false}
+          />
+        </Flex>
+      )}
+
+      {/* Credit validation error */}
+      {errors.credits && (
+        <Flex fillWidth horizontal="center" padding="m">
+          <Feedback
+            variant="danger"
+            title="Credit Validation"
+            description={errors.credits}
+            showCloseButton={false}
+          />
+        </Flex>
+      )}
+
       <form onSubmit={handleSubmit}>
         {/* URL Input */}
         <Flex direction="column" gap="s">
@@ -153,6 +219,9 @@ export default function DocumentForm({ onSuccess, onError }: DocumentFormProps) 
           />
           <Text variant="body-default-xs" onBackground="neutral-weak">
             Provide clear instructions for how the AI should analyze and present this document.
+          </Text>
+          <Text variant="body-default-xs" onBackground="neutral-weak" style={{ marginTop: '8px' }}>
+            Document generation costs 1 credit.
           </Text>
         </Flex>
 

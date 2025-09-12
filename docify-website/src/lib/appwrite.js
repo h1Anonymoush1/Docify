@@ -123,3 +123,64 @@ export const updateUserPrefs = async (prefs) => {
         throw error;
     }
 };
+
+// Credit management functions
+export const getUserCredits = async () => {
+    try {
+        const user = await account.get();
+        const credits = user.prefs?.credits || 0;
+        console.log('Current user credits:', credits);
+        return credits;
+    } catch (error) {
+        console.error('Failed to get user credits:', error);
+        throw error;
+    }
+};
+
+/**
+ * @param {string} reason - The reason for credit deduction
+ * @param {string|null|undefined} documentId - The document ID associated with the credit deduction
+ * @returns {Promise<Object>} - Result object with success status and new credit balance
+ */
+export const deductUserCredit = async (reason = 'document_processing', documentId) => {
+    // Ensure documentId is handled properly
+    const docId = documentId;
+    try {
+        const user = await account.get();
+        const currentCredits = user.prefs?.credits || 0;
+
+        if (currentCredits < 1) {
+            throw new Error('Insufficient credits');
+        }
+
+        const newCredits = currentCredits - 1;
+
+        // Prepare updated preferences
+        const updatedPrefs = {
+            ...user.prefs,
+            credits: newCredits,
+            last_credit_update: Math.floor(Date.now() / 1000)
+        };
+
+        // Add to credit history
+        if (!updatedPrefs.credit_history) {
+            updatedPrefs.credit_history = [];
+        }
+        updatedPrefs.credit_history.push({
+            amount: -1,
+            reason: reason,
+            timestamp: Math.floor(Date.now() / 1000),
+            document_id: docId || 'unknown'
+        });
+
+        // Update user preferences
+        const updatedUser = await account.updatePrefs(updatedPrefs);
+
+        console.log(`Credit deducted: ${currentCredits} → ${newCredits}`);
+        return { success: true, credits: newCredits, user: updatedUser };
+
+    } catch (error) {
+        console.error('Failed to deduct user credit:', error);
+        throw error;
+    }
+};

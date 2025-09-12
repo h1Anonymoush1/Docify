@@ -15,7 +15,6 @@ from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 from appwrite.client import Client
 from appwrite.services.databases import Databases
-from appwrite.services.users import Users
 from appwrite.id import ID
 from google import genai
 
@@ -31,7 +30,6 @@ client.set_endpoint(os.environ.get('APPWRITE_FUNCTION_API_ENDPOINT'))
 client.set_project(os.environ.get('APPWRITE_FUNCTION_PROJECT_ID'))
 client.set_key(os.environ.get('APPWRITE_API_KEY'))
 databases = Databases(client)
-users = Users(client)
 
 # Gemini configuration
 GEMINI_MODEL = "gemini-2.5-flash"  # Using Flash for better availability and speed
@@ -980,63 +978,6 @@ def create_compatible_blocks(analysis_result: Dict[str, Any]) -> str:
     return blocks_json
 
 
-# ===== STEP 9: DEDUCT USER CREDITS =====
-def deduct_user_credit(user_id: str) -> bool:
-    """
-    Deduct 1 credit from the user's account after successful document processing
-    """
-    if not user_id:
-        print("⚠️ No user ID provided for credit deduction")
-        return False
-
-    try:
-        print(f"💰 Deducting 1 credit from user: {user_id}")
-
-        # Get current user preferences
-        current_prefs = users.get_prefs(user_id)
-        current_credits = current_prefs.get('credits', 0)
-
-        print(f"   Current credits: {current_credits}")
-
-        # Check if user has enough credits
-        if current_credits < 1:
-            print(f"⚠️ User {user_id} has insufficient credits ({current_credits}) - cannot deduct")
-            return False
-
-        # Calculate new credit amount
-        new_credits = current_credits - 1
-
-        # Prepare updated preferences
-        updated_prefs = current_prefs.copy()
-        updated_prefs['credits'] = new_credits
-        updated_prefs['last_credit_update'] = int(time.time())
-
-        # Add to credit history
-        if 'credit_history' not in updated_prefs:
-            updated_prefs['credit_history'] = []
-        updated_prefs['credit_history'].append({
-            'amount': -1,
-            'reason': 'document_processing',
-            'timestamp': int(time.time()),
-            'document_id': 'processed_via_orchestrator'
-        })
-
-        print(f"   Deducting 1 credit: {current_credits} → {new_credits}")
-
-        # Update user preferences
-        result = users.update_prefs(user_id, updated_prefs)
-
-        if result:
-            print(f"✅ Successfully deducted 1 credit from user {user_id}")
-            print(f"   New balance: {new_credits} credits")
-            return True
-        else:
-            print(f"❌ Failed to update preferences for user {user_id}")
-            return False
-
-    except Exception as e:
-        print(f"❌ Error deducting credits from user {user_id}: {e}")
-        return False
 
 
 # ===== STEP 8: FINAL SAVE AND COMPLETE =====
@@ -1146,20 +1087,6 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
             blocks_json
         )
 
-        # Step 9: Deduct user credit after successful processing
-        print("\n--- STEP 9: DEDUCT USER CREDIT ---")
-        user_id = document_data.get('user_id')
-        credit_deducted = False
-
-        if user_id:
-            credit_deducted = deduct_user_credit(user_id)
-            if credit_deducted:
-                print("✅ Credit deduction completed successfully")
-            else:
-                print("⚠️ Credit deduction failed or insufficient credits")
-        else:
-            print("⚠️ No user ID available for credit deduction")
-
         processing_time = time.time() - start_time
         print(f"⏱️ Total processing time: {processing_time:.2f}s")
         print("🎉 === DOCIFY UNIFIED ORCHESTRATOR COMPLETED ===")
@@ -1170,8 +1097,7 @@ def main(context: Dict[str, Any]) -> Dict[str, Any]:
             'data': {
                 'document_id': document_data['document_id'],
                 'title': ai_title,
-                'processing_time': round(processing_time, 2),
-                'credit_deducted': credit_deducted
+                'processing_time': round(processing_time, 2)
             }
         }
 
